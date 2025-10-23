@@ -1,0 +1,151 @@
+version: '3.8'
+
+services:
+  # PostgreSQL database for OLTP
+  postgres:
+    image: postgres:15
+    container_name: dex-postgres
+    environment:
+      POSTGRES_DB: dex
+      POSTGRES_USER: dexuser
+      POSTGRES_PASSWORD: dexpassword
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U dexuser -d dex"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # ClickHouse for analytics (OLAP)
+  clickhouse:
+    image: clickhouse/clickhouse-server:23.3
+    container_name: dex-clickhouse
+    ports:
+      - "8123:8123"
+      - "9000:9000"
+    volumes:
+      - clickhouse_data:/var/lib/clickhouse
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "localhost:8123/ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Redis for caching and queues
+  redis:
+    image: redis:7-alpine
+    container_name: dex-redis
+    ports:
+      - "6379:6379"
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # NATS for event streaming
+  nats:
+    image: nats:2.9-alpine
+    container_name: dex-nats
+    ports:
+      - "4222:4222"
+      - "8222:8222"
+    command: "--jetstream"
+    volumes:
+      - nats_data:/tmp/nats
+
+  # IPFS for content storage
+  ipfs:
+    image: ipfs/kubo:latest
+    container_name: dex-ipfs
+    ports:
+      - "4001:4001"
+      - "8080:8080"
+      - "5001:5001"
+    volumes:
+      - ipfs_data:/data/ipfs
+
+  # IPFS monitoring service
+  ipfs-monitor:
+    build:
+      context: ../../..
+      dockerfile: services/ipfs-rs/Dockerfile
+    container_name: dex-ipfs-monitor
+    ports:
+      - "9093:9093"
+    depends_on:
+      - ipfs
+    environment:
+      - RUST_LOG=info
+
+  # MEV monitoring service
+  mev-monitor:
+    build:
+      context: ../../..
+      dockerfile: services/mev-monitor/Dockerfile
+    container_name: dex-mev-monitor
+    ports:
+      - "9094:9094"
+    environment:
+      - RUST_LOG=info
+
+  # Account Abstraction Bundler service
+  aa-bundler:
+    build:
+      context: ../../..
+      dockerfile: services/aa-bundler/Dockerfile
+    container_name: dex-aa-bundler
+    ports:
+      - "9095:9095"
+    environment:
+      - RUST_LOG=info
+
+  # Prometheus for metrics
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: dex-prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ../prometheus.yml:/etc/prometheus/prometheus.yml
+      - ../prometheus_rules:/etc/prometheus/rules
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--storage.tsdb.retention.time=200h'
+      - '--web.enable-lifecycle'
+
+  # Grafana for dashboards
+  grafana:
+    image: grafana/grafana-enterprise
+    container_name: dex-grafana
+    ports:
+      - "3001:3000"
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ../grafana/grafana.ini:/etc/grafana/grafana.ini
+      - ../grafana/provisioning:/etc/grafana/provisioning
+      - ../grafana/dashboards:/var/lib/grafana/dashboards
+    depends_on:
+      - prometheus
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_USERS_ALLOW_SIGN_UP=false
+
+volumes:
+  postgres_data:
+  clickhouse_data:
+  redis_data:
+  nats_data:
+  ipfs_data:
+  prometheus_data:
+  grafana_data:

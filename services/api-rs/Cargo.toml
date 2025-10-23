@@ -1,0 +1,33 @@
+[package]
+name = "api-service"
+version = "0.1.0"
+edition = "2021"
+license = "MIT OR Apache-2.0"
+description = "API service for the decentralized application"
+
+[dependencies]
+tokio = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+anyhow = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+
+# Web framework
+axum = "0.7"
+tower = "0.5"
+tower-http = { version = "0.5", features = ["cors", "trace"] }
+
+# Database
+sqlx = { workspace = true }
+
+# Metrics
+prometheus-client = "0.22"
+
+# Local dependencies
+core = { path = "../../crates/core" }
+
+[[bin]]
+name = "api"
+path = "src/main.rs"

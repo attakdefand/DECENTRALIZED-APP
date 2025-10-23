@@ -1,0 +1,33 @@
+[package]
+name = "indexer-service"
+version = "0.1.0"
+edition = "2021"
+license = "MIT OR Apache-2.0"
+description = "Off-chain indexer service for the decentralized application"
+
+[dependencies]
+tokio = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+anyhow = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+
+ethers = { workspace = true }
+alloy = { workspace = true }
+sqlx = { workspace = true }
+
+# Web framework
+axum = "0.7"
+
+# Metrics
+prometheus-client = "0.22"
+
+# Local dependencies
+core = { path = "../../crates/core" }
+indexer = { path = "../../crates/indexer" }
+
+[[bin]]
+name = "indexer"
+path = "src/main.rs"

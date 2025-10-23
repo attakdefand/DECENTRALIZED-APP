@@ -1,0 +1,55 @@
+service: dapp
+slo:
+  api_latency_p95_ms:
+    target: 250
+    window: 7d
+    alert:
+      burn_rate:
+        fast: {window: 1h, factor: 14}
+        slow: {window: 24h, factor: 7}
+    status: implemented
+    implementation:
+      metrics: histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket[5m])) by (le))
+      service: api-rs
+      monitoring: prometheus
+      dashboard: grafana
+  error_rate_percent:
+    target: 0.5
+    window: 7d
+    alert:
+      burn_rate:
+        fast: {window: 1h, factor: 14}
+        slow: {window: 24h, factor: 7}
+    status: implemented
+    implementation:
+      metrics: (sum(rate(http_request_errors_total[5m])) / sum(rate(http_requests_total[5m]))) * 100
+      service: api-rs
+      monitoring: prometheus
+      dashboard: grafana
+  indexer_lag_blocks:
+    target: 2
+    window: 1d
+    status: implemented
+    implementation:
+      metrics: indexer_lag_blocks
+      service: indexer-rs
+      monitoring: prometheus
+      dashboard: grafana
+  ipfs_pin_coverage_percent:
+    target: 99.0
+    window: 1d
+    status: implemented
+    implementation:
+      metrics: ipfs_pin_coverage_percent
+      service: ipfs-rs
+      monitoring: prometheus
+      dashboard: grafana
+  mev_incidents_count:
+    target: 0
+    window: 30d
+    status: implemented
+    implementation:
+      metrics: mev_incidents_total
+      service: mev-monitor
+      monitoring: prometheus
+      dashboard: grafana

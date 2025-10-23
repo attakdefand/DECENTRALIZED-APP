@@ -1,0 +1,46 @@
+[workspace]
+members = [
+    "crates/*",
+    "services/*",
+    "web-ui",
+]
+resolver = "2"
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/attakdefand/MONDOL-DECENTRALIZED-EXCHANGE.git"
+
+[workspace.dependencies]
+# Common dependencies
+tokio = { version = "1.0", features = ["full"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+anyhow = "1.0"
+thiserror = "1.0"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+# Web3 related dependencies
+ethers = "2.0"
+alloy = "0.1"
+reqwest = { version = "0.11", features = ["json"] }
+
+# Database related dependencies
+sqlx = { version = "0.7", features = ["runtime-tokio-rustls", "postgres", "uuid", "chrono", "json"] }
+redis = "0.24"
+
+# CLI dependencies
+clap = { version = "4.0", features = ["derive"] }
+
+# Web framework
+axum = "0.7"
+tower = "0.5"
+tower-http = "0.5"
+
+[profile.release]
+panic = "abort"
+codegen-units = 1
+lto = true
+strip = true

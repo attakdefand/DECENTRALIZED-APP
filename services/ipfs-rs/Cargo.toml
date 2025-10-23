@@ -1,0 +1,31 @@
+[package]
+name = "ipfs-service"
+version = "0.1.0"
+edition = "2021"
+license = "MIT OR Apache-2.0"
+description = "IPFS pin coverage monitoring service for the decentralized application"
+
+[dependencies]
+tokio = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+anyhow = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+
+# HTTP client for IPFS API
+reqwest = { workspace = true }
+
+# Web framework
+axum = "0.7"
+
+# Metrics
+prometheus-client = "0.22"
+
+# Local dependencies
+core = { path = "../../crates/core" }
+
+[[bin]]
+name = "ipfs-monitor"
+path = "src/main.rs"

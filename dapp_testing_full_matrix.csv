@@ -1,0 +1,56 @@
+Domain,Main Type,Sub-type,Functions / Features to Test,What It Verifies,Techniques & Tooling,Evidence / KPIs
+Smart Contracts,Language/Compiler,Solidity/Vyper build matrix,"Compiler versions, optimizer settings, Yul IR toggles","Bytecode stability, optimization safety, no undefined behavior",Foundry/Hardhat matrix runs; bytecode diff; solc-select,"Build logs, bytecode diffs, gas snapshot deltas"
+Smart Contracts,Logic Patterns,CEI/Reentrancy/Access modifiers,"External calls after state write, reentrancy guard present, onlyOwner/roles enforced","No reentrancy, correct privilege boundaries","Unit + fuzz, Echidna/Foundry stateful tests; Slither reentrancy detectors",Invariant report: no state regression; reentrancy proofs absent
+Smart Contracts,Math/Safety,Overflow/underflow/precision,SafeMath / solidity ^0.8 checks; fixed-point math rounding; fees,Arithmetic safety and value conservation,Property-based tests; differential vs. reference Python/Rust model,Conservation invariants; % drift ≤ tolerance
+Smart Contracts,Upgradeability,Proxy/UUPS/Timelock,"Upgrades gated by timelock & multisig, storage layout safe",Immutable invariants preserved across upgrades,OpenZeppelin Upgrades plugin; storage layout diff; shadow-fork dry-run,Upgrade simulation report; storage layout check pass
+Smart Contracts,Pause/Circuit Breaker,Pausable/Rate-caps,"Pause paths, per-function caps, unpause",Emergency controls halt risky functions safely,Scenario tests; chaos toggles; role-based checks,MTTR to pause; paused-state coverage
+Smart Contracts,Eventing,Event schemas & indices,"Events emitted correctly, indexed topics, ids","Indexability, auditability, analytics readiness",Event snapshot comparison; ABI/event schema lint,"Event coverage %, schema contract-test export"
+DeFi,AMM - CPMM,"Swap, add/remove liquidity, fees","x*y=k conservation, fee accrual, slippage bounds",AMM math correctness & fee routing,Fuzz invariants; curve model cross-check; Foundry invariant,K conservation ≤ epsilon; fee ledger matches trades
+DeFi,AMM - StableSwap,"Amplification A, imbalance handling",Curve near-peg behavior; withdrawal under imbalances,Low slippage for like-assets; invariants,Numerical model parity tests; adversarial imbalance sims,Max slippage under tests; peg robustness score
+DeFi,CLAMM,"Ticks, range orders, fee growth","Tick crossing, per-tick liquidity, price math",Correct tick accounting and fee distribution,Reference math model; exhaustive edge-case ticks,No negative liquidity; fee sum reconciliation
+DeFi,Orderbook DEX,CLOB matching/settlement,"Place/cancel/match, partial fills, IOC/FOK",Price-time priority and fair matching,Engine unit tests; replay against fixtures; MEV sims,"Match correctness %, latency, fairness metrics"
+DeFi,Lending,"Collateral, borrow, repay, liquidate","HF threshold, interest accrual, liquidation bonus",Solvency; no bad debt beyond buffer,Kink rate-model tests; oracle shock sims,Liquidation success rate; bad-debt under stress
+DeFi,Perpetuals,"Funding, ADL, insurance fund","Funding intervals, mark/index spread, bankruptcy",Fair funding; last-resort coverage,Backtests; shadow-fork dry-runs; insurance waterfall sims,Funding error vs target; insolvency incidents = 0
+Oracle,Aggregation,Median/TWAP/EWMA,"n-publisher feeds, outlier/staleness filters",Manipulation resistance; liveness,Replay feeds; jitter; kill outliers; boundary tests,Max deviation; staleness bounds; quorum %
+Oracle,Transport,Signing/verification,"EIP-712 domain, chainId, payload structure",Authenticity and replay protection,Sig tests; domain mismatch; chain replay,Signature verify rate; replay tests pass
+MEV,Order Protection,Commit-reveal,"Commit hash, reveal window, expiry",Front-run resistance,"Timing tests; hash preimage, window skew","Reveal on-time %, commit-reveal integrity"
+MEV,Batch Auctions,Frequent Batch Auctions (FBA),"Batching window, uniform clearing price",Time-slicing fairness; no price discrimination,Discrete-time sims; solver cross-check,Clearing price parity across solvers
+AA (EIP-4337),UserOps,Validation & nonces,"validateUserOp rules, nonces, signatures",Replay-safe and scoped execution,Bundler harness; userop fuzz; scope tests,"Invalid UserOps rejected %, scope leak=0"
+AA (EIP-4337),Paymaster,Sponsorship policies,"Budget, allowlists, stake/slash",Abuse resistance and solvency,Policy fuzz; stake withdrawal limits; rate-caps,Sponsor budget adherence; zero unpaid debts
+AA (EIP-4337),Session Keys,Capabilities/expiry,"Function scoping, spend caps, TTL",Least-privilege temporary access,Cap-lint; path-coverage; negative tests,Scope violations = 0; expiry enforced
+Cross-chain,Proof Systems,Light-client/Optimistic/ZK,"Header/receipt verification, challenge windows",Source chain correctness,Fixture proofs; fraud proof sim; ZK verifier tests,Proof verify gas ≤ cap; challenge success rate
+Cross-chain,Replay & Nonces,Message idempotency,"Nonce tracking, replay guards, timeouts",No double execution,Stateful tests; race conditions; reorg sims,Replay incidents = 0; reorg tolerance proven
+Privacy/ZK,Membership/Nullifiers,"Merkle trees, nullifiers","Insert/withdraw, prevent double-spend",Anonymity set correctness,Circuit tests; path proofs; note commitment checks,No duplicate nullifier; proof verify rate
+Privacy/ZK,ZK-KYC,Selective disclosure,Prove credential w/o reveal; revocation,Privacy with compliance,Circuits; issuer keys; revocation list tests,Valid proofs accepted; revoked rejected
+Storage,IPFS/Arweave,Pinning & integrity,"CID correctness, multiple pin providers",Content addressability and availability,Pin audit; gateway fallback; hash-anchoring,"Pin coverage %, retrieval success %"
+Storage,Metadata,JSON schemas & hashing,"Schema validation, on-chain hash anchor",No silent metadata tampering,Schema lints; hash recompute; diff,"Schema validity %, hash parity"
+Data/Indexing,Reorg Safety,Backfill/catch-up,"Fork handling, idempotent writes",Consistency under chain reorgs,Shadow-fork tests; block-range replays,Zero duplicate rows; RPO/RTO targets
+Data/Indexing,Views & Materialization,Derived tables,"Candles, leaderboards, balances mirror",Derived correctness vs chain,Recompute checksums; reconciliation jobs,Reconciliation delta ≤ tolerance
+API/Backend,REST/GraphQL,"AuthN/Z, rate-limits","JWT/AA session validation, RBAC, quotas",Access control & DoS resilience,Integration tests; token bucket; fuzz,429 rate correctness; auth bypass=0
+API/Backend,Idempotency,Safe retries,Idempotency keys for POSTs,No duplicate side effects,Chaos tests; retry storm sims,Duplicate side-effects=0
+Frontend,Wallet Connect,"EIP-1193, network switch","Connect/disconnect, chain mismatch UX",Reliable connection and safety prompts,Playwright/Cypress; mocked providers,Connect success rate; UX errors logged
+Frontend,Slippage & Deadline,Order builder,"Slippage caps, deadline, max gas",User-protective parameters applied,UI-unit + contract assert; e2e,Txs with missing caps=0
+Performance,Throughput & Latency,Hot paths,"Swap path, order submit, read queries",Meets SLOs under load,k6/Locust; p95/p99 metrics; profilers,p95 latency; max TPS; saturation
+Performance,Gas Profiling,Function-level gas,Per-function gas snapshots,Gas stability and budgets,forge snapshot; diff thresholds,Gas delta ≤ threshold per commit
+Performance,Cold Start,Service start SLO,Indexer/API cold boot times,Operational readiness after deploy,Probe tests; readiness gates,Cold start ≤ target secs
+Reliability,Soak,Endurance runs,"Long-running workloads, memory leaks",Stability over time,24h+ soak; heap sampling,Error rate trend; RSS growth ≤ X%
+Reliability,Stress/Spike,Overload behavior,"Traffic surges, queue backpressure",Graceful degradation,Spike tests; token bucket tuning,No crash; bounded queue; shed %
+Reliability,Chaos,Fault injection,"RPC/node failure, DB down, partial outages",Failover & recovery,Chaos Mesh/Toxiproxy; drills,MTTR; failover success rate
+Security (Off-chain),IAM,SSO/MFA/SCIM,"Least privilege, periodic reviews",Human access safety,IdP tests; permission lints,Access review completion %
+Security (Off-chain),Key Mgmt,HSM/MPC,"Signer rotation, shard distribution",Signature safety,KMS api tests; rotation drills,Rotation frequency; signer health
+Security (Off-chain),Supply Chain,SBOM/Provenance,"Pin deps, sign images",Build integrity (SLSA),cosign/in-toto; SBOM diff,Signature verify rate; SBOM drift
+Security (Off-chain),Network/RPC,TLS/mTLS/Pinning,Provider diversity and pinning,Transport security,mtls tests; cert rotation,TLS score; failover drills pass
+Security (Off-chain),Abuse/DoS,WAF/Quota/Anti-bot,"Per-IP/address caps, captcha, job guards",Service availability,Rate sims; bot frameworks,429 accuracy; abuse blocked %
+Compliance,Policies,Terms/Privacy/Consent,"Consent capture, age/geo gates",Legal guardrails observed,Policy tests; cookie/consent flows,Consent logs; geo-block efficacy
+Compliance,Auditability,Admin/Audit trail,Tamper-evident admin ledger,Forensics-ready logs,Append-only store; hash-chaining,Audit completeness %; tamper checks
+Observability,Traces,End-to-end OTel,Trace ids across UI→API→indexer,Root cause & latency breakdown,OTel SDKs; trace tests,Trace rate; span error %
+Observability,Metrics,Golden signals,"Latency, errors, saturation, throughput",SLO adherence,Prometheus rules; burn-rate alerts,Error budget burn; alert MTTA/MTTR
+Observability,Logs,PII-aware structured,"Masking, correlation ids",Safe and useful logs,Log lints; redaction tests,PII leak incidents=0
+Governance/DAO,Voting,Token/quadratic/conviction,"Propose, vote, delegate, execute with timelock",Legitimate governance outcomes,Sim votes; quorum checks; fork tests,Quorum met; execution delay respected
+Governance/DAO,Treasury,Streams/vesting/payouts,"Cliff/vesting, multisig payouts",Funds managed per policy,Time travel tests; schedule checks,No missed vest; signer policy ok
+NFT,Royalties,Payout splits,"Royalty basis points, recipients",Correct revenue distribution,Math checks; fuzz recipients arrays,Sum bps ≤ 10000; payout parity
+NFT,Auctions/Markets,Dutch/English/Sealed-bid,"Bid logic, finalize, refunds",Fair settlement and no stuck funds,Auction sims; boundary tests,No orphan bids; finalization success %
+Wallets,Hardware/Software,Sign/verify UX,Message/tx prompts clarity; chainId,Users sign correct payloads,E2E UI tests; simulated devices,Mis-sign incidents=0
+Wallets,Permits,EIP-2612/permit2,Nonce/domain/separator; expiry,Secure approvals without tx,Permit fuzz; replay tests,Replay=0; expired rejects
+Docs/Runbooks,Threat Model,STRIDE/LINDDUN,"Abuse cases, mitigations",Explicit security assumptions,Doc tests; lint links,Model freshness; coverage %
+Docs/Runbooks,IR/DR,Pause/restore,Who does what when; contacts,Realistic recovery,Game-day checklist; comms templates,DR RTO/RPO met; drill cadence

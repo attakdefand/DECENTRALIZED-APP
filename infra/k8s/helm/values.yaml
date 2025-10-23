@@ -1,0 +1,114 @@
+# Default values for decentralized-app chart
+
+# PostgreSQL configuration
+postgresql:
+  enabled: true
+  image:
+    repository: postgres
+    tag: 15
+  auth:
+    username: dexuser
+    password: dexpassword
+    database: dex
+
+# ClickHouse configuration
+clickhouse:
+  enabled: true
+  image:
+    repository: clickhouse/clickhouse-server
+    tag: 23.3
+
+# Redis configuration
+redis:
+  enabled: true
+  image:
+    repository: redis
+    tag: 7-alpine
+
+# NATS configuration
+nats:
+  enabled: true
+  image:
+    repository: nats
+    tag: 2.9-alpine
+
+# IPFS configuration
+ipfs:
+  enabled: true
+  image:
+    repository: ipfs/kubo
+    tag: latest
+
+# API service configuration
+apiService:
+  enabled: true
+  image:
+    repository: dex-api
+    tag: latest
+  service:
+    type: ClusterIP
+    port: 3000
+
+# Indexer service configuration
+indexerService:
+  enabled: true
+  image:
+    repository: dex-indexer
+    tag: latest
+  service:
+    type: ClusterIP
+    port: 9091
+
+# Keeper service configuration
+keeperService:
+  enabled: true
+  image:
+    repository: dex-keeper
+    tag: latest
+  service:
+    type: ClusterIP
+    port: 9092
+
+# IPFS monitor service configuration
+ipfsMonitorService:
+  enabled: true
+  image:
+    repository: dex-ipfs-monitor
+    tag: latest
+  service:
+    type: ClusterIP
+    port: 9093
+
+# MEV monitor service configuration
+mevMonitorService:
+  enabled: true
+  image:
+    repository: dex-mev-monitor
+    tag: latest
+  service:
+    type: ClusterIP
+    port: 9094
+
+# AA Bundler service configuration
+aaBundlerService:
+  enabled: true
+  image:
+    repository: dex-aa-bundler
+    tag: latest
+  service:
+    type: ClusterIP
+    port: 9095
+
+# Prometheus configuration
+prometheus:
+  enabled: true
+  image:
+    repository: prom/prometheus
+    tag: latest
+
+# Grafana configuration
+grafana:
+  enabled: true
+  image:
+    repository: grafana/grafana-enterprise
+    tag: latest

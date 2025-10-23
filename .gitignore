@@ -1,0 +1,42 @@
+# Dependencies
+/target
+**/*.rs.bk
+
+# IDEs
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Web UI build artifacts
+web-ui/pkg/
+web-ui/dist/
+
+# Documentation and references (as requested)
+docs/
+.references/
+
+# Environment files
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Logs
+*.log
+
+# Temporary files
+*.tmp
+*.temp
+
+# Rust coverage files
+*.profraw
+*.profdata
+
+# WASM pack files
+pkg/

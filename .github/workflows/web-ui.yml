@@ -1,0 +1,88 @@
+name: Web UI CI
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'web-ui/**'
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'web-ui/**'
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Install Rust
+      uses: actions-rs/toolchain@v1
+      with:
+        toolchain: stable
+        target: wasm32-unknown-unknown
+        override: true
+        
+    - name: Install wasm-pack
+      run: |
+        curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+        
+    - name: Cache cargo registry
+      uses: actions/cache@v3
+      with:
+        path: |
+          ~/.cargo/registry
+          ~/.cargo/git
+          target
+        key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+        
+    - name: Check code formatting
+      run: |
+        cd web-ui
+        cargo fmt -- --check
+        
+    - name: Run clippy
+      run: |
+        cd web-ui
+        cargo clippy -- -D warnings
+        
+    - name: Build WebAssembly package
+      run: |
+        cd web-ui
+        wasm-pack build --target web
+        
+    - name: Run tests
+      run: |
+        cd web-ui
+        wasm-pack test --headless --firefox
+
+  deploy:
+    needs: test
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Install Rust
+      uses: actions-rs/toolchain@v1
+      with:
+        toolchain: stable
+        target: wasm32-unknown-unknown
+        override: true
+        
+    - name: Install wasm-pack
+      run: |
+        curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+        
+    - name: Build for production
+      run: |
+        cd web-ui
+        wasm-pack build --target web --release
+        
+    - name: Deploy to GitHub Pages
+      uses: peaceiris/actions-gh-pages@v3
+      with:
+        github_token: ${{ secrets.GITHUB_TOKEN }}
+        publish_dir: ./web-ui/pkg

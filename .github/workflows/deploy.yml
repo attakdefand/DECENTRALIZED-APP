@@ -1,0 +1,94 @@
+name: Deploy
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to deploy to'
+        required: true
+        default: 'staging'
+        type: choice
+        options:
+        - staging
+        - canary
+        - ga
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  deploy-staging:
+    name: Deploy to Staging
+    runs-on: ubuntu-latest
+    if: github.event.inputs.environment == 'staging'
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Deploy to Staging
+      run: |
+        echo "Deploying to staging environment"
+        # This is a placeholder - in a real implementation, we would deploy to staging
+        # kubectl set image deployment/indexer indexer=decentralized-app/indexer:${{ github.sha }}
+        # kubectl set image deployment/api api=decentralized-app/api:${{ github.sha }}
+        # kubectl set image deployment/keepers keepers=decentralized-app/keepers:${{ github.sha }}
+
+  deploy-canary:
+    name: Deploy to Canary
+    runs-on: ubuntu-latest
+    if: github.event.inputs.environment == 'canary'
+    needs: deploy-staging
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Run Integration Tests
+      run: |
+        echo "Running integration tests for canary deployment"
+        # This is a placeholder - in a real implementation, we would run integration tests
+        cargo test -p integration-tests
+    
+    - name: Deploy to Canary
+      run: |
+        echo "Deploying to canary environment"
+        # This is a placeholder - in a real implementation, we would deploy to canary
+        # kubectl set image deployment/indexer indexer=decentralized-app/indexer:${{ github.sha }}
+        # kubectl set image deployment/api api=decentralized-app/api:${{ github.sha }}
+
+  deploy-ga:
+    name: Deploy to GA
+    runs-on: ubuntu-latest
+    if: github.event.inputs.environment == 'ga'
+    needs: deploy-canary
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Run Production Tests
+      run: |
+        echo "Running production tests for GA deployment"
+        # This is a placeholder - in a real implementation, we would run production tests
+        cargo test -p production-tests
+    
+    - name: Deploy to GA
+      run: |
+        echo "Deploying to GA environment"
+        # This is a placeholder - in a real implementation, we would deploy to GA
+        # kubectl set image deployment/indexer indexer=decentralized-app/indexer:${{ github.sha }}
+        # kubectl set image deployment/api api=decentralized-app/api:${{ github.sha }}
+        # kubectl set image deployment/keepers keepers=decentralized-app/keepers:${{ github.sha }}
+        # kubectl set image deployment/ipfs-monitor ipfs-monitor=decentralized-app/ipfs-monitor:${{ github.sha }}
+        # kubectl set image deployment/mev-monitor mev-monitor=decentralized-app/mev-monitor:${{ github.sha }}
+        # kubectl set image deployment/aa-bundler aa-bundler=decentralized-app/aa-bundler:${{ github.sha }}
+
+  notify:
+    name: Deployment Notification
+    runs-on: ubuntu-latest
+    needs: [deploy-staging, deploy-canary, deploy-ga]
+    
+    steps:
+    - name: Send notification
+      run: |
+        echo "Deployment to ${{ github.event.inputs.environment }} completed"
+        # This is a placeholder - in a real implementation, we would send notifications
+        # curl -X POST -H "Content-Type: application/json" -d '{"text":"Deployment to ${{ github.event.inputs.environment }} completed"}' $SLACK_WEBHOOK
