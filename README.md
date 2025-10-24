@@ -123,6 +123,9 @@ dex start
 # Start specific services
 dex start --services api,indexer
 
+# Start services with custom ports
+dex start --api-port 3000 --indexer-port 3001
+
 # Check service status
 dex status
 
@@ -131,6 +134,31 @@ dex stop
 
 # Get help
 dex --help
+```
+
+### Detailed CLI Options
+
+The CLI provides comprehensive control over all services in the DECENTRALIZED-APP:
+
+```bash
+Usage: dex-cli.exe <COMMAND>
+
+Commands:
+  start   Start all services
+  stop    Stop all services
+  status  Check the status of services
+  init    Initialize the application
+  help    Print this message or the help of the given subcommand(s)
+
+Start all services
+
+Usage: dex-cli.exe start [OPTIONS]
+
+Options:
+  -s, --services <SERVICES>          Services to start (api, indexer, keepers, ipfs, mev, aa)
+      --api-port <API_PORT>          Port for the API service [default: 3000]
+      --indexer-port <INDEXER_PORT>  Port for the indexer service [default: 3001]
+  -h, --help                         Print help
 ```
 
 ## Getting Started
