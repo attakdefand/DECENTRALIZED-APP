@@ -200,6 +200,10 @@ Options:
    # Serve the pkg directory with any static file server
    ```
 
+### Complete Cross-Platform Setup
+
+For detailed installation instructions for Windows, macOS, and Linux, see the [Complete Cross-Platform Setup Guide](COMPLETE-CROSS-PLATFORM-SETUP.md).
+
 ## Releases and Packages
 
 ### GitHub Releases
