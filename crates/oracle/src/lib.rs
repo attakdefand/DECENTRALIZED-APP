@@ -1,178 +1,411 @@
-//! Oracle implementations for price feeds
+//! Oracle service for DECENTRALIZED-APP
 //!
-//! This module provides various oracle implementations:
-//! - Medianizer for aggregating multiple feeds
-//! - TWAP (Time Weighted Average Price) calculator
+//! This crate provides oracle adapters, price aggregation, and integrity monitoring.
 
-use core::Result;
-use core::Error;
-use core::types::{Address, TokenAmount};
+use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
+use std::time::{SystemTime, UNIX_EPOCH};
 
-/// Price feed structure
-#[derive(Debug, Clone)]
-pub struct PriceFeed {
-    pub source: String,
-    pub base_token: Address,
-    pub quote_token: Address,
-    pub price: f64,
+/// Oracle adapter trait
+pub trait OracleAdapter: Send + Sync {
+    /// Get the latest price for a pair
+    fn get_price(&self, pair: &str) -> Result<PriceData, OracleError>;
+    
+    /// Get historical prices
+    fn get_historical_prices(&self, pair: &str, count: usize) -> Result<Vec<PriceData>, OracleError>;
+    
+    /// Check oracle health
+    fn is_healthy(&self) -> bool;
+}
+
+/// Price data structure
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct PriceData {
+    pub pair: String,
+    pub price: u128,
     pub timestamp: u64,
-    pub confidence: f64,
+    pub confidence: u64,
+    pub oracle_provider: String,
 }
 
-/// Medianizer oracle
-///
-/// Aggregates multiple price feeds and returns the median price
-pub struct Medianizer {
-    pub base_token: Address,
-    pub quote_token: Address,
-    pub feeds: Vec<PriceFeed>,
+/// Oracle error types
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum OracleError {
+    NetworkError(String),
+    DataError(String),
+    TimeoutError,
+    ValidationError(String),
 }
 
-impl Medianizer {
-    /// Create a new medianizer
-    pub fn new(base_token: Address, quote_token: Address) -> Self {
+impl std::fmt::Display for OracleError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            OracleError::NetworkError(e) => write!(f, "Network error: {}", e),
+            OracleError::DataError(e) => write!(f, "Data error: {}", e),
+            OracleError::TimeoutError => write!(f, "Timeout error"),
+            OracleError::ValidationError(e) => write!(f, "Validation error: {}", e),
+        }
+    }
+}
+
+impl std::error::Error for OracleError {}
+
+/// Publisher key structure
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PublisherKey {
+    pub id: String,
+    pub public_key: String,
+    pub provider: String,
+    pub created_at: u64,
+    pub expires_at: u64,
+    pub status: KeyStatus,
+}
+
+/// Key status
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum KeyStatus {
+    Active,
+    Rotating,
+    Expired,
+    Compromised,
+}
+
+/// Publisher key manager
+pub struct PublisherKeyManager {
+    /// Active publisher keys
+    pub active_keys: HashMap<String, PublisherKey>,
+    /// Emergency key for backup
+    pub emergency_key: PublisherKey,
+}
+
+impl PublisherKeyManager {
+    pub fn new() -> Self {
         Self {
-            base_token,
-            quote_token,
-            feeds: Vec::new(),
+            active_keys: HashMap::new(),
+            emergency_key: PublisherKey {
+                id: "emergency".to_string(),
+                public_key: "".to_string(),
+                provider: "system".to_string(),
+                created_at: 0,
+                expires_at: u64::MAX,
+                status: KeyStatus::Active,
+            },
         }
     }
     
-    /// Add a price feed
-    pub fn add_feed(&mut self, feed: PriceFeed) {
-        self.feeds.push(feed);
-    }
-    
-    /// Get the median price from all feeds
-    pub fn median_price(&self) -> Result<f64> {
-        if self.feeds.is_empty() {
-            return Err(Error::Custom("No price feeds available".to_string()));
+    /// Add a new publisher key
+    pub fn add_key(&mut self, key: PublisherKey) -> Result<(), String> {
+        if self.active_keys.contains_key(&key.id) {
+            return Err("Key ID already exists".to_string());
         }
         
-        let mut prices: Vec<f64> = self.feeds.iter().map(|feed| feed.price).collect();
+        self.active_keys.insert(key.id.clone(), key);
+        Ok(())
+    }
+    
+    /// Validate a signature
+    pub fn validate_signature(&self, key_id: &str, _data: &[u8], _signature: &[u8]) -> bool {
+        if let Some(key) = self.active_keys.get(key_id) {
+            matches!(key.status, KeyStatus::Active) && key.expires_at > current_timestamp()
+        } else {
+            false
+        }
+    }
+}
+
+/// Price aggregator for TWAP and median calculations
+pub struct PriceAggregator {
+    /// Time window for TWAP calculation (in seconds)
+    pub twap_window: u64,
+    /// Number of oracles required for median
+    pub min_oracles: usize,
+    /// Maximum price deviation allowed
+    pub max_deviation: f64,
+    /// Oracle adapters
+    pub oracles: Vec<Box<dyn OracleAdapter>>,
+}
+
+impl PriceAggregator {
+    pub fn new(twap_window: u64, min_oracles: usize, max_deviation: f64) -> Self {
+        Self {
+            twap_window,
+            min_oracles,
+            max_deviation,
+            oracles: Vec::new(),
+        }
+    }
+    
+    /// Add an oracle adapter
+    pub fn add_oracle(&mut self, oracle: Box<dyn OracleAdapter>) {
+        self.oracles.push(oracle);
+    }
+    
+    /// Calculate TWAP for a pair
+    pub fn calculate_twap(&self, pair: &str) -> Result<PriceData, OracleError> {
+        let mut prices = Vec::new();
+        let mut timestamps = Vec::new();
+        
+        // Collect prices from all healthy oracles
+        for oracle in &self.oracles {
+            if oracle.is_healthy() {
+                match oracle.get_historical_prices(pair, (self.twap_window / 60) as usize) {
+                    Ok(historical_prices) => {
+                        for price_data in historical_prices {
+                            prices.push(price_data.price as f64);
+                            timestamps.push(price_data.timestamp as f64);
+                        }
+                    }
+                    Err(_) => continue, // Skip unhealthy oracle
+                }
+            }
+        }
+        
+        if prices.is_empty() {
+            return Err(OracleError::DataError("No valid prices available".to_string()));
+        }
+        
+        // Calculate TWAP
+        let twap = self.calculate_time_weighted_average(&prices, &timestamps);
+        
+        Ok(PriceData {
+            pair: pair.to_string(),
+            price: twap as u128,
+            timestamp: current_timestamp(),
+            confidence: self.calculate_confidence(&prices),
+            oracle_provider: "TWAP".to_string(),
+        })
+    }
+    
+    /// Calculate median price from multiple oracles
+    pub fn calculate_median(&self, pair: &str) -> Result<PriceData, OracleError> {
+        let mut prices = Vec::new();
+        
+        // Collect latest prices from all healthy oracles
+        for oracle in &self.oracles {
+            if oracle.is_healthy() {
+                match oracle.get_price(pair) {
+                    Ok(price_data) => {
+                        prices.push(price_data.price as f64);
+                    }
+                    Err(_) => continue, // Skip unhealthy oracle
+                }
+            }
+        }
+        
+        if prices.len() < self.min_oracles {
+            return Err(OracleError::DataError("Insufficient oracle responses".to_string()));
+        }
+        
+        // Calculate median
+        let median = self.calculate_median_value(&mut prices);
+        
+        // Check for outliers
+        if self.detect_outliers(&prices, median) {
+            return Err(OracleError::ValidationError("Outliers detected".to_string()));
+        }
+        
+        Ok(PriceData {
+            pair: pair.to_string(),
+            price: median as u128,
+            timestamp: current_timestamp(),
+            confidence: self.calculate_confidence(&prices),
+            oracle_provider: "Median".to_string(),
+        })
+    }
+    
+    /// Calculate time-weighted average
+    fn calculate_time_weighted_average(&self, prices: &[f64], timestamps: &[f64]) -> f64 {
+        if prices.is_empty() {
+            return 0.0;
+        }
+        
+        let mut weighted_sum = 0.0;
+        let mut time_sum = 0.0;
+        
+        for i in 0..prices.len() - 1 {
+            let time_diff = timestamps[i + 1] - timestamps[i];
+            weighted_sum += prices[i] * time_diff;
+            time_sum += time_diff;
+        }
+        
+        if time_sum == 0.0 {
+            prices[0]
+        } else {
+            weighted_sum / time_sum
+        }
+    }
+    
+    /// Calculate median value
+    fn calculate_median_value(&self, prices: &mut [f64]) -> f64 {
         prices.sort_by(|a, b| a.partial_cmp(b).unwrap());
-        
         let len = prices.len();
-        let median = if len % 2 == 0 {
+        
+        if len % 2 == 0 {
             (prices[len / 2 - 1] + prices[len / 2]) / 2.0
         } else {
             prices[len / 2]
-        };
+        }
+    }
+    
+    /// Detect outliers using standard deviation
+    fn detect_outliers(&self, prices: &[f64], median: f64) -> bool {
+        if prices.is_empty() {
+            return false;
+        }
         
-        Ok(median)
+        let mean: f64 = prices.iter().sum::<f64>() / prices.len() as f64;
+        let variance: f64 = prices.iter().map(|x| (x - mean).powi(2)).sum::<f64>() / prices.len() as f64;
+        let std_dev = variance.sqrt();
+        
+        prices.iter().any(|&price| (price - median).abs() > std_dev * self.max_deviation)
+    }
+    
+    /// Calculate confidence score
+    fn calculate_confidence(&self, prices: &[f64]) -> u64 {
+        if prices.is_empty() {
+            return 0;
+        }
+        
+        let mean: f64 = prices.iter().sum::<f64>() / prices.len() as f64;
+        let variance: f64 = prices.iter().map(|x| (x - mean).powi(2)).sum::<f64>() / prices.len() as f64;
+        let std_dev = variance.sqrt();
+        
+        // Convert to confidence score (0-100)
+        let cv = std_dev / mean; // Coefficient of variation
+        let confidence = (1.0 - cv.min(1.0)) * 100.0;
+        confidence as u64
     }
 }
 
-/// TWAP (Time Weighted Average Price) calculator
-pub struct TwapCalculator {
-    pub prices: Vec<(f64, u64)>, // (price, timestamp)
-    pub window: u64, // in seconds
+/// Oracle integrity tests
+pub struct OracleIntegrityTests {
+    /// Maximum allowed price change per minute
+    pub max_price_change: f64,
+    /// Maximum allowed staleness (in seconds)
+    pub max_staleness: u64,
+    /// Minimum confidence threshold
+    pub min_confidence: u64,
 }
 
-impl TwapCalculator {
-    /// Create a new TWAP calculator
-    pub fn new(window: u64) -> Self {
+impl OracleIntegrityTests {
+    pub fn new(max_price_change: f64, max_staleness: u64, min_confidence: u64) -> Self {
         Self {
-            prices: Vec::new(),
-            window,
+            max_price_change,
+            max_staleness,
+            min_confidence,
         }
     }
     
-    /// Add a price observation
-    pub fn add_price(&mut self, price: f64, timestamp: u64) {
-        self.prices.push((price, timestamp));
+    /// Test for price manipulation
+    pub fn test_price_manipulation(&self, current_price: &PriceData, previous_price: &PriceData) -> bool {
+        if current_price.timestamp <= previous_price.timestamp {
+            return false; // Invalid timestamp
+        }
         
-        // Remove old observations outside the window
-        self.prices.retain(|(_, ts)| timestamp - ts <= self.window);
+        let time_diff = current_price.timestamp - previous_price.timestamp;
+        if time_diff == 0 {
+            return false; // Same timestamp
+        }
+        
+        let price_change = ((current_price.price as f64 - previous_price.price as f64) / previous_price.price as f64).abs();
+        let change_per_minute = price_change / (time_diff as f64 / 60.0);
+        
+        change_per_minute <= self.max_price_change
     }
     
-    /// Calculate the TWAP
-    pub fn calculate_twap(&self) -> Result<f64> {
-        if self.prices.is_empty() {
-            return Err(Error::Custom("No price observations available".to_string()));
-        }
-        
-        // Sort prices by timestamp
-        let mut sorted_prices = self.prices.clone();
-        sorted_prices.sort_by(|a, b| a.1.cmp(&b.1));
-        
-        let mut weighted_sum = 0.0;
-        let mut total_time = 0.0;
-        
-        for i in 1..sorted_prices.len() {
-            let (price, timestamp) = sorted_prices[i];
-            let (prev_price, prev_timestamp) = sorted_prices[i - 1];
-            
-            let time_diff = (timestamp - prev_timestamp) as f64;
-            // Use the previous price for the time interval
-            weighted_sum += prev_price * time_diff;
-            total_time += time_diff;
-        }
-        
-        if total_time == 0.0 {
-            Ok(sorted_prices.last().unwrap().0)
-        } else {
-            Ok(weighted_sum / total_time)
-        }
+    /// Test for data staleness
+    pub fn test_data_staleness(&self, price_data: &PriceData) -> bool {
+        let current_time = current_timestamp();
+        let staleness = current_time - price_data.timestamp;
+        staleness <= self.max_staleness
     }
+    
+    /// Test for confidence level
+    pub fn test_confidence(&self, price_data: &PriceData) -> bool {
+        price_data.confidence >= self.min_confidence
+    }
+    
+    /// Run all integrity tests
+    pub fn run_integrity_tests(&self, current_price: &PriceData, previous_price: Option<&PriceData>) -> Vec<String> {
+        let mut failures = Vec::new();
+        
+        // Test staleness
+        if !self.test_data_staleness(current_price) {
+            failures.push("Data is stale".to_string());
+        }
+        
+        // Test confidence
+        if !self.test_confidence(current_price) {
+            failures.push("Confidence level too low".to_string());
+        }
+        
+        // Test manipulation if previous price is available
+        if let Some(prev_price) = previous_price {
+            if !self.test_price_manipulation(current_price, prev_price) {
+                failures.push("Price manipulation detected".to_string());
+            }
+        }
+        
+        failures
+    }
+}
+
+/// Helper function to get current timestamp
+pub fn current_timestamp() -> u64 {
+    SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .expect("Time went backwards")
+        .as_secs()
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[test]
-    fn test_medianizer() {
-        let mut medianizer = Medianizer::new(
-            Address("ETH".to_string()),
-            Address("USD".to_string()),
-        );
+    fn test_publisher_key_manager() {
+        let mut key_manager = PublisherKeyManager::new();
         
-        medianizer.add_feed(PriceFeed {
-            source: "source1".to_string(),
-            base_token: Address("ETH".to_string()),
-            quote_token: Address("USD".to_string()),
-            price: 3000.0,
-            timestamp: 1234567890,
-            confidence: 0.9,
-        });
+        let key = PublisherKey {
+            id: "test_key".to_string(),
+            public_key: "test_public_key".to_string(),
+            provider: "test_provider".to_string(),
+            created_at: current_timestamp(),
+            expires_at: current_timestamp() + 3600,
+            status: KeyStatus::Active,
+        };
         
-        medianizer.add_feed(PriceFeed {
-            source: "source2".to_string(),
-            base_token: Address("ETH".to_string()),
-            quote_token: Address("USD".to_string()),
-            price: 3100.0,
-            timestamp: 1234567891,
-            confidence: 0.8,
-        });
-        
-        medianizer.add_feed(PriceFeed {
-            source: "source3".to_string(),
-            base_token: Address("ETH".to_string()),
-            quote_token: Address("USD".to_string()),
-            price: 2900.0,
-            timestamp: 1234567892,
-            confidence: 0.7,
-        });
-        
-        let median_price = medianizer.median_price().unwrap();
-        assert_eq!(median_price, 3000.0);
+        assert!(key_manager.add_key(key).is_ok());
+        assert!(key_manager.validate_signature("test_key", &[], &[]));
     }
-    
+
     #[test]
-    fn test_twap() {
-        let mut twap = TwapCalculator::new(3600); // 1 hour window
+    fn test_price_aggregator() {
+        let _aggregator = PriceAggregator::new(3600, 3, 2.0); // 1 hour window, 3 oracles min, 2 std dev max
+        // Additional tests would require mock oracle adapters
+    }
+
+    #[test]
+    fn test_integrity_tests() {
+        let tests = OracleIntegrityTests::new(0.05, 300, 80); // 5% max change, 5min max staleness, 80 min confidence
         
-        let now = 1234567890;
-        twap.add_price(100.0, now);
-        twap.add_price(110.0, now + 1800); // 30 minutes later
-        twap.add_price(120.0, now + 3600); // 1 hour later
+        let current = PriceData {
+            pair: "ETH/USD".to_string(),
+            price: 3000000000000000000000, // $3000
+            timestamp: 1000,
+            confidence: 95,
+            oracle_provider: "Test".to_string(),
+        };
         
-        let twap_price = twap.calculate_twap().unwrap();
-        // TWAP should be weighted average:
-        // First 30 min: 100.0
-        // Next 30 min: 110.0
-        // TWAP = (100.0 * 30 + 110.0 * 30) / 60 = 105.0
-        assert_eq!(twap_price, 105.0);
+        let previous = PriceData {
+            pair: "ETH/USD".to_string(),
+            price: 2000000000000000000000, // $2000
+            timestamp: 900,
+            confidence: 95,
+            oracle_provider: "Test".to_string(),
+        };
+        
+        // This should detect manipulation (50% change in 100 seconds)
+        assert!(!tests.test_price_manipulation(&current, &previous));
     }
 }

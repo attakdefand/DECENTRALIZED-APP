@@ -20,3 +20,7 @@ core = { path = "../core" }
 
 [lib]
 crate-type = ["rlib"]
+
+[[bin]]
+name = "bridge_security_simulation"
+path = "src/bin/bridge_security_simulation.rs"

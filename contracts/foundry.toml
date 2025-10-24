@@ -1,0 +1,9 @@
+[profile.default]
+src = 'src'
+out = 'out'
+libs = ['lib']
+test = 'test'
+cache_path = 'cache_forge'
+solc_version = '0.8.19'
+
+# See more config options https://github.com/foundry-rs/foundry/tree/master/config

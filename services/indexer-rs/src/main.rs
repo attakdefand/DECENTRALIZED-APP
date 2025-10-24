@@ -22,14 +22,6 @@ use axum::{
     Router,
 };
 
-// Add OpenTelemetry imports
-use opentelemetry::{
-    global,
-    trace::{TraceContextExt, Tracer},
-    Context, KeyValue,
-};
-use opentelemetry_sdk::{trace::TracerProvider, Resource};
-use tracing_opentelemetry::OpenTelemetrySpanExt;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt, EnvFilter};
 
 // Create a struct to hold our metrics
@@ -119,19 +111,12 @@ async fn main() -> Result<()> {
     }
 }
 
-// Initialize OpenTelemetry tracing
+// Initialize tracing
 fn init_tracing() {
-    // Create a Jaeger tracer
-    let tracer = opentelemetry_jaeger::new_agent_pipeline()
-        .with_service_name("indexer-service")
-        .install_simple()
-        .expect("Failed to install OpenTelemetry tracer");
-    
-    // Create a tracing subscriber
+    // Simple tracing initialization
     tracing_subscriber::registry()
         .with(EnvFilter::try_from_default_env().unwrap_or_else(|_| "info".into()))
         .with(tracing_subscriber::fmt::layer())
-        .with(tracing_opentelemetry::layer().with_tracer(tracer))
         .init();
 }
 

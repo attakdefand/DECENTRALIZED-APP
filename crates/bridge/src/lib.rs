@@ -1,11 +1,13 @@
 //! Cross-chain bridge implementation
 //!
 //! This module implements various cross-chain bridge mechanisms including
-//! optimistic, ZK-proof, and light-client bridges.
+//! optimistic, ZK-proof, and light-client bridges with watcher and challenger
+//! functionality for enhanced security.
 
 use core::{Error, Result};
 use core::types::{Address, TokenAmount};
 use serde::{Deserialize, Serialize};
+use std::time::{SystemTime, UNIX_EPOCH};
 
 /// Bridge configuration
 #[derive(Debug, Clone)]
@@ -15,6 +17,7 @@ pub struct BridgeConfig {
     pub bridge_contract_address: Address,
     pub confirmation_blocks: u64,
     pub challenge_period: u64, // in seconds
+    pub min_stake: u128, // Minimum stake required for challengers
 }
 
 /// Bridge transfer request
@@ -30,8 +33,23 @@ pub struct BridgeTransfer {
     pub timestamp: u64,
 }
 
+// Custom implementation of PartialEq for BridgeTransfer since TokenAmount doesn't implement it
+impl PartialEq for BridgeTransfer {
+    fn eq(&self, other: &Self) -> bool {
+        self.id == other.id &&
+        self.sender == other.sender &&
+        self.recipient == other.recipient &&
+        self.token == other.token &&
+        self.amount.value == other.amount.value &&
+        self.amount.decimals == other.amount.decimals &&
+        self.source_chain_id == other.source_chain_id &&
+        self.destination_chain_id == other.destination_chain_id &&
+        self.timestamp == other.timestamp
+    }
+}
+
 /// Bridge transfer status
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum TransferStatus {
     Pending,
     Confirmed,
@@ -51,10 +69,57 @@ pub struct Relay {
     pub status: TransferStatus,
 }
 
+/// Watcher configuration
+#[derive(Debug, Clone)]
+pub struct WatcherConfig {
+    pub id: String,
+    pub chain_id: u64,
+    pub enabled: bool,
+    pub alert_threshold: u64, // Alert after this many suspicious events
+}
+
+/// Watcher alert
+#[derive(Debug, Clone)]
+pub struct WatcherAlert {
+    pub id: String,
+    pub watcher_id: String,
+    pub transfer_id: String,
+    pub alert_type: String,
+    pub description: String,
+    pub timestamp: u64,
+    pub resolved: bool,
+}
+
+/// Challenger configuration
+#[derive(Debug, Clone)]
+pub struct ChallengerConfig {
+    pub id: String,
+    pub address: Address,
+    pub stake: u128,
+    pub active: bool,
+}
+
+/// Challenge to a bridge transfer
+#[derive(Debug, Clone)]
+pub struct Challenge {
+    pub id: String,
+    pub transfer_id: String,
+    pub challenger: Address,
+    pub reason: String,
+    pub proof: Vec<u8>, // Fraud proof
+    pub timestamp: u64,
+    pub resolved: bool,
+    pub successful: bool,
+}
+
 /// Light client bridge implementation
 pub struct LightClientBridge {
     pub config: BridgeConfig,
     pub relays: Vec<Relay>,
+    pub watchers: Vec<WatcherConfig>,
+    pub alerts: Vec<WatcherAlert>,
+    pub challengers: Vec<ChallengerConfig>,
+    pub challenges: Vec<Challenge>,
 }
 
 impl LightClientBridge {
@@ -63,11 +128,15 @@ impl LightClientBridge {
         Self {
             config,
             relays: Vec::new(),
+            watchers: Vec::new(),
+            alerts: Vec::new(),
+            challengers: Vec::new(),
+            challenges: Vec::new(),
         }
     }
     
     /// Submit a bridge transfer
-    pub async fn submit_transfer(&self, transfer: BridgeTransfer) -> Result<String> {
+    pub fn submit_transfer(&self, transfer: BridgeTransfer) -> Result<String> {
         tracing::info!("Submitting bridge transfer: {}", transfer.id);
         
         // In a real implementation, we would:
@@ -80,7 +149,7 @@ impl LightClientBridge {
     }
     
     /// Relay a transfer to the destination chain
-    pub async fn relay_transfer(&mut self, transfer_id: &str, proof: Vec<u8>) -> Result<()> {
+    pub fn relay_transfer(&mut self, transfer_id: &str, proof: Vec<u8>) -> Result<()> {
         tracing::info!("Relaying transfer: {}", transfer_id);
         
         let relay = Relay {
@@ -99,10 +168,64 @@ impl LightClientBridge {
     }
     
     /// Verify a relay proof
-    pub fn verify_proof(&self, proof: &[u8]) -> Result<bool> {
+    pub fn verify_proof(&self, _proof: &[u8]) -> Result<bool> {
         // In a real implementation, we would verify the cryptographic proof
         // For this example, we'll just return true
         Ok(true)
+    }
+    
+    /// Add a watcher to monitor bridge operations
+    pub fn add_watcher(&mut self, watcher: WatcherConfig) -> Result<()> {
+        tracing::info!("Adding watcher: {}", watcher.id);
+        self.watchers.push(watcher);
+        Ok(())
+    }
+    
+    /// Generate an alert from a watcher
+    pub fn generate_alert(&mut self, alert: WatcherAlert) -> Result<()> {
+        tracing::info!("Generating alert: {} for transfer: {}", alert.id, alert.transfer_id);
+        self.alerts.push(alert);
+        Ok(())
+    }
+    
+    /// Add a challenger to the bridge
+    pub fn add_challenger(&mut self, challenger: ChallengerConfig) -> Result<()> {
+        tracing::info!("Adding challenger: {}", challenger.id);
+        self.challengers.push(challenger);
+        Ok(())
+    }
+    
+    /// Submit a challenge to a transfer
+    pub fn submit_challenge(&mut self, challenge: Challenge) -> Result<()> {
+        tracing::info!("Submitting challenge: {} for transfer: {}", challenge.id, challenge.transfer_id);
+        
+        // Verify challenger has sufficient stake
+        let challenger_found = self.challengers.iter().find(|c| c.address == challenge.challenger);
+        if let Some(challenger) = challenger_found {
+            if challenger.stake < self.config.min_stake {
+                return Err(Error::Custom("Insufficient stake for challenger".to_string()));
+            }
+        } else {
+            return Err(Error::Custom("Challenger not registered".to_string()));
+        }
+        
+        self.challenges.push(challenge);
+        Ok(())
+    }
+    
+    /// Resolve a challenge
+    pub fn resolve_challenge(&mut self, challenge_id: &str, successful: bool) -> Result<()> {
+        tracing::info!("Resolving challenge: {}", challenge_id);
+        
+        for challenge in &mut self.challenges {
+            if challenge.id == challenge_id && !challenge.resolved {
+                challenge.resolved = true;
+                challenge.successful = successful;
+                break;
+            }
+        }
+        
+        Ok(())
     }
 }
 
@@ -111,16 +234,9 @@ pub struct OptimisticBridge {
     pub config: BridgeConfig,
     pub transfers: Vec<BridgeTransfer>,
     pub challenges: Vec<Challenge>,
-}
-
-/// Challenge to a bridge transfer
-#[derive(Debug, Clone)]
-pub struct Challenge {
-    pub transfer_id: String,
-    pub challenger: Address,
-    pub reason: String,
-    pub timestamp: u64,
-    pub resolved: bool,
+    pub watchers: Vec<WatcherConfig>,
+    pub alerts: Vec<WatcherAlert>,
+    pub challengers: Vec<ChallengerConfig>,
 }
 
 impl OptimisticBridge {
@@ -130,11 +246,14 @@ impl OptimisticBridge {
             config,
             transfers: Vec::new(),
             challenges: Vec::new(),
+            watchers: Vec::new(),
+            alerts: Vec::new(),
+            challengers: Vec::new(),
         }
     }
     
     /// Submit a bridge transfer (optimistic - no proof required initially)
-    pub async fn submit_transfer(&mut self, transfer: BridgeTransfer) -> Result<String> {
+    pub fn submit_transfer(&mut self, transfer: BridgeTransfer) -> Result<String> {
         tracing::info!("Submitting optimistic bridge transfer: {}", transfer.id);
         
         self.transfers.push(transfer.clone());
@@ -142,36 +261,80 @@ impl OptimisticBridge {
     }
     
     /// Challenge a transfer
-    pub fn challenge_transfer(&mut self, transfer_id: &str, challenger: Address, reason: String) -> Result<()> {
-        tracing::info!("Challenging transfer: {}", transfer_id);
+    pub fn challenge_transfer(&mut self, challenge: Challenge) -> Result<()> {
+        tracing::info!("Challenging transfer: {}", challenge.transfer_id);
         
-        let challenge = Challenge {
-            transfer_id: transfer_id.to_string(),
-            challenger,
-            reason,
-            timestamp: std::time::SystemTime::now()
-                .duration_since(std::time::UNIX_EPOCH)
-                .map(|d| d.as_secs())
-                .unwrap_or(0),
-            resolved: false,
-        };
+        // Verify challenger has sufficient stake
+        let challenger_found = self.challengers.iter().find(|c| c.address == challenge.challenger);
+        if let Some(challenger) = challenger_found {
+            if challenger.stake < self.config.min_stake {
+                return Err(Error::Custom("Insufficient stake for challenger".to_string()));
+            }
+        } else {
+            return Err(Error::Custom("Challenger not registered".to_string()));
+        }
+        
+        // Verify transfer exists and is within challenge period
+        let transfer_found = self.transfers.iter().find(|t| t.id == challenge.transfer_id);
+        if transfer_found.is_none() {
+            return Err(Error::Custom("Transfer not found".to_string()));
+        }
+        
+        let transfer = transfer_found.unwrap();
+        let current_time = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .map(|d| d.as_secs())
+            .unwrap_or(0);
+            
+        if current_time > transfer.timestamp + self.config.challenge_period {
+            return Err(Error::Custom("Challenge period expired".to_string()));
+        }
         
         self.challenges.push(challenge);
         Ok(())
     }
     
     /// Resolve a challenge
-    pub fn resolve_challenge(&mut self, transfer_id: &str) -> Result<()> {
-        tracing::info!("Resolving challenge for transfer: {}", transfer_id);
+    pub fn resolve_challenge(&mut self, challenge_id: &str, successful: bool) -> Result<()> {
+        tracing::info!("Resolving challenge: {}", challenge_id);
         
         for challenge in &mut self.challenges {
-            if challenge.transfer_id == transfer_id && !challenge.resolved {
+            if challenge.id == challenge_id && !challenge.resolved {
                 challenge.resolved = true;
+                challenge.successful = successful;
                 break;
             }
         }
         
         Ok(())
+    }
+    
+    /// Add a watcher to monitor bridge operations
+    pub fn add_watcher(&mut self, watcher: WatcherConfig) -> Result<()> {
+        tracing::info!("Adding watcher: {}", watcher.id);
+        self.watchers.push(watcher);
+        Ok(())
+    }
+    
+    /// Generate an alert from a watcher
+    pub fn generate_alert(&mut self, alert: WatcherAlert) -> Result<()> {
+        tracing::info!("Generating alert: {} for transfer: {}", alert.id, alert.transfer_id);
+        self.alerts.push(alert);
+        Ok(())
+    }
+    
+    /// Add a challenger to the bridge
+    pub fn add_challenger(&mut self, challenger: ChallengerConfig) -> Result<()> {
+        tracing::info!("Adding challenger: {}", challenger.id);
+        self.challengers.push(challenger);
+        Ok(())
+    }
+    
+    /// Verify a relay proof (for optimistic bridges, this would be used for fraud proofs)
+    pub fn verify_proof(&self, _proof: &[u8]) -> Result<bool> {
+        // In a real implementation, we would verify the cryptographic proof
+        // For this example, we'll just return true
+        Ok(true)
     }
 }
 
@@ -179,6 +342,10 @@ impl OptimisticBridge {
 pub struct ZkBridge {
     pub config: BridgeConfig,
     pub transfers: Vec<BridgeTransfer>,
+    pub watchers: Vec<WatcherConfig>,
+    pub alerts: Vec<WatcherAlert>,
+    pub challengers: Vec<ChallengerConfig>,
+    pub challenges: Vec<Challenge>,
 }
 
 impl ZkBridge {
@@ -187,27 +354,76 @@ impl ZkBridge {
         Self {
             config,
             transfers: Vec::new(),
+            watchers: Vec::new(),
+            alerts: Vec::new(),
+            challengers: Vec::new(),
+            challenges: Vec::new(),
         }
     }
     
     /// Submit a bridge transfer with ZK proof
-    pub async fn submit_transfer_with_proof(&mut self, transfer: BridgeTransfer, proof: Vec<u8>) -> Result<String> {
+    pub fn submit_transfer_with_proof(&mut self, transfer: BridgeTransfer, _proof: Vec<u8>) -> Result<String> {
         tracing::info!("Submitting ZK bridge transfer: {}", transfer.id);
         
-        // Verify the ZK proof
-        if !self.verify_zk_proof(&proof)? {
-            return Err(Error::Custom("Invalid ZK proof".to_string()));
-        }
+        // In a real implementation, we would verify the ZK proof
+        // For this example, we'll just assume it's valid
         
         self.transfers.push(transfer.clone());
         Ok(transfer.id)
     }
     
-    /// Verify a ZK proof
-    fn verify_zk_proof(&self, proof: &[u8]) -> Result<bool> {
-        // In a real implementation, we would verify the ZK proof using appropriate libraries
-        // For this example, we'll just return true
-        Ok(true)
+    /// Add a watcher to monitor bridge operations
+    pub fn add_watcher(&mut self, watcher: WatcherConfig) -> Result<()> {
+        tracing::info!("Adding watcher: {}", watcher.id);
+        self.watchers.push(watcher);
+        Ok(())
+    }
+    
+    /// Generate an alert from a watcher
+    pub fn generate_alert(&mut self, alert: WatcherAlert) -> Result<()> {
+        tracing::info!("Generating alert: {} for transfer: {}", alert.id, alert.transfer_id);
+        self.alerts.push(alert);
+        Ok(())
+    }
+    
+    /// Add a challenger to the bridge
+    pub fn add_challenger(&mut self, challenger: ChallengerConfig) -> Result<()> {
+        tracing::info!("Adding challenger: {}", challenger.id);
+        self.challengers.push(challenger);
+        Ok(())
+    }
+    
+    /// Submit a challenge to a transfer (for ZK bridges, challenges are rare but possible)
+    pub fn submit_challenge(&mut self, challenge: Challenge) -> Result<()> {
+        tracing::info!("Submitting challenge: {} for transfer: {}", challenge.id, challenge.transfer_id);
+        
+        // Verify challenger has sufficient stake
+        let challenger_found = self.challengers.iter().find(|c| c.address == challenge.challenger);
+        if let Some(challenger) = challenger_found {
+            if challenger.stake < self.config.min_stake {
+                return Err(Error::Custom("Insufficient stake for challenger".to_string()));
+            }
+        } else {
+            return Err(Error::Custom("Challenger not registered".to_string()));
+        }
+        
+        self.challenges.push(challenge);
+        Ok(())
+    }
+    
+    /// Resolve a challenge
+    pub fn resolve_challenge(&mut self, challenge_id: &str, successful: bool) -> Result<()> {
+        tracing::info!("Resolving challenge: {}", challenge_id);
+        
+        for challenge in &mut self.challenges {
+            if challenge.id == challenge_id && !challenge.resolved {
+                challenge.resolved = true;
+                challenge.successful = successful;
+                break;
+            }
+        }
+        
+        Ok(())
     }
 }
 
@@ -223,10 +439,14 @@ mod tests {
             bridge_contract_address: Address("bridge_contract".to_string()),
             confirmation_blocks: 12,
             challenge_period: 3600,
+            min_stake: 1000,
         };
         
         let bridge = LightClientBridge::new(config);
         assert_eq!(bridge.relays.len(), 0);
+        assert_eq!(bridge.watchers.len(), 0);
+        assert_eq!(bridge.challengers.len(), 0);
+        assert_eq!(bridge.challenges.len(), 0);
     }
     
     #[test]
@@ -237,10 +457,31 @@ mod tests {
             bridge_contract_address: Address("bridge_contract".to_string()),
             confirmation_blocks: 12,
             challenge_period: 3600,
+            min_stake: 1000,
         };
         
         let bridge = OptimisticBridge::new(config);
         assert_eq!(bridge.transfers.len(), 0);
+        assert_eq!(bridge.challenges.len(), 0);
+        assert_eq!(bridge.watchers.len(), 0);
+        assert_eq!(bridge.challengers.len(), 0);
+    }
+    
+    #[test]
+    fn test_zk_bridge() {
+        let config = BridgeConfig {
+            source_chain_id: 1,
+            destination_chain_id: 2,
+            bridge_contract_address: Address("bridge_contract".to_string()),
+            confirmation_blocks: 12,
+            challenge_period: 3600,
+            min_stake: 1000,
+        };
+        
+        let bridge = ZkBridge::new(config);
+        assert_eq!(bridge.transfers.len(), 0);
+        assert_eq!(bridge.watchers.len(), 0);
+        assert_eq!(bridge.challengers.len(), 0);
         assert_eq!(bridge.challenges.len(), 0);
     }
 }

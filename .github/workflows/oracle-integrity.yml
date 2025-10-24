@@ -1,0 +1,151 @@
+name: Oracle Integrity Tests
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'crates/oracle/**'
+      - 'tests/oracle_integrity.rs'
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'crates/oracle/**'
+      - 'tests/oracle_integrity.rs'
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  oracle-integrity-tests:
+    name: Oracle Integrity Tests
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Install Rust
+      uses: actions-rs/toolchain@v1
+      with:
+        toolchain: stable
+        override: true
+    
+    - name: Cache cargo registry
+      uses: actions/cache@v3
+      with:
+        path: |
+          ~/.cargo/registry
+          ~/.cargo/git
+        key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
+    
+    - name: Cache cargo build
+      uses: actions/cache@v3
+      with:
+        path: target/
+        key: ${{ runner.os }}-cargo-build-target-${{ hashFiles('**/Cargo.lock') }}
+    
+    - name: Build oracle crate
+      run: |
+        cd crates/oracle
+        cargo build --release
+    
+    - name: Run oracle integrity tests
+      run: |
+        cargo test oracle_integrity -- --nocapture
+    
+    - name: Run unit tests
+      run: |
+        cd crates/oracle
+        cargo test --lib
+    
+    - name: Run documentation tests
+      run: |
+        cd crates/oracle
+        cargo test --doc
+
+  manipulation-staleness-tests:
+    name: Manipulation and Staleness Tests
+    runs-on: ubuntu-latest
+    needs: oracle-integrity-tests
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Install Rust
+      uses: actions-rs/toolchain@v1
+      with:
+        toolchain: stable
+        override: true
+    
+    - name: Cache cargo registry
+      uses: actions/cache@v3
+      with:
+        path: |
+          ~/.cargo/registry
+          ~/.cargo/git
+        key: ${{ runner.os }}-cargo-manipulation-${{ hashFiles('**/Cargo.lock') }}
+    
+    - name: Run manipulation tests
+      run: |
+        cargo test test_price_manipulation_detection
+        cargo test test_normal_price_movement
+    
+    - name: Run staleness tests
+      run: |
+        cargo test test_data_staleness
+        cargo test test_confidence_level
+
+  failover-drill-tests:
+    name: Failover Drill Tests
+    runs-on: ubuntu-latest
+    needs: oracle-integrity-tests
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Install Rust
+      uses: actions-rs/toolchain@v1
+      with:
+        toolchain: stable
+        override: true
+    
+    - name: Cache cargo registry
+      uses: actions/cache@v3
+      with:
+        path: |
+          ~/.cargo/registry
+          ~/.cargo/git
+        key: ${{ runner.os }}-cargo-failover-${{ hashFiles('**/Cargo.lock') }}
+    
+    - name: Run failover simulation tests
+      run: |
+        # These tests would simulate oracle failover scenarios
+        echo "Running failover drill tests..."
+        cargo test test_complete_integrity_check
+        cargo test test_integrity_check_with_failures
+
+  performance-tests:
+    name: Oracle Performance Tests
+    runs-on: ubuntu-latest
+    needs: oracle-integrity-tests
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Install Rust
+      uses: actions-rs/toolchain@v1
+      with:
+        toolchain: stable
+        override: true
+    
+    - name: Cache cargo registry
+      uses: actions/cache@v3
+      with:
+        path: |
+          ~/.cargo/registry
+          ~/.cargo/git
+        key: ${{ runner.os }}-cargo-performance-${{ hashFiles('**/Cargo.lock') }}
+    
+    - name: Run performance tests
+      run: |
+        cargo test test_integrity_check_performance --release
+        # Additional performance tests could be added here

@@ -27,6 +27,12 @@ ethers = "2.0"
 alloy = "0.1"
 reqwest = { version = "0.11", features = ["json"] }
 
+# Cryptography dependencies
+aes-gcm = "0.10"
+rand = "0.8"
+hex = "0.4"
+sha3 = "0.10"
+
 # Database related dependencies
 sqlx = { version = "0.7", features = ["runtime-tokio-rustls", "postgres", "uuid", "chrono", "json"] }
 redis = "0.24"

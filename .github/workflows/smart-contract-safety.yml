@@ -1,0 +1,95 @@
+name: Smart Contract Safety Tests
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'contracts/**'
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'contracts/**'
+
+jobs:
+  safety-tests:
+    name: Safety Tests
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Install Foundry
+      uses: foundry-rs/foundry-toolchain@v1
+    
+    - name: Install dependencies
+      run: |
+        cd contracts
+        forge install --no-commit openzeppelin/openzeppelin-contracts
+        forge install --no-commit foundry-rs/forge-std
+    
+    - name: Run safety tests
+      run: |
+        cd contracts
+        forge test -vvv
+    
+    - name: Run gas snapshot
+      run: |
+        cd contracts
+        forge snapshot
+    
+    - name: Check invariants
+      run: |
+        cd contracts
+        forge test --match-test invariant
+
+  static-analysis:
+    name: Static Analysis
+    runs-on: ubuntu-latest
+    needs: safety-tests
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Install Slither
+      run: |
+        pip3 install slither-analyzer
+        pip3 install solc-select
+        solc-select install 0.8.19
+        solc-select use 0.8.19
+    
+    - name: Run Slither analysis
+      run: |
+        cd contracts
+        slither . --triage-mode
+    
+    - name: Install Mythril
+      run: |
+        pip3 install mythril
+    
+    - name: Run Mythril analysis
+      run: |
+        cd contracts
+        mythril analyze src/core/SafeToken.sol
+        mythril analyze src/core/Vault.sol
+
+  fuzz-testing:
+    name: Fuzz Testing
+    runs-on: ubuntu-latest
+    needs: safety-tests
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Install Foundry
+      uses: foundry-rs/foundry-toolchain@v1
+    
+    - name: Install dependencies
+      run: |
+        cd contracts
+        forge install --no-commit openzeppelin/openzeppelin-contracts
+        forge install --no-commit foundry-rs/forge-std
+    
+    - name: Run fuzz tests
+      run: |
+        cd contracts
+        forge test --match-test testProperty --fuzz-runs 1000

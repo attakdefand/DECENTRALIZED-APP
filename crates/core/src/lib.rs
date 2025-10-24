@@ -2,6 +2,34 @@
 //!
 //! This crate contains shared components used across different modules of the dApp.
 
+pub mod risk;
+pub mod mev_mitigation;
+pub mod aa_security;
+pub mod tx_routing;
+pub mod rate_limiting;
+pub mod data_protection;
+pub mod data_integrity;
+pub mod rpc_resilience;
+pub mod container_hardening;
+pub mod supply_chain;
+pub mod observability;
+pub mod incident_response;
+pub mod logging;
+
+// Re-export key types
+pub use risk::{CollateralFactor, FeeRouter, InsuranceFund};
+pub use mev_mitigation::{PrivateRelayer, BatchAuctionEngine, Order, ExecutedTrade};
+pub use aa_security::{SessionKeyManager, PaymasterSecurityManager, UserOperation, SessionKey, Paymaster};
+pub use tx_routing::{TxRoutingManager, DeadlineHandler, Transaction, Permit, PrivateTxRelay, SubmissionResult, TxRoutingError};
+pub use rate_limiting::{TokenBucket, RateLimiter, IdempotencyManager, JobGuard, WAFRules, Request, WAFError, JobError};
+pub use data_protection::{FieldEncryption, PiiMap, DsrErasureManager, PiiField, PiiClassification, DsrRequest, DsrRequestType, DsrRequestStatus, EncryptionError};
+pub use data_integrity::{ContentItem, PinningService, HashAnchor, ContentSafetyPolicy, DataIntegrityError, DataIntegrityManager};
+pub use rpc_resilience::{RpcProvider, ProviderHealth, TlsConfig, FailoverPolicy, CircuitBreaker, CircuitBreakerState, RpcResilienceError, RpcResilienceManager};
+pub use container_hardening::{AdmissionPolicy, SeccompProfile, AppArmorProfile, SecretsManagement, SecretBackend, ContainerHardeningError, ContainerHardeningManager, ContainerConfig, PolicyViolation, ViolationSeverity};
+pub use supply_chain::{Sbom, Component, Vulnerability, Signature, Provenance, SupplyChainError, SupplyChainManager};
+pub use observability::{OtelCollector, PrometheusRule, SiemRule, SiemSeverity, AdminAuditLog, ObservabilityError, ObservabilityManager};
+pub use incident_response::{PauseKillSwitch, Backup, BackupType, BackupStatus, RestoreJob, RestoreStatus, CommunicationPlan, CommunicationChannel, EscalationStep, IncidentResponseError, IncidentResponseManager, IncidentAction};
+
 /// Common error types used across the application
 #[derive(Debug)]
 pub enum Error {
@@ -76,55 +104,5 @@ pub mod types {
     pub struct TokenAmount {
         pub value: u128,
         pub decimals: u8,
-    }
-}
-
-/// Configuration management
-pub mod config {
-    use serde::{Deserialize, Serialize};
-    use std::fs;
-    
-    /// Application configuration
-    #[derive(Debug, Clone, Serialize, Deserialize)]
-    pub struct Config {
-        pub rpc_url: String,
-        pub chain_id: u64,
-        pub database_url: String,
-    }
-    
-    impl Config {
-        /// Load configuration from a JSON file
-        pub fn load(path: &str) -> crate::Result<Self> {
-            let content = fs::read_to_string(path)?;
-            let config: Config = serde_json::from_str(&content)?;
-            Ok(config)
-        }
-    }
-}
-
-/// Logging and tracing utilities
-pub mod logging {
-    use tracing_subscriber::{fmt, EnvFilter};
-    
-    /// Initialize logging with default settings
-    pub fn init() {
-        let filter = EnvFilter::try_from_default_env()
-            .unwrap_or_else(|_| EnvFilter::new("info"));
-            
-        fmt::Subscriber::builder()
-            .with_env_filter(filter)
-            .init();
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_error_conversion() {
-        let io_error = std::io::Error::new(std::io::ErrorKind::Other, "test error");
-        let error: Error = io_error.into();
-        assert!(matches!(error, Error::Io(_)));
     }
 }

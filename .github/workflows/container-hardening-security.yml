@@ -1,0 +1,54 @@
+name: Container Hardening Security
+
+on:
+  push:
+    branches: [ main, develop ]
+    paths:
+      - 'crates/core/src/container_hardening.rs'
+      - 'crates/core/tests/container_hardening_integration.rs'
+      - 'tests/container_hardening_simulation.rs'
+      - '.github/workflows/container-hardening-security.yml'
+  pull_request:
+    branches: [ main, develop ]
+    paths:
+      - 'crates/core/src/container_hardening.rs'
+      - 'crates/core/tests/container_hardening_integration.rs'
+      - 'tests/container_hardening_simulation.rs'
+      - '.github/workflows/container-hardening-security.yml'
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Install Rust
+      uses: actions-rs/toolchain@v1
+      with:
+        toolchain: stable
+        profile: minimal
+        override: true
+
+    - name: Cache cargo registry
+      uses: actions/cache@v3
+      with:
+        path: |
+          ~/.cargo/registry
+          ~/.cargo/git
+          target
+        key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+
+    - name: Run container hardening integration tests
+      run: |
+        cd crates/core
+        cargo test --test container_hardening_integration
+
+    - name: Run container hardening simulation tests
+      run: |
+        cd crates/core
+        cargo run --bin container_hardening_simulation
+
+    - name: Check documentation
+      run: |
+        cd crates/core
+        cargo doc --no-deps --document-private-items

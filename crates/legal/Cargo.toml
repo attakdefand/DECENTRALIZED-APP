@@ -1,0 +1,26 @@
+[package]
+name = "legal"
+version = "0.1.0"
+edition = "2021"
+license = "MIT OR Apache-2.0"
+description = "Legal compliance implementation for DECENTRALIZED-APP"
+
+[dependencies]
+tokio = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+anyhow = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }
+
+ethers = { workspace = true }
+alloy = { workspace = true }
+
+core = { path = "../core" }
+
+[lib]
+crate-type = ["rlib"]
+
+[[bin]]
+name = "legal_compliance_simulation"
+path = "src/bin/legal_compliance_simulation.rs"

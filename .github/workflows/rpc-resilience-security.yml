@@ -1,0 +1,45 @@
+name: RPC Resilience Security Tests
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'crates/core/src/rpc_resilience.rs'
+      - 'tests/rpc_resilience_simulation.rs'
+      - '.github/workflows/rpc-resilience-security.yml'
+  pull_request:
+    paths:
+      - 'crates/core/src/rpc_resilience.rs'
+      - 'tests/rpc_resilience_simulation.rs'
+      - '.github/workflows/rpc-resilience-security.yml'
+
+jobs:
+  rpc-resilience-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Install Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          override: true
+
+      - name: Run Rust RPC resilience tests
+        run: |
+          cargo test -p core rpc_resilience
+
+      - name: Run RPC resilience integration tests
+        run: |
+          cargo test -p core --test rpc_resilience_integration
+
+      - name: Run RPC resilience simulation tests
+        run: |
+          cargo test --test rpc_resilience_simulation
+
+      - name: Run RPC resilience security simulation tests
+        run: |
+          chmod +x scripts/run-rpc-resilience-tests.sh
+          ./scripts/run-rpc-resilience-tests.sh

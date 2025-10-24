@@ -30,6 +30,7 @@ opentelemetry = { workspace = true }
 opentelemetry_sdk = { workspace = true }
 tracing-opentelemetry = { workspace = true }
 opentelemetry-prometheus = { workspace = true }
+opentelemetry-stdout = { workspace = true }
 
 # Local dependencies
 core = { path = "../../crates/core" }

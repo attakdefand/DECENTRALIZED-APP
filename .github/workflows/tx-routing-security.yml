@@ -1,0 +1,47 @@
+name: Transaction Routing Security Tests
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'contracts/src/core/ReplayProtection.sol'
+      - 'contracts/test/core/TxRoutingTests.sol'
+      - 'crates/core/src/tx_routing.rs'
+      - '.github/workflows/tx-routing-security.yml'
+  pull_request:
+    paths:
+      - 'contracts/src/core/ReplayProtection.sol'
+      - 'contracts/test/core/TxRoutingTests.sol'
+      - 'crates/core/src/tx_routing.rs'
+      - '.github/workflows/tx-routing-security.yml'
+
+jobs:
+  tx-routing-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Install Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          override: true
+
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
+
+      - name: Run Rust TX routing tests
+        run: |
+          cargo test -p core tx_routing
+
+      - name: Run Solidity TX routing tests
+        run: |
+          cd contracts
+          forge test --match-contract TxRoutingTests -vvv
+
+      - name: Run TX routing security simulation tests
+        run: |
+          chmod +x scripts/run-tx-routing-tests.sh
+          ./scripts/run-tx-routing-tests.sh
