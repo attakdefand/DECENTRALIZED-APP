@@ -1,0 +1,44 @@
+name: Web UI Fix
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'web-ui/**'
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'web-ui/**'
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Install Rust
+      uses: actions-rs/toolchain@v1
+      with:
+        toolchain: stable
+        target: wasm32-unknown-unknown
+        override: true
+        
+    - name: Install wasm-pack
+      run: |
+        curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+        
+    - name: Check code formatting
+      run: |
+        cd web-ui
+        cargo fmt -- --check
+        
+    - name: Run clippy
+      run: |
+        cd web-ui
+        cargo clippy -- -D warnings
+        
+    - name: Build WebAssembly package
+      run: |
+        cd web-ui
+        wasm-pack build --target web
