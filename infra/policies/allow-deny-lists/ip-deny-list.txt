@@ -1,0 +1,11 @@
+# IP Deny List
+# List of IP addresses blocked from accessing systems
+
+# Known Malicious Networks
+1.2.3.4         # Known attacker
+5.6.7.8         # Malware distribution
+9.10.11.12      # Botnet command and control
+
+# Suspicious Networks
+100.0.0.0/8     # Private network in public space
+127.0.0.0/8     # Loopback addresses (should not appear in logs)

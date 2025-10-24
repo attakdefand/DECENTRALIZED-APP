@@ -39,6 +39,15 @@ axum = "0.7"
 tower = "0.5"
 tower-http = "0.5"
 
+# Observability dependencies
+opentelemetry = "0.21"
+opentelemetry_sdk = { version = "0.21", features = ["rt-tokio"] }
+opentelemetry-stdout = { version = "0.1", features = ["logs"] }
+opentelemetry-jaeger = "0.20"
+tracing-opentelemetry = "0.22"
+opentelemetry-prometheus = "0.14"
+prometheus-client = "0.22"
+
 [profile.release]
 panic = "abort"
 codegen-units = 1

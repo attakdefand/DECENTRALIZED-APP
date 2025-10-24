@@ -25,6 +25,16 @@ use std::sync::Arc;
 use tokio::sync::Mutex;
 use std::time::Instant;
 
+// Add OpenTelemetry imports
+use opentelemetry::{
+    global,
+    trace::{TraceContextExt, Tracer},
+    Context, KeyValue,
+};
+use opentelemetry_sdk::{trace::TracerProvider, Resource};
+use tracing_opentelemetry::OpenTelemetrySpanExt;
+use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt, EnvFilter};
+
 // Create a struct to hold our metrics
 #[derive(Clone)]
 struct Metrics {
@@ -42,6 +52,9 @@ struct AppState {
 
 #[tokio::main]
 async fn main() -> Result<()> {
+    // Initialize OpenTelemetry tracing
+    init_tracing();
+    
     // Initialize logging
     logging::init();
     
@@ -121,6 +134,22 @@ async fn main() -> Result<()> {
     Ok(())
 }
 
+// Initialize OpenTelemetry tracing
+fn init_tracing() {
+    // Create a Jaeger tracer
+    let tracer = opentelemetry_jaeger::new_agent_pipeline()
+        .with_service_name("api-service")
+        .install_simple()
+        .expect("Failed to install OpenTelemetry tracer");
+    
+    // Create a tracing subscriber
+    tracing_subscriber::registry()
+        .with(EnvFilter::try_from_default_env().unwrap_or_else(|_| "info".into()))
+        .with(tracing_subscriber::fmt::layer())
+        .with(tracing_opentelemetry::layer().with_tracer(tracer))
+        .init();
+}
+
 // Middleware to track request metrics
 async fn track_metrics(
     State(state): State<AppState>,
@@ -130,6 +159,14 @@ async fn track_metrics(
     let start = Instant::now();
     let method = request.method().clone();
     let path = request.uri().path().to_string();
+    
+    // Create a span for this request
+    let span = tracing::info_span!(
+        "http_request",
+        method = %method,
+        path = %path,
+    );
+    let _enter = span.enter();
     
     state.metrics.total_requests.inc();
     
@@ -168,22 +205,51 @@ async fn track_metrics(
 
 // Basic route handlers
 async fn root() -> &'static str {
+    // Add a trace for this endpoint
+    let span = tracing::info_span!("root_endpoint");
+    let _enter = span.enter();
+    
     "Decentralized Application API Service"
 }
 
 async fn health_check() -> &'static str {
+    // Add a trace for this endpoint
+    let span = tracing::info_span!("health_check_endpoint");
+    let _enter = span.enter();
+    
     "OK"
 }
 
 async fn get_pools() -> &'static str {
+    // Add a trace for this endpoint
+    let span = tracing::info_span!("get_pools_endpoint");
+    let _enter = span.enter();
+    
+    // Simulate some work
+    tokio::time::sleep(tokio::time::Duration::from_millis(10)).await;
+    
     "Pool data would be returned here"
 }
 
 async fn get_orders() -> &'static str {
+    // Add a trace for this endpoint
+    let span = tracing::info_span!("get_orders_endpoint");
+    let _enter = span.enter();
+    
+    // Simulate some work
+    tokio::time::sleep(tokio::time::Duration::from_millis(15)).await;
+    
     "Order data would be returned here"
 }
 
 async fn get_markets() -> &'static str {
+    // Add a trace for this endpoint
+    let span = tracing::info_span!("get_markets_endpoint");
+    let _enter = span.enter();
+    
+    // Simulate some work
+    tokio::time::sleep(tokio::time::Duration::from_millis(20)).await;
+    
     "Market data would be returned here"
 }
 

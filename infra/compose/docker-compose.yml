@@ -141,6 +141,27 @@ services:
       - GF_SECURITY_ADMIN_PASSWORD=admin
       - GF_USERS_ALLOW_SIGN_UP=false
 
+  # Jaeger for distributed tracing
+  jaeger:
+    image: jaegertracing/all-in-one:latest
+    container_name: dex-jaeger
+    ports:
+      - "16686:16686"  # UI
+      - "14268:14268"  # Accepts jaeger.thrift directly from clients
+      - "14250:14250"  # Accepts model.proto for gRPC
+      - "6831:6831/udp"  # Accepts jaeger.thrift in compact Thrift protocol
+    environment:
+      - COLLECTOR_ZIPKIN_HOST_PORT=:9411
+
+  # Pushgateway for synthetic test metrics
+  pushgateway:
+    image: prom/pushgateway:latest
+    container_name: dex-pushgateway
+    ports:
+      - "9091:9091"
+    volumes:
+      - pushgateway_data:/data
+
 volumes:
   postgres_data:
   clickhouse_data:
@@ -149,3 +170,4 @@ volumes:
   ipfs_data:
   prometheus_data:
   grafana_data:
+  pushgateway_data:

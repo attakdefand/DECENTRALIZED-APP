@@ -22,7 +22,13 @@ sqlx = { workspace = true }
 axum = "0.7"
 
 # Metrics
-prometheus-client = "0.22"
+prometheus-client = { workspace = true }
+
+# Observability
+opentelemetry = { workspace = true }
+opentelemetry_sdk = { workspace = true }
+tracing-opentelemetry = { workspace = true }
+opentelemetry-prometheus = { workspace = true }
 
 # Local dependencies
 core = { path = "../../crates/core" }

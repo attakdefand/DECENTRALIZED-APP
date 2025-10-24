@@ -396,3 +396,26 @@ jobs:
         # git checkout HEAD~1
         # forge inspect MyContract bytecode > bytecode_old.txt
         # diff bytecode_old.txt bytecode_new.txt
+
+  policy-validation:
+    name: Policy Validation
+    runs-on: ubuntu-latest
+    needs: build-and-test
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Run policy validation tests
+      run: |
+        chmod +x tests/policy-tests/policy-validation.sh
+        ./tests/policy-tests/policy-validation.sh
+    
+    - name: Run policy lint checks
+      run: |
+        chmod +x scripts/policy-lint.sh
+        ./scripts/policy-lint.sh
+    
+    - name: Verify policy bundle signatures
+      run: |
+        chmod +x scripts/verify-policy-bundle.sh
+        ./scripts/verify-policy-bundle.sh

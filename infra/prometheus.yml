@@ -39,3 +39,9 @@ scrape_configs:
     scrape_interval: 30s
     static_configs:
       - targets: ['aa-bundler-service:9095']
+
+  # Jaeger for tracing
+  - job_name: 'jaeger'
+    scrape_interval: 15s
+    static_configs:
+      - targets: ['jaeger:14269']
