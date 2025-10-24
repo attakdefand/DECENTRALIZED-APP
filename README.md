@@ -70,6 +70,69 @@ A comprehensive decentralized application built with Rust, featuring smart contr
 - Docker compose files
 - Kubernetes manifests
 
+## Complete Cross-Platform Installation
+
+The application provides a seamless installation experience across Windows, macOS, and Linux platforms.
+
+### Quick Installation
+
+#### Windows
+
+1. Download or clone this repository
+2. Open PowerShell as Administrator
+3. Navigate to the project directory
+4. Run the installer:
+   ```powershell
+   .\install.ps1
+   ```
+5. Restart your terminal or log out and back in for PATH changes to take effect
+
+#### Linux/macOS
+
+1. Download or clone this repository
+2. Open a terminal
+3. Navigate to the project directory
+4. Make the installer executable:
+   ```bash
+   chmod +x install.sh
+   ```
+5. Run the installer:
+   ```bash
+   ./install.sh
+   ```
+
+### Using Pre-built Packages
+
+Download pre-built packages from the [Releases page](https://github.com/attakdefand/DECENTRALIZED-APP/releases):
+
+1. Download the package for your platform
+2. Extract the archive
+3. Run the installer in the extracted directory
+
+## Usage
+
+After installation, you can use the `dex` command to manage the application:
+
+```bash
+# Initialize the application
+dex init
+
+# Start all services
+dex start
+
+# Start specific services
+dex start --services api,indexer
+
+# Check service status
+dex status
+
+# Stop all services
+dex stop
+
+# Get help
+dex --help
+```
+
 ## Getting Started
 
 ### Prerequisites
@@ -134,6 +197,7 @@ To use our packages, see the [packages documentation](docs/packages.md) and [pac
 The project includes several tools to streamline development:
 
 - **Release Scripts**: Automated release creation ([create-release.sh](scripts/create-release.sh), [create-release.ps1](scripts/create-release.ps1))
+- **Package Scripts**: Create distributable packages ([package.sh](scripts/package.sh), [package.ps1](scripts/package.ps1))
 - **Makefile**: Common development commands (`make build`, `make test`, etc.)
 - **PowerShell Makefile**: Windows equivalent of Makefile ([Makefile.ps1](Makefile.ps1))
 
@@ -147,6 +211,10 @@ The project includes several tools to streamline development:
 - [Releases](docs/releases.md)
 - [Packages](docs/packages.md)
 - [Package Usage Examples](docs/package_usage_example.md)
+- [Installation Guide](install/README.md)
+- [Complete Installation Guide](docs/complete_installation_guide.md)
+- [CLI Usage Examples](docs/cli_usage_example.md)
+- [Cross-Platform Installation System](docs/cross_platform_installation.md)
 - [Contributing Guidelines](docs/contributing.md)
 - [Code of Conduct](docs/code_of_conduct.md)
 

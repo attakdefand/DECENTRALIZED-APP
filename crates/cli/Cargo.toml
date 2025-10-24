@@ -1,15 +1,18 @@
 [package]
-name = "decentralized-app-cli"
+name = "dex-cli"
 version = "0.1.0"
 edition = "2021"
 license = "MIT OR Apache-2.0"
-description = "CLI for the decentralized application"
+description = "Command-line interface for the Decentralized Exchange application"
 
 [dependencies]
-tokio = { workspace = true }
+tokio = { workspace = true, features = ["full"] }
+clap = { version = "4.0", features = ["derive"] }
 anyhow = { workspace = true }
-clap = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+serde = { workspace = true, features = ["derive"] }
+serde_json = { workspace = true }
 
-[[bin]]
-name = "dex"
-path = "src/main.rs"
+# Local dependencies
+core = { path = "../core" }
