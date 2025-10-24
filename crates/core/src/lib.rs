@@ -2,33 +2,62 @@
 //!
 //! This crate contains shared components used across different modules of the dApp.
 
-pub mod risk;
-pub mod mev_mitigation;
 pub mod aa_security;
-pub mod tx_routing;
-pub mod rate_limiting;
-pub mod data_protection;
-pub mod data_integrity;
-pub mod rpc_resilience;
 pub mod container_hardening;
-pub mod supply_chain;
-pub mod observability;
+pub mod data_integrity;
+pub mod data_protection;
 pub mod incident_response;
 pub mod logging;
+pub mod mev_mitigation;
+pub mod observability;
+pub mod rate_limiting;
+pub mod risk;
+pub mod rpc_resilience;
+pub mod supply_chain;
+pub mod tx_routing;
 
 // Re-export key types
+pub use aa_security::{
+    Paymaster, PaymasterSecurityManager, SessionKey, SessionKeyManager, UserOperation,
+};
+pub use container_hardening::{
+    AdmissionPolicy, AppArmorProfile, ContainerConfig, ContainerHardeningError,
+    ContainerHardeningManager, PolicyViolation, SeccompProfile, SecretBackend, SecretsManagement,
+    ViolationSeverity,
+};
+pub use data_integrity::{
+    ContentItem, ContentSafetyPolicy, DataIntegrityError, DataIntegrityManager, HashAnchor,
+    PinningService,
+};
+pub use data_protection::{
+    DsrErasureManager, DsrRequest, DsrRequestStatus, DsrRequestType, EncryptionError,
+    FieldEncryption, PiiClassification, PiiField, PiiMap,
+};
+pub use incident_response::{
+    Backup, BackupStatus, BackupType, CommunicationChannel, CommunicationPlan, EscalationStep,
+    IncidentAction, IncidentResponseError, IncidentResponseManager, PauseKillSwitch, RestoreJob,
+    RestoreStatus,
+};
+pub use mev_mitigation::{BatchAuctionEngine, ExecutedTrade, Order, PrivateRelayer};
+pub use observability::{
+    AdminAuditLog, ObservabilityError, ObservabilityManager, OtelCollector, PrometheusRule,
+    SiemRule, SiemSeverity,
+};
+pub use rate_limiting::{
+    IdempotencyManager, JobError, JobGuard, RateLimiter, Request, TokenBucket, WAFError, WAFRules,
+};
 pub use risk::{CollateralFactor, FeeRouter, InsuranceFund};
-pub use mev_mitigation::{PrivateRelayer, BatchAuctionEngine, Order, ExecutedTrade};
-pub use aa_security::{SessionKeyManager, PaymasterSecurityManager, UserOperation, SessionKey, Paymaster};
-pub use tx_routing::{TxRoutingManager, DeadlineHandler, Transaction, Permit, PrivateTxRelay, SubmissionResult, TxRoutingError};
-pub use rate_limiting::{TokenBucket, RateLimiter, IdempotencyManager, JobGuard, WAFRules, Request, WAFError, JobError};
-pub use data_protection::{FieldEncryption, PiiMap, DsrErasureManager, PiiField, PiiClassification, DsrRequest, DsrRequestType, DsrRequestStatus, EncryptionError};
-pub use data_integrity::{ContentItem, PinningService, HashAnchor, ContentSafetyPolicy, DataIntegrityError, DataIntegrityManager};
-pub use rpc_resilience::{RpcProvider, ProviderHealth, TlsConfig, FailoverPolicy, CircuitBreaker, CircuitBreakerState, RpcResilienceError, RpcResilienceManager};
-pub use container_hardening::{AdmissionPolicy, SeccompProfile, AppArmorProfile, SecretsManagement, SecretBackend, ContainerHardeningError, ContainerHardeningManager, ContainerConfig, PolicyViolation, ViolationSeverity};
-pub use supply_chain::{Sbom, Component, Vulnerability, Signature, Provenance, SupplyChainError, SupplyChainManager};
-pub use observability::{OtelCollector, PrometheusRule, SiemRule, SiemSeverity, AdminAuditLog, ObservabilityError, ObservabilityManager};
-pub use incident_response::{PauseKillSwitch, Backup, BackupType, BackupStatus, RestoreJob, RestoreStatus, CommunicationPlan, CommunicationChannel, EscalationStep, IncidentResponseError, IncidentResponseManager, IncidentAction};
+pub use rpc_resilience::{
+    CircuitBreaker, CircuitBreakerState, FailoverPolicy, ProviderHealth, RpcProvider,
+    RpcResilienceError, RpcResilienceManager, TlsConfig,
+};
+pub use supply_chain::{
+    Component, Provenance, Sbom, Signature, SupplyChainError, SupplyChainManager, Vulnerability,
+};
+pub use tx_routing::{
+    DeadlineHandler, Permit, PrivateTxRelay, SubmissionResult, Transaction, TxRoutingError,
+    TxRoutingManager,
+};
 
 /// Common error types used across the application
 #[derive(Debug)]
@@ -94,11 +123,11 @@ pub type Result<T> = std::result::Result<T, Error>;
 /// Common types used across the application
 pub mod types {
     use serde::{Deserialize, Serialize};
-    
+
     /// Represents a blockchain address
     #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
     pub struct Address(pub String);
-    
+
     /// Represents a token amount with decimals
     #[derive(Debug, Clone, Serialize, Deserialize)]
     pub struct TokenAmount {

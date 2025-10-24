@@ -156,10 +156,18 @@ pub enum SupplyChainError {
 impl fmt::Display for SupplyChainError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
-            SupplyChainError::SbomGenerationFailed(msg) => write!(f, "SBOM generation failed: {}", msg),
-            SupplyChainError::SignatureVerificationFailed(msg) => write!(f, "Signature verification failed: {}", msg),
-            SupplyChainError::ProvenanceValidationFailed(msg) => write!(f, "Provenance validation failed: {}", msg),
-            SupplyChainError::DependencyScanFailed(msg) => write!(f, "Dependency scan failed: {}", msg),
+            SupplyChainError::SbomGenerationFailed(msg) => {
+                write!(f, "SBOM generation failed: {}", msg)
+            }
+            SupplyChainError::SignatureVerificationFailed(msg) => {
+                write!(f, "Signature verification failed: {}", msg)
+            }
+            SupplyChainError::ProvenanceValidationFailed(msg) => {
+                write!(f, "Provenance validation failed: {}", msg)
+            }
+            SupplyChainError::DependencyScanFailed(msg) => {
+                write!(f, "Dependency scan failed: {}", msg)
+            }
             SupplyChainError::ConfigurationError(msg) => write!(f, "Configuration error: {}", msg),
         }
     }
@@ -192,7 +200,7 @@ impl SupplyChainManager {
         // In a real implementation, this would scan the project dependencies
         // and generate a comprehensive SBOM. For this example, we'll create
         // a simple placeholder SBOM.
-        
+
         let components = vec![
             Component {
                 id: "component-1".to_string(),
@@ -243,7 +251,7 @@ impl SupplyChainManager {
     pub fn create_signature(&self, artifact_hash: &str) -> Result<Signature, SupplyChainError> {
         // In a real implementation, this would use actual cryptographic signing
         // For this example, we'll create a placeholder signature
-        
+
         let signature = Signature {
             algorithm: "RSA-SHA256".to_string(),
             public_key: "public-key-placeholder".to_string(),
@@ -255,13 +263,21 @@ impl SupplyChainManager {
     }
 
     /// Store a signature
-    pub fn store_signature(&mut self, artifact_uri: &str, signature: Signature) -> Result<(), SupplyChainError> {
+    pub fn store_signature(
+        &mut self,
+        artifact_uri: &str,
+        signature: Signature,
+    ) -> Result<(), SupplyChainError> {
         self.signatures.insert(artifact_uri.to_string(), signature);
         Ok(())
     }
 
     /// Verify a signature
-    pub fn verify_signature(&self, artifact_hash: &str, signature: &Signature) -> Result<bool, SupplyChainError> {
+    pub fn verify_signature(
+        &self,
+        artifact_hash: &str,
+        signature: &Signature,
+    ) -> Result<bool, SupplyChainError> {
         // In a real implementation, this would perform actual cryptographic verification
         // For this example, we'll just check if the signature matches our placeholder format
         let expected_signature = format!("signature-for-{}", artifact_hash);
@@ -269,7 +285,13 @@ impl SupplyChainManager {
     }
 
     /// Create provenance information for a build
-    pub fn create_provenance(&self, build_id: &str, source: SourceInfo, build_config: BuildConfig, artifacts: Vec<Artifact>) -> Result<Provenance, SupplyChainError> {
+    pub fn create_provenance(
+        &self,
+        build_id: &str,
+        source: SourceInfo,
+        build_config: BuildConfig,
+        artifacts: Vec<Artifact>,
+    ) -> Result<Provenance, SupplyChainError> {
         let provenance = Provenance {
             id: format!("prov-{}", build_id),
             build_id: build_id.to_string(),
@@ -355,7 +377,7 @@ mod tests {
         let mut manager = SupplyChainManager::new();
         let sbom = manager.generate_sbom("test-component", "1.0.0").unwrap();
         let sbom_id = sbom.id.clone();
-        
+
         assert!(manager.store_sbom(sbom).is_ok());
         assert_eq!(manager.sboms.len(), 1);
         assert!(manager.get_sbom(&sbom_id).is_some());
@@ -365,12 +387,14 @@ mod tests {
     fn test_signature_creation_and_verification() {
         let manager = SupplyChainManager::new();
         let artifact_hash = "sha256:test123";
-        
+
         let signature = manager.create_signature(artifact_hash).unwrap();
         assert!(manager.verify_signature(artifact_hash, &signature).unwrap());
-        
+
         // Test with wrong hash
-        assert!(!manager.verify_signature("sha256:wrong", &signature).unwrap());
+        assert!(!manager
+            .verify_signature("sha256:wrong", &signature)
+            .unwrap());
     }
 
     #[test]
@@ -378,7 +402,7 @@ mod tests {
         let mut manager = SupplyChainManager::new();
         let artifact_uri = "artifact://test";
         let signature = manager.create_signature("sha256:test123").unwrap();
-        
+
         assert!(manager.store_signature(artifact_uri, signature).is_ok());
         assert_eq!(manager.signatures.len(), 1);
     }
@@ -386,30 +410,32 @@ mod tests {
     #[test]
     fn test_provenance_creation_storage_and_retrieval() {
         let mut manager = SupplyChainManager::new();
-        
+
         let source = SourceInfo {
             repo_url: "https://github.com/example/repo".to_string(),
             commit_hash: "abc123".to_string(),
             branch: "main".to_string(),
             tag: Some("v1.0.0".to_string()),
         };
-        
+
         let build_config = BuildConfig {
             build_script: "build.sh".to_string(),
             environment: HashMap::new(),
             tools: HashMap::new(),
         };
-        
+
         let artifacts = vec![Artifact {
             name: "test-artifact".to_string(),
             uri: "artifact://test".to_string(),
             hash: "sha256:test123".to_string(),
             size: 1024,
         }];
-        
-        let provenance = manager.create_provenance("build-123", source, build_config, artifacts).unwrap();
+
+        let provenance = manager
+            .create_provenance("build-123", source, build_config, artifacts)
+            .unwrap();
         let provenance_id = provenance.id.clone();
-        
+
         assert!(manager.store_provenance(provenance).is_ok());
         assert_eq!(manager.provenance.len(), 1);
         assert!(manager.get_provenance(&provenance_id).is_some());

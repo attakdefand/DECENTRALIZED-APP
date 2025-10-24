@@ -2,10 +2,10 @@
 //!
 //! This module contains reusable UI components.
 
-pub mod navigation;
-pub mod pool_card;
-pub mod order_table;
 pub mod market_chart;
+pub mod navigation;
+pub mod order_table;
+pub mod pool_card;
 
 #[cfg(test)]
 mod tests {

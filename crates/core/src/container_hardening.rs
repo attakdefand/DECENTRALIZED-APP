@@ -176,10 +176,18 @@ pub enum ContainerHardeningError {
 impl std::fmt::Display for ContainerHardeningError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            ContainerHardeningError::PolicyNotFound(name) => write!(f, "Policy not found: {}", name),
-            ContainerHardeningError::ProfileNotFound(name) => write!(f, "Profile not found: {}", name),
-            ContainerHardeningError::SecretNotFound(name) => write!(f, "Secret not found: {}", name),
-            ContainerHardeningError::ConfigurationError(msg) => write!(f, "Configuration error: {}", msg),
+            ContainerHardeningError::PolicyNotFound(name) => {
+                write!(f, "Policy not found: {}", name)
+            }
+            ContainerHardeningError::ProfileNotFound(name) => {
+                write!(f, "Profile not found: {}", name)
+            }
+            ContainerHardeningError::SecretNotFound(name) => {
+                write!(f, "Secret not found: {}", name)
+            }
+            ContainerHardeningError::ConfigurationError(msg) => {
+                write!(f, "Configuration error: {}", msg)
+            }
             ContainerHardeningError::GenericError(msg) => write!(f, "Error: {}", msg),
         }
     }
@@ -268,9 +276,12 @@ impl ContainerHardeningManager {
     }
 
     /// Validate container configuration against policies
-    pub fn validate_container_config(&self, container_config: &ContainerConfig) -> Result<Vec<PolicyViolation>, ContainerHardeningError> {
+    pub fn validate_container_config(
+        &self,
+        container_config: &ContainerConfig,
+    ) -> Result<Vec<PolicyViolation>, ContainerHardeningError> {
         let mut violations = Vec::new();
-        
+
         // Check each policy
         for policy in self.policies.values() {
             if policy.enabled {
@@ -281,12 +292,16 @@ impl ContainerHardeningManager {
                 }
             }
         }
-        
+
         Ok(violations)
     }
 
     /// Check if a rule is violated by a container configuration
-    fn check_rule_violation(&self, rule: &PolicyRule, container_config: &ContainerConfig) -> Option<PolicyViolation> {
+    fn check_rule_violation(
+        &self,
+        rule: &PolicyRule,
+        container_config: &ContainerConfig,
+    ) -> Option<PolicyViolation> {
         // This is a simplified implementation
         // In a real implementation, this would evaluate the rule expression
         // against the container configuration
@@ -295,9 +310,9 @@ impl ContainerHardeningManager {
                 // For demonstration, we'll create a violation if the container
                 // is configured to run as privileged, but only for rules that
                 // specifically check for privileged containers
-                if container_config.privileged && 
-                   (rule.name.contains("privileged") || 
-                    rule.expression.contains("privileged")) {
+                if container_config.privileged
+                    && (rule.name.contains("privileged") || rule.expression.contains("privileged"))
+                {
                     Some(PolicyViolation {
                         policy_name: "default".to_string(),
                         rule_name: rule.name.clone(),
@@ -316,7 +331,10 @@ impl ContainerHardeningManager {
     pub fn rotate_secrets(&self) -> Result<(), ContainerHardeningError> {
         // In a real implementation, this would connect to the secret backend
         // and rotate secrets according to the rotation interval
-        println!("Rotating secrets using {:?} backend", self.secrets_management.backend);
+        println!(
+            "Rotating secrets using {:?} backend",
+            self.secrets_management.backend
+        );
         Ok(())
     }
 }

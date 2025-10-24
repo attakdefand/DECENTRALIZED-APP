@@ -55,7 +55,10 @@ impl PoolsService {
     }
 
     /// Create a new pool
-    pub async fn create_pool(&self, request: CreatePoolRequest) -> Result<CreatePoolResponse, anyhow::Error> {
+    pub async fn create_pool(
+        &self,
+        request: CreatePoolRequest,
+    ) -> Result<CreatePoolResponse, anyhow::Error> {
         self.client.post("/pools", &request).await
     }
 }
@@ -77,7 +80,7 @@ mod tests {
             volume_24h: 50000.0,
             apr: 0.15,
         };
-        
+
         assert_eq!(pool.id, "pool-1");
         assert_eq!(pool.token_a, "ETH");
         assert_eq!(pool.token_b, "USDC");
@@ -90,7 +93,7 @@ mod tests {
     fn test_pools_service_creation() {
         let client = ApiClient::new("http://localhost:3000/api/v1".to_string());
         let pools_service = PoolsService::new(client);
-        
+
         // This is a simple test to ensure the service can be created
         assert!(true);
     }

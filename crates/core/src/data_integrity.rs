@@ -5,7 +5,7 @@
 
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use std::time::{SystemTime, UNIX_EPOCH};
+
 
 /// Represents a content item stored in decentralized storage
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -95,19 +95,17 @@ pub struct DataIntegrityManager {
     hash_anchors: HashMap<String, HashAnchor>,
     /// Content safety policy
     safety_policy: ContentSafetyPolicy,
-    /// Pin coverage threshold
-    pin_coverage_threshold: f64,
+
 }
 
 impl DataIntegrityManager {
     /// Create a new data integrity manager
-    pub fn new(safety_policy: ContentSafetyPolicy, pin_coverage_threshold: f64) -> Self {
+    pub fn new(safety_policy: ContentSafetyPolicy) -> Self {
         Self {
             content_items: HashMap::new(),
             pinning_services: HashMap::new(),
             hash_anchors: HashMap::new(),
             safety_policy,
-            pin_coverage_threshold,
         }
     }
 
@@ -129,7 +127,11 @@ impl DataIntegrityManager {
         }
 
         // Check file type
-        if !self.safety_policy.allowed_types.contains(&item.content_type) {
+        if !self
+            .safety_policy
+            .allowed_types
+            .contains(&item.content_type)
+        {
             return Err(DataIntegrityError::ContentSafetyViolation);
         }
 
@@ -164,7 +166,9 @@ impl DataIntegrityManager {
 
     /// Check pin coverage for a content item
     pub fn check_pin_coverage(&self, cid: &str) -> Result<f64, DataIntegrityError> {
-        let item = self.content_items.get(cid)
+        let item = self
+            .content_items
+            .get(cid)
             .ok_or(DataIntegrityError::ContentNotFound)?;
 
         // Calculate coverage based on available pinning services
@@ -179,8 +183,14 @@ impl DataIntegrityManager {
     }
 
     /// Verify content integrity
-    pub fn verify_content_integrity(&self, cid: &str, expected_cid: &str) -> Result<bool, DataIntegrityError> {
-        let item = self.content_items.get(cid)
+    pub fn verify_content_integrity(
+        &self,
+        cid: &str,
+        expected_cid: &str,
+    ) -> Result<bool, DataIntegrityError> {
+        let item = self
+            .content_items
+            .get(cid)
             .ok_or(DataIntegrityError::ContentNotFound)?;
 
         // Verify CID matches
@@ -215,7 +225,11 @@ impl DataIntegrityManager {
     /// Check if content meets safety requirements
     pub fn is_content_safe(&self, item: &ContentItem) -> bool {
         // Check if content type is allowed
-        if !self.safety_policy.allowed_types.contains(&item.content_type) {
+        if !self
+            .safety_policy
+            .allowed_types
+            .contains(&item.content_type)
+        {
             return false;
         }
 
@@ -227,13 +241,7 @@ impl DataIntegrityManager {
         true
     }
 
-    /// Get current timestamp
-    fn current_timestamp(&self) -> u64 {
-        SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .unwrap()
-            .as_secs()
-    }
+
 }
 
 #[cfg(test)]
@@ -249,7 +257,7 @@ mod tests {
             encryption_required: false,
         };
 
-        let manager = DataIntegrityManager::new(policy, 99.0);
+        let manager = DataIntegrityManager::new(policy);
         assert_eq!(manager.get_all_content_items().len(), 0);
         assert_eq!(manager.get_all_pinning_services().len(), 0);
     }
@@ -263,7 +271,7 @@ mod tests {
             encryption_required: false,
         };
 
-        let mut manager = DataIntegrityManager::new(policy, 99.0);
+        let mut manager = DataIntegrityManager::new(policy);
 
         let item = ContentItem {
             cid: "QmTest123".to_string(),
@@ -288,7 +296,7 @@ mod tests {
             encryption_required: false,
         };
 
-        let mut manager = DataIntegrityManager::new(policy, 99.0);
+        let mut manager = DataIntegrityManager::new(policy);
 
         // Try to add content that exceeds size limit
         let large_item = ContentItem {
@@ -326,7 +334,7 @@ mod tests {
             encryption_required: false,
         };
 
-        let mut manager = DataIntegrityManager::new(policy, 99.0);
+        let mut manager = DataIntegrityManager::new(policy);
 
         let service = PinningService {
             name: "pinata".to_string(),
@@ -349,7 +357,7 @@ mod tests {
             encryption_required: false,
         };
 
-        let mut manager = DataIntegrityManager::new(policy, 99.0);
+        let mut manager = DataIntegrityManager::new(policy);
 
         let anchor = HashAnchor {
             cid: "QmTest123".to_string(),
@@ -372,7 +380,7 @@ mod tests {
             encryption_required: false,
         };
 
-        let mut manager = DataIntegrityManager::new(policy, 99.0);
+        let mut manager = DataIntegrityManager::new(policy);
 
         // Add pinning services
         let service1 = PinningService {
@@ -421,7 +429,7 @@ mod tests {
             encryption_required: false,
         };
 
-        let mut manager = DataIntegrityManager::new(policy, 99.0);
+        let mut manager = DataIntegrityManager::new(policy);
 
         let item = ContentItem {
             cid: "QmTest123".to_string(),
@@ -436,8 +444,12 @@ mod tests {
         manager.add_content_item(item).unwrap();
 
         // Verify content integrity
-        assert!(manager.verify_content_integrity("QmTest123", "QmTest123").unwrap());
-        assert!(!manager.verify_content_integrity("QmTest123", "QmWrong123").unwrap());
+        assert!(manager
+            .verify_content_integrity("QmTest123", "QmTest123")
+            .unwrap());
+        assert!(!manager
+            .verify_content_integrity("QmTest123", "QmWrong123")
+            .unwrap());
     }
 
     #[test]
@@ -449,7 +461,7 @@ mod tests {
             encryption_required: false,
         };
 
-        let manager = DataIntegrityManager::new(policy, 99.0);
+        let manager = DataIntegrityManager::new(policy);
 
         let safe_item = ContentItem {
             cid: "QmSafe123".to_string(),

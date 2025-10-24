@@ -129,15 +129,22 @@ impl ObservabilityManager {
     }
 
     /// Adds an OpenTelemetry collector
-    pub fn add_otel_collector(&mut self, collector: OtelCollector) -> Result<(), ObservabilityError> {
+    pub fn add_otel_collector(
+        &mut self,
+        collector: OtelCollector,
+    ) -> Result<(), ObservabilityError> {
         if collector.endpoint.is_empty() {
-            return Err(ObservabilityError::ConfigError("Endpoint cannot be empty".to_string()));
+            return Err(ObservabilityError::ConfigError(
+                "Endpoint cannot be empty".to_string(),
+            ));
         }
-        
+
         if collector.sampling_rate < 0.0 || collector.sampling_rate > 1.0 {
-            return Err(ObservabilityError::ConfigError("Sampling rate must be between 0.0 and 1.0".to_string()));
+            return Err(ObservabilityError::ConfigError(
+                "Sampling rate must be between 0.0 and 1.0".to_string(),
+            ));
         }
-        
+
         self.otel_collectors.insert(collector.id.clone(), collector);
         Ok(())
     }
@@ -150,9 +157,11 @@ impl ObservabilityManager {
     /// Adds a Prometheus rule
     pub fn add_prometheus_rule(&mut self, rule: PrometheusRule) -> Result<(), ObservabilityError> {
         if rule.expr.is_empty() {
-            return Err(ObservabilityError::ConfigError("Expression cannot be empty".to_string()));
+            return Err(ObservabilityError::ConfigError(
+                "Expression cannot be empty".to_string(),
+            ));
         }
-        
+
         self.prometheus_rules.insert(rule.id.clone(), rule);
         Ok(())
     }
@@ -205,7 +214,10 @@ impl ObservabilityManager {
     /// Gets audit logs with optional filtering
     pub fn get_audit_logs(&self, user_filter: Option<&str>) -> Vec<&AdminAuditLog> {
         if let Some(user) = user_filter {
-            self.audit_logs.iter().filter(|log| log.user == user).collect()
+            self.audit_logs
+                .iter()
+                .filter(|log| log.user == user)
+                .collect()
         } else {
             self.audit_logs.iter().collect()
         }
@@ -215,19 +227,25 @@ impl ObservabilityManager {
     pub fn validate_configuration(&self) -> Result<(), ObservabilityError> {
         // Validate that we have at least one collector
         if self.otel_collectors.is_empty() {
-            return Err(ObservabilityError::ValidationError("At least one OpenTelemetry collector is required".to_string()));
+            return Err(ObservabilityError::ValidationError(
+                "At least one OpenTelemetry collector is required".to_string(),
+            ));
         }
-        
+
         // Validate that we have at least one alerting rule
         if self.prometheus_rules.is_empty() {
-            return Err(ObservabilityError::ValidationError("At least one Prometheus rule is required".to_string()));
+            return Err(ObservabilityError::ValidationError(
+                "At least one Prometheus rule is required".to_string(),
+            ));
         }
-        
+
         // Validate that we have at least one SIEM rule
         if self.siem_rules.is_empty() {
-            return Err(ObservabilityError::ValidationError("At least one SIEM rule is required".to_string()));
+            return Err(ObservabilityError::ValidationError(
+                "At least one SIEM rule is required".to_string(),
+            ));
         }
-        
+
         Ok(())
     }
 }
@@ -251,7 +269,7 @@ mod tests {
             sampling_rate: 0.1,
             export_interval: 30,
         };
-        
+
         assert_eq!(collector.id, "test-collector");
         assert_eq!(collector.telemetry_types.len(), 2);
     }
@@ -260,10 +278,10 @@ mod tests {
     fn test_prometheus_rule_creation() {
         let mut labels = HashMap::new();
         labels.insert("severity".to_string(), "critical".to_string());
-        
+
         let mut annotations = HashMap::new();
         annotations.insert("summary".to_string(), "High latency detected".to_string());
-        
+
         let rule = PrometheusRule {
             id: "high-latency".to_string(),
             expr: "rate(http_request_duration_seconds_sum[5m]) / rate(http_request_duration_seconds_count[5m]) > 1".to_string(),
@@ -271,7 +289,7 @@ mod tests {
             labels,
             annotations,
         };
-        
+
         assert_eq!(rule.id, "high-latency");
         assert_eq!(rule.labels.len(), 1);
     }
@@ -285,7 +303,7 @@ mod tests {
             severity: SiemSeverity::High,
             enabled: true,
         };
-        
+
         assert_eq!(rule.id, "suspicious-login");
         assert!(matches!(rule.severity, SiemSeverity::High));
     }
@@ -293,7 +311,7 @@ mod tests {
     #[test]
     fn test_observability_manager() {
         let mut manager = ObservabilityManager::new();
-        
+
         // Test adding collector
         let collector = OtelCollector {
             id: "test-collector".to_string(),
@@ -302,10 +320,10 @@ mod tests {
             sampling_rate: 0.1,
             export_interval: 30,
         };
-        
+
         assert!(manager.add_otel_collector(collector).is_ok());
         assert!(manager.get_otel_collector("test-collector").is_some());
-        
+
         // Test adding Prometheus rule
         let rule = PrometheusRule {
             id: "high-latency".to_string(),
@@ -314,10 +332,10 @@ mod tests {
             labels: HashMap::new(),
             annotations: HashMap::new(),
         };
-        
+
         assert!(manager.add_prometheus_rule(rule).is_ok());
         assert!(manager.get_prometheus_rule("high-latency").is_some());
-        
+
         // Test adding SIEM rule
         let siem_rule = SiemRule {
             id: "suspicious-login".to_string(),
@@ -326,14 +344,14 @@ mod tests {
             severity: SiemSeverity::High,
             enabled: true,
         };
-        
+
         assert!(manager.add_siem_rule(siem_rule).is_ok());
         assert!(manager.get_siem_rule("suspicious-login").is_some());
-        
+
         // Test logging admin action
         let mut metadata = HashMap::new();
         metadata.insert("resource".to_string(), "user_database".to_string());
-        
+
         let log_result = manager.log_admin_action(
             "admin_user".to_string(),
             "database_access".to_string(),
@@ -341,10 +359,10 @@ mod tests {
             metadata,
             Some("192.168.1.1".to_string()),
         );
-        
+
         assert!(log_result.is_ok());
         assert_eq!(manager.get_audit_logs(None).len(), 1);
-        
+
         // Test validation
         assert!(manager.validate_configuration().is_ok());
     }
@@ -352,7 +370,7 @@ mod tests {
     #[test]
     fn test_invalid_otel_collector() {
         let mut manager = ObservabilityManager::new();
-        
+
         // Test invalid endpoint
         let collector = OtelCollector {
             id: "invalid-collector".to_string(),
@@ -361,9 +379,9 @@ mod tests {
             sampling_rate: 0.1,
             export_interval: 30,
         };
-        
+
         assert!(manager.add_otel_collector(collector).is_err());
-        
+
         // Test invalid sampling rate
         let collector = OtelCollector {
             id: "invalid-collector-2".to_string(),
@@ -372,7 +390,7 @@ mod tests {
             sampling_rate: 1.5, // Invalid sampling rate
             export_interval: 30,
         };
-        
+
         assert!(manager.add_otel_collector(collector).is_err());
     }
 }

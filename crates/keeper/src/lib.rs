@@ -15,14 +15,14 @@ impl LiquidationKeeper {
     pub fn new() -> Self {
         Self
     }
-    
+
     /// Run liquidation checks
     pub fn run(&self) -> Result<()> {
         // In a real implementation, this would:
         // 1. Query for undercollateralized positions
         // 2. Execute liquidation transactions
         // 3. Update metrics
-        
+
         Ok(())
     }
 }
@@ -37,14 +37,14 @@ impl OracleKeeper {
     pub fn new() -> Self {
         Self
     }
-    
+
     /// Update oracle prices
     pub fn update_prices(&self) -> Result<()> {
         // In a real implementation, this would:
         // 1. Fetch latest prices from data sources
         // 2. Submit price updates to oracle contracts
         // 3. Update metrics
-        
+
         Ok(())
     }
 }
@@ -59,14 +59,14 @@ impl FundingRateKeeper {
     pub fn new() -> Self {
         Self
     }
-    
+
     /// Update funding rates
     pub fn update_rates(&self) -> Result<()> {
         // In a real implementation, this would:
         // 1. Calculate funding rates based on market conditions
         // 2. Submit updates to perpetual futures contracts
         // 3. Update metrics
-        
+
         Ok(())
     }
 }

@@ -37,7 +37,7 @@ pub fn home() -> Html {
                     </div>
                 </div>
             </div>
-            
+
             <div class="mt-8">
                 <h3 class="text-lg font-medium text-gray-900">{"Recent Activity"}</h3>
                 <div class="mt-4 bg-white shadow overflow-hidden sm:rounded-md">

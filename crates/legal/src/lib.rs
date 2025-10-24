@@ -7,8 +7,8 @@
 //! - KYC integration
 //! - Audit trail and reporting
 
-use core::Result;
 use core::types::Address;
+use core::Result;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
@@ -17,19 +17,19 @@ use std::collections::HashMap;
 pub struct LegalConfig {
     /// Enable/disable terms of service enforcement
     pub enforce_terms: bool,
-    
+
     /// Enable/disable privacy policy enforcement
     pub enforce_privacy: bool,
-    
+
     /// Enable/disable geographic restrictions
     pub enforce_geo: bool,
-    
+
     /// Enable/disable age restrictions
     pub enforce_age: bool,
-    
+
     /// Enable/disable sanctions screening
     pub enforce_sanctions: bool,
-    
+
     /// Enable/disable KYC requirements
     pub enforce_kyc: bool,
 }
@@ -138,16 +138,16 @@ impl LegalCompliance {
             audit_log: Vec::new(),
         }
     }
-    
+
     /// Check if a user has accepted the terms of service
     pub fn check_terms_accepted(&self, user: &Address) -> bool {
         if !self.config.enforce_terms {
             return true;
         }
-        
+
         self.terms.accepted_users.contains(user)
     }
-    
+
     /// Record that a user has accepted the terms of service
     pub fn accept_terms(&mut self, user: Address) -> Result<()> {
         tracing::info!("User {:?} accepted terms of service", user);
@@ -155,61 +155,68 @@ impl LegalCompliance {
         self.audit_log.push(format!("Terms accepted by {:?}", user));
         Ok(())
     }
-    
+
     /// Check if a user's location is allowed
     pub fn check_geo_allowed(&self, country_code: &str) -> bool {
         if !self.config.enforce_geo {
             return true;
         }
-        
+
         match self.geo_restrictions.get(country_code) {
             Some(restriction) => restriction.allowed,
             None => true, // Default to allowed if not explicitly restricted
         }
     }
-    
+
     /// Add a geographic restriction
     pub fn add_geo_restriction(&mut self, restriction: GeoRestriction) -> Result<()> {
         tracing::info!("Adding geo restriction for {}", restriction.country_code);
         let country_code = restriction.country_code.clone();
-        self.geo_restrictions.insert(country_code.clone(), restriction.clone());
-        self.audit_log.push(format!("Geo restriction added for {}", country_code));
+        self.geo_restrictions
+            .insert(country_code.clone(), restriction.clone());
+        self.audit_log
+            .push(format!("Geo restriction added for {}", country_code));
         Ok(())
     }
-    
+
     /// Check if a user meets age requirements
     pub fn check_age_allowed(&self, user_age: u8) -> bool {
         if !self.config.enforce_age {
             return true;
         }
-        
+
         user_age >= self.age_restriction.min_age
     }
-    
+
     /// Check if an address is sanctioned
     pub fn check_sanctions(&self, address: &str) -> bool {
         if !self.config.enforce_sanctions {
             return false;
         }
-        
+
         // In a real implementation, this would call a sanctions screening service
-        self.sanctions_config.blocked_addresses.contains(&address.to_string())
+        self.sanctions_config
+            .blocked_addresses
+            .contains(&address.to_string())
     }
-    
+
     /// Add an address to the sanctions list
     pub fn add_sanctioned_address(&mut self, address: String) -> Result<()> {
         tracing::info!("Adding sanctioned address: {}", address);
-        self.sanctions_config.blocked_addresses.push(address.clone());
-        self.audit_log.push(format!("Sanctioned address added: {}", address));
+        self.sanctions_config
+            .blocked_addresses
+            .push(address.clone());
+        self.audit_log
+            .push(format!("Sanctioned address added: {}", address));
         Ok(())
     }
-    
+
     /// Check a user's KYC status
     pub fn check_kyc_status(&self, user: &Address) -> KycStatus {
         if !self.config.enforce_kyc {
             return KycStatus::NotRequired;
         }
-        
+
         match self.kyc_records.get(user) {
             Some(record) => {
                 // Check if KYC is expired
@@ -217,25 +224,29 @@ impl LegalCompliance {
                     .duration_since(std::time::UNIX_EPOCH)
                     .map(|d| d.as_secs())
                     .unwrap_or(0);
-                
+
                 if record.status == KycStatus::Verified && current_time > record.expiry_date {
                     KycStatus::Expired
                 } else {
                     record.status.clone()
                 }
-            },
+            }
             None => KycStatus::Pending,
         }
     }
-    
+
     /// Update a user's KYC record
     pub fn update_kyc_record(&mut self, record: KycRecord) -> Result<()> {
         tracing::info!("Updating KYC record for user: {:?}", record.user_address);
-        self.kyc_records.insert(record.user_address.clone(), record.clone());
-        self.audit_log.push(format!("KYC record updated for user: {:?}", record.user_address));
+        self.kyc_records
+            .insert(record.user_address.clone(), record.clone());
+        self.audit_log.push(format!(
+            "KYC record updated for user: {:?}",
+            record.user_address
+        ));
         Ok(())
     }
-    
+
     /// Log a compliance-related action
     pub fn log_action(&mut self, action: String) -> Result<()> {
         tracing::info!("Compliance action: {}", action);
@@ -247,7 +258,7 @@ impl LegalCompliance {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[test]
     fn test_legal_compliance_creation() {
         let config = LegalConfig {
@@ -258,13 +269,13 @@ mod tests {
             enforce_sanctions: true,
             enforce_kyc: true,
         };
-        
+
         let compliance = LegalCompliance::new(config);
         assert_eq!(compliance.terms.version, "1.0.0");
         assert_eq!(compliance.privacy.version, "1.0.0");
         assert_eq!(compliance.age_restriction.min_age, 18);
     }
-    
+
     #[test]
     fn test_terms_acceptance() {
         let config = LegalConfig {
@@ -275,15 +286,15 @@ mod tests {
             enforce_sanctions: false,
             enforce_kyc: false,
         };
-        
+
         let mut compliance = LegalCompliance::new(config);
         let user = Address("user_address".to_string());
-        
+
         assert!(!compliance.check_terms_accepted(&user));
         assert!(compliance.accept_terms(user.clone()).is_ok());
         assert!(compliance.check_terms_accepted(&user));
     }
-    
+
     #[test]
     fn test_geo_restrictions() {
         let config = LegalConfig {
@@ -294,20 +305,20 @@ mod tests {
             enforce_sanctions: false,
             enforce_kyc: false,
         };
-        
+
         let mut compliance = LegalCompliance::new(config);
         let restriction = GeoRestriction {
             country_code: "US".to_string(),
             allowed: false,
             reason: "Sanctions".to_string(),
         };
-        
+
         assert!(compliance.check_geo_allowed("US")); // Not restricted yet
         assert!(compliance.add_geo_restriction(restriction).is_ok());
         assert!(!compliance.check_geo_allowed("US")); // Now restricted
         assert!(compliance.check_geo_allowed("CA")); // Not restricted
     }
-    
+
     #[test]
     fn test_age_restrictions() {
         let config = LegalConfig {
@@ -318,13 +329,13 @@ mod tests {
             enforce_sanctions: false,
             enforce_kyc: false,
         };
-        
+
         let compliance = LegalCompliance::new(config);
-        
+
         assert!(compliance.check_age_allowed(25)); // Above minimum age
         assert!(!compliance.check_age_allowed(16)); // Below minimum age
     }
-    
+
     #[test]
     fn test_sanctions_checking() {
         let config = LegalConfig {
@@ -335,15 +346,17 @@ mod tests {
             enforce_sanctions: true,
             enforce_kyc: false,
         };
-        
+
         let mut compliance = LegalCompliance::new(config);
-        
+
         assert!(!compliance.check_sanctions("address1")); // Not sanctioned yet
-        assert!(compliance.add_sanctioned_address("address1".to_string()).is_ok());
+        assert!(compliance
+            .add_sanctioned_address("address1".to_string())
+            .is_ok());
         assert!(compliance.check_sanctions("address1")); // Now sanctioned
         assert!(!compliance.check_sanctions("address2")); // Not sanctioned
     }
-    
+
     #[test]
     fn test_kyc_management() {
         let config = LegalConfig {
@@ -354,14 +367,14 @@ mod tests {
             enforce_sanctions: false,
             enforce_kyc: true,
         };
-        
+
         let mut compliance = LegalCompliance::new(config);
         let user = Address("user_address".to_string());
         let current_time = std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
             .map(|d| d.as_secs())
             .unwrap_or(0);
-        
+
         let kyc_record = KycRecord {
             user_address: user.clone(),
             status: KycStatus::Verified,
@@ -369,7 +382,7 @@ mod tests {
             expiry_date: current_time + 365 * 24 * 3600, // 1 year from now
             provider: "test_provider".to_string(),
         };
-        
+
         assert_eq!(compliance.check_kyc_status(&user), KycStatus::Pending);
         assert!(compliance.update_kyc_record(kyc_record).is_ok());
         assert_eq!(compliance.check_kyc_status(&user), KycStatus::Verified);

@@ -3,8 +3,8 @@
 //! This module implements EIP-4337 Account Abstraction functionality including
 //! user operations, bundlers, and paymasters.
 
-use core::{Error, Result};
 use core::types::{Address, TokenAmount};
+use core::{Error, Result};
 use serde::{Deserialize, Serialize};
 
 /// User Operation as defined in EIP-4337
@@ -80,10 +80,7 @@ pub struct SessionKey {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum Permission {
     /// Allow transfers up to a certain amount
-    TransferLimit {
-        token: Address,
-        amount: TokenAmount,
-    },
+    TransferLimit { token: Address, amount: TokenAmount },
     /// Allow specific contract calls
     ContractCall {
         contract: Address,
@@ -121,26 +118,26 @@ impl SmartAccount {
             nonce: 0,
         }
     }
-    
+
     /// Validate a user operation
     pub fn validate_user_operation(&self, user_op: &UserOperation) -> Result<ValidationResult> {
         // Check nonce
         if user_op.nonce != self.nonce {
             return Err(Error::Custom("Invalid nonce".to_string()));
         }
-        
+
         // Check signature
         if !self.verify_signature(user_op)? {
             return Err(Error::Custom("Invalid signature".to_string()));
         }
-        
+
         // Check session key permissions if applicable
         if let Some(permission_check) = self.check_session_key_permissions(user_op)? {
             if !permission_check {
                 return Err(Error::Custom("Insufficient permissions".to_string()));
             }
         }
-        
+
         // Create validation result
         let result = ValidationResult {
             return_info: ReturnInfo {
@@ -165,33 +162,37 @@ impl SmartAccount {
             },
             aggregator_info: None,
         };
-        
+
         Ok(result)
     }
-    
+
     /// Verify the signature of a user operation
     fn verify_signature(&self, user_op: &UserOperation) -> Result<bool> {
         // In a real implementation, we would verify the cryptographic signature
         // For this example, we'll just return true
         Ok(true)
     }
-    
+
     /// Check if a session key has sufficient permissions
     fn check_session_key_permissions(&self, user_op: &UserOperation) -> Result<Option<bool>> {
         // Check if the sender is a session key
-        let session_key = self.config.session_keys.iter().find(|key| key.key == user_op.sender);
-        
+        let session_key = self
+            .config
+            .session_keys
+            .iter()
+            .find(|key| key.key == user_op.sender);
+
         if let Some(key) = session_key {
             // Check if the key is expired
             let current_time = std::time::SystemTime::now()
                 .duration_since(std::time::UNIX_EPOCH)
                 .map(|d| d.as_secs())
                 .unwrap_or(0);
-            
+
             if current_time > key.expiry {
                 return Ok(Some(false));
             }
-            
+
             // Check permissions (simplified)
             // In a real implementation, we would check against the specific permissions
             Ok(Some(true))
@@ -200,19 +201,19 @@ impl SmartAccount {
             Ok(None)
         }
     }
-    
+
     /// Execute a user operation
     pub fn execute_user_operation(&mut self, user_op: &UserOperation) -> Result<()> {
         // Validate the user operation first
         self.validate_user_operation(user_op)?;
-        
+
         // Execute the call data
         // In a real implementation, we would execute the contract call
         tracing::info!("Executing user operation for sender: {:?}", user_op.sender);
-        
+
         // Increment nonce
         self.nonce += 1;
-        
+
         Ok(())
     }
 }
@@ -233,21 +234,26 @@ impl Paymaster {
             deposit,
         }
     }
-    
+
     /// Validate a paymaster operation
-    pub fn validate_paymaster_user_op(&self, user_op: &UserOperation, user_op_hash: &[u8], max_cost: u128) -> Result<(Vec<u8>, u128)> {
+    pub fn validate_paymaster_user_op(
+        &self,
+        user_op: &UserOperation,
+        user_op_hash: &[u8],
+        max_cost: u128,
+    ) -> Result<(Vec<u8>, u128)> {
         // Check if paymaster has sufficient deposit
         if self.deposit < max_cost {
             return Err(Error::Custom("Insufficient paymaster deposit".to_string()));
         }
-        
+
         // In a real implementation, we would verify the paymaster signature
         // and check any additional conditions
-        
+
         // Return context and verification gas limit
         Ok((Vec::new(), 0))
     }
-    
+
     /// Post-execution processing
     pub fn post_op(&self, mode: PostOpMode, context: &[u8], actual_gas_cost: u128) -> Result<()> {
         // Handle post-execution logic
@@ -271,21 +277,24 @@ pub enum PostOpMode {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[test]
     fn test_smart_account_creation() {
         let config = SmartAccountConfig {
             owner: Address("owner".to_string()),
             guardians: vec![],
             session_keys: vec![],
-            daily_limit: TokenAmount { value: 1000000000000000000, decimals: 18 },
+            daily_limit: TokenAmount {
+                value: 1000000000000000000,
+                decimals: 18,
+            },
             paymaster: None,
         };
-        
+
         let account = SmartAccount::new(Address("account".to_string()), config);
         assert_eq!(account.nonce, 0);
     }
-    
+
     #[test]
     fn test_paymaster_creation() {
         let paymaster = Paymaster::new(
@@ -293,7 +302,7 @@ mod tests {
             Address("owner".to_string()),
             1000000000000000000, // 1 ETH deposit
         );
-        
+
         assert_eq!(paymaster.deposit, 1000000000000000000);
     }
 }

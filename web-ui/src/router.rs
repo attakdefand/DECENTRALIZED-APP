@@ -6,11 +6,7 @@ use yew::prelude::*;
 use yew_router::prelude::*;
 
 use crate::pages::{
-    home::Home,
-    pools::Pools,
-    orders::Orders,
-    markets::Markets,
-    not_found::NotFound,
+    home::Home, markets::Markets, not_found::NotFound, orders::Orders, pools::Pools,
 };
 
 /// Application routes

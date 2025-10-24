@@ -4,7 +4,7 @@
 
 use yew::prelude::*;
 
-use crate::components::order_table::{OrderTable, OrderData, OrderSide, OrderStatus};
+use crate::components::order_table::{OrderData, OrderSide, OrderStatus, OrderTable};
 
 /// Orders page component
 #[function_component(Orders)]
@@ -53,11 +53,11 @@ pub fn orders() -> Html {
                     </button>
                 </div>
             </div>
-            
+
             <div class="mt-6">
                 <OrderTable orders={orders} />
             </div>
-            
+
             <div class="mt-8">
                 <h3 class="text-lg font-medium text-gray-900">{"Order Types"}</h3>
                 <div class="mt-4 grid grid-cols-1 gap-5 sm:grid-cols-3">

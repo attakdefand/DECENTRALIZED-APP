@@ -205,19 +205,28 @@ impl IncidentResponseManager {
     }
 
     /// Adds a pause/kill switch
-    pub fn add_pause_kill_switch(&mut self, switch: PauseKillSwitch) -> Result<(), IncidentResponseError> {
+    pub fn add_pause_kill_switch(
+        &mut self,
+        switch: PauseKillSwitch,
+    ) -> Result<(), IncidentResponseError> {
         if switch.id.is_empty() {
-            return Err(IncidentResponseError::ConfigError("Switch ID cannot be empty".to_string()));
+            return Err(IncidentResponseError::ConfigError(
+                "Switch ID cannot be empty".to_string(),
+            ));
         }
-        
+
         if switch.target.is_empty() {
-            return Err(IncidentResponseError::ConfigError("Target cannot be empty".to_string()));
+            return Err(IncidentResponseError::ConfigError(
+                "Target cannot be empty".to_string(),
+            ));
         }
-        
+
         if switch.authorized_roles.is_empty() {
-            return Err(IncidentResponseError::ConfigError("At least one authorized role is required".to_string()));
+            return Err(IncidentResponseError::ConfigError(
+                "At least one authorized role is required".to_string(),
+            ));
         }
-        
+
         self.pause_kill_switches.insert(switch.id.clone(), switch);
         Ok(())
     }
@@ -234,27 +243,28 @@ impl IncidentResponseManager {
         user: String,
         reason: String,
     ) -> Result<(), IncidentResponseError> {
-        let switch = self.pause_kill_switches.get_mut(id).ok_or_else(|| {
-            IncidentResponseError::OperationError("Switch not found".to_string())
-        })?;
-        
+        let switch = self
+            .pause_kill_switches
+            .get_mut(id)
+            .ok_or_else(|| IncidentResponseError::OperationError("Switch not found".to_string()))?;
+
         // In a real implementation, we would check user authorization here
         // For now, we'll just log the action
-        
+
         let timestamp = SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .map_err(|e| IncidentResponseError::OperationError(format!("Time error: {}", e)))?
             .as_secs();
-        
+
         switch.active = true;
         switch.reason = Some(reason.clone());
         switch.activated_at = Some(timestamp);
-        
+
         // Log the action
         let mut details = HashMap::new();
         details.insert("switch_id".to_string(), id.to_string());
         details.insert("reason".to_string(), reason);
-        
+
         let action = IncidentAction {
             id: uuid::Uuid::new_v4().to_string(),
             action_type: "activate_pause_kill_switch".to_string(),
@@ -262,9 +272,9 @@ impl IncidentResponseManager {
             timestamp,
             details,
         };
-        
+
         self.audit_log.push(action);
-        
+
         Ok(())
     }
 
@@ -274,24 +284,25 @@ impl IncidentResponseManager {
         id: &str,
         user: String,
     ) -> Result<(), IncidentResponseError> {
-        let switch = self.pause_kill_switches.get_mut(id).ok_or_else(|| {
-            IncidentResponseError::OperationError("Switch not found".to_string())
-        })?;
-        
+        let switch = self
+            .pause_kill_switches
+            .get_mut(id)
+            .ok_or_else(|| IncidentResponseError::OperationError("Switch not found".to_string()))?;
+
         let timestamp = SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .map_err(|e| IncidentResponseError::OperationError(format!("Time error: {}", e)))?
             .as_secs();
-        
+
         switch.active = false;
         switch.reason = None;
         switch.activated_at = None;
         switch.expires_at = None;
-        
+
         // Log the action
         let mut details = HashMap::new();
         details.insert("switch_id".to_string(), id.to_string());
-        
+
         let action = IncidentAction {
             id: uuid::Uuid::new_v4().to_string(),
             action_type: "deactivate_pause_kill_switch".to_string(),
@@ -299,22 +310,26 @@ impl IncidentResponseManager {
             timestamp,
             details,
         };
-        
+
         self.audit_log.push(action);
-        
+
         Ok(())
     }
 
     /// Adds a backup
     pub fn add_backup(&mut self, backup: Backup) -> Result<(), IncidentResponseError> {
         if backup.id.is_empty() {
-            return Err(IncidentResponseError::ConfigError("Backup ID cannot be empty".to_string()));
+            return Err(IncidentResponseError::ConfigError(
+                "Backup ID cannot be empty".to_string(),
+            ));
         }
-        
+
         if backup.location.is_empty() {
-            return Err(IncidentResponseError::ConfigError("Backup location cannot be empty".to_string()));
+            return Err(IncidentResponseError::ConfigError(
+                "Backup location cannot be empty".to_string(),
+            ));
         }
-        
+
         self.backups.insert(backup.id.clone(), backup);
         Ok(())
     }
@@ -335,13 +350,17 @@ impl IncidentResponseManager {
     /// Adds a restore job
     pub fn add_restore_job(&mut self, job: RestoreJob) -> Result<(), IncidentResponseError> {
         if job.id.is_empty() {
-            return Err(IncidentResponseError::ConfigError("Job ID cannot be empty".to_string()));
+            return Err(IncidentResponseError::ConfigError(
+                "Job ID cannot be empty".to_string(),
+            ));
         }
-        
+
         if job.backup_id.is_empty() {
-            return Err(IncidentResponseError::ConfigError("Backup ID cannot be empty".to_string()));
+            return Err(IncidentResponseError::ConfigError(
+                "Backup ID cannot be empty".to_string(),
+            ));
         }
-        
+
         self.restore_jobs.insert(job.id.clone(), job);
         Ok(())
     }
@@ -361,12 +380,12 @@ impl IncidentResponseManager {
         let job = self.restore_jobs.get_mut(id).ok_or_else(|| {
             IncidentResponseError::OperationError("Restore job not found".to_string())
         })?;
-        
+
         // Check if status indicates completion before moving it
         let is_completed = status == RestoreStatus::Completed || status == RestoreStatus::Failed;
-        
+
         job.status = status;
-        
+
         if is_completed {
             let timestamp = SystemTime::now()
                 .duration_since(UNIX_EPOCH)
@@ -374,22 +393,29 @@ impl IncidentResponseManager {
                 .as_secs();
             job.completed_at = Some(timestamp);
         }
-        
+
         job.error_message = error_message;
-        
+
         Ok(())
     }
 
     /// Adds a communication plan
-    pub fn add_communication_plan(&mut self, plan: CommunicationPlan) -> Result<(), IncidentResponseError> {
+    pub fn add_communication_plan(
+        &mut self,
+        plan: CommunicationPlan,
+    ) -> Result<(), IncidentResponseError> {
         if plan.id.is_empty() {
-            return Err(IncidentResponseError::ConfigError("Plan ID cannot be empty".to_string()));
+            return Err(IncidentResponseError::ConfigError(
+                "Plan ID cannot be empty".to_string(),
+            ));
         }
-        
+
         if plan.incident_type.is_empty() {
-            return Err(IncidentResponseError::ConfigError("Incident type cannot be empty".to_string()));
+            return Err(IncidentResponseError::ConfigError(
+                "Incident type cannot be empty".to_string(),
+            ));
         }
-        
+
         self.communication_plans.insert(plan.id.clone(), plan);
         Ok(())
     }
@@ -400,7 +426,10 @@ impl IncidentResponseManager {
     }
 
     /// Gets communication plan by incident type
-    pub fn get_communication_plan_by_type(&self, incident_type: &str) -> Option<&CommunicationPlan> {
+    pub fn get_communication_plan_by_type(
+        &self,
+        incident_type: &str,
+    ) -> Option<&CommunicationPlan> {
         self.communication_plans
             .values()
             .find(|plan| plan.incident_type == incident_type)
@@ -410,11 +439,11 @@ impl IncidentResponseManager {
     pub fn get_audit_log(&self, limit: Option<usize>) -> Vec<&IncidentAction> {
         let mut log_entries: Vec<&IncidentAction> = self.audit_log.iter().collect();
         log_entries.sort_by(|a, b| b.timestamp.cmp(&a.timestamp));
-        
+
         if let Some(limit) = limit {
             log_entries.truncate(limit);
         }
-        
+
         log_entries
     }
 
@@ -422,19 +451,25 @@ impl IncidentResponseManager {
     pub fn validate_configuration(&self) -> Result<(), IncidentResponseError> {
         // Validate that we have at least one pause/kill switch
         if self.pause_kill_switches.is_empty() {
-            return Err(IncidentResponseError::ValidationError("At least one pause/kill switch is required".to_string()));
+            return Err(IncidentResponseError::ValidationError(
+                "At least one pause/kill switch is required".to_string(),
+            ));
         }
-        
+
         // Validate that we have at least one backup
         if self.backups.is_empty() {
-            return Err(IncidentResponseError::ValidationError("At least one backup is required".to_string()));
+            return Err(IncidentResponseError::ValidationError(
+                "At least one backup is required".to_string(),
+            ));
         }
-        
+
         // Validate that we have at least one communication plan
         if self.communication_plans.is_empty() {
-            return Err(IncidentResponseError::ValidationError("At least one communication plan is required".to_string()));
+            return Err(IncidentResponseError::ValidationError(
+                "At least one communication plan is required".to_string(),
+            ));
         }
-        
+
         Ok(())
     }
 }
@@ -460,7 +495,7 @@ mod tests {
             expires_at: None,
             authorized_roles: vec!["admin".to_string(), "security".to_string()],
         };
-        
+
         assert_eq!(switch.id, "test-switch");
         assert_eq!(switch.authorized_roles.len(), 2);
     }
@@ -469,7 +504,7 @@ mod tests {
     fn test_backup_creation() {
         let mut metadata = HashMap::new();
         metadata.insert("version".to_string(), "1.0.0".to_string());
-        
+
         let backup = Backup {
             id: "backup-123".to_string(),
             backup_type: BackupType::Database,
@@ -479,7 +514,7 @@ mod tests {
             status: BackupStatus::Completed,
             metadata,
         };
-        
+
         assert_eq!(backup.id, "backup-123");
         assert!(matches!(backup.backup_type, BackupType::Database));
         assert_eq!(backup.metadata.len(), 1);
@@ -489,7 +524,7 @@ mod tests {
     fn test_restore_job_creation() {
         let mut metadata = HashMap::new();
         metadata.insert("source".to_string(), "production".to_string());
-        
+
         let job = RestoreJob {
             id: "restore-456".to_string(),
             backup_id: "backup-123".to_string(),
@@ -500,7 +535,7 @@ mod tests {
             error_message: None,
             metadata,
         };
-        
+
         assert_eq!(job.id, "restore-456");
         assert!(matches!(job.status, RestoreStatus::Pending));
     }
@@ -517,22 +552,23 @@ mod tests {
                 channel_type: "slack".to_string(),
                 channel_id: "incident-channel".to_string(),
                 priority: 2,
-            }
+            },
         ];
-        
+
         let mut templates = HashMap::new();
-        templates.insert("initial".to_string(), "Incident detected: {description}".to_string());
+        templates.insert(
+            "initial".to_string(),
+            "Incident detected: {description}".to_string(),
+        );
         templates.insert("update".to_string(), "Update: {status}".to_string());
-        
-        let escalation_steps = vec![
-            EscalationStep {
-                step: 1,
-                time_threshold: 30,
-                recipients: vec!["oncall@company.com".to_string()],
-                action: "Notify on-call team".to_string(),
-            }
-        ];
-        
+
+        let escalation_steps = vec![EscalationStep {
+            step: 1,
+            time_threshold: 30,
+            recipients: vec!["oncall@company.com".to_string()],
+            action: "Notify on-call team".to_string(),
+        }];
+
         let plan = CommunicationPlan {
             id: "security-incident-plan".to_string(),
             incident_type: "security".to_string(),
@@ -541,7 +577,7 @@ mod tests {
             templates,
             escalation_procedures: escalation_steps,
         };
-        
+
         assert_eq!(plan.id, "security-incident-plan");
         assert_eq!(plan.channels.len(), 2);
         assert_eq!(plan.templates.len(), 2);
@@ -550,7 +586,7 @@ mod tests {
     #[test]
     fn test_incident_response_manager() {
         let mut manager = IncidentResponseManager::new();
-        
+
         // Test adding pause/kill switch
         let switch = PauseKillSwitch {
             id: "contract-pause".to_string(),
@@ -561,10 +597,10 @@ mod tests {
             expires_at: None,
             authorized_roles: vec!["admin".to_string()],
         };
-        
+
         assert!(manager.add_pause_kill_switch(switch).is_ok());
         assert!(manager.get_pause_kill_switch("contract-pause").is_some());
-        
+
         // Test adding backup
         let backup = Backup {
             id: "db-backup-1".to_string(),
@@ -575,10 +611,10 @@ mod tests {
             status: BackupStatus::Completed,
             metadata: HashMap::new(),
         };
-        
+
         assert!(manager.add_backup(backup).is_ok());
         assert!(manager.get_backup("db-backup-1").is_some());
-        
+
         // Test adding restore job
         let job = RestoreJob {
             id: "restore-1".to_string(),
@@ -590,10 +626,10 @@ mod tests {
             error_message: None,
             metadata: HashMap::new(),
         };
-        
+
         assert!(manager.add_restore_job(job).is_ok());
         assert!(manager.get_restore_job("restore-1").is_some());
-        
+
         // Test adding communication plan
         let plan = CommunicationPlan {
             id: "security-plan".to_string(),
@@ -603,10 +639,10 @@ mod tests {
             templates: HashMap::new(),
             escalation_procedures: vec![],
         };
-        
+
         assert!(manager.add_communication_plan(plan).is_ok());
         assert!(manager.get_communication_plan("security-plan").is_some());
-        
+
         // Test validation
         assert!(manager.validate_configuration().is_ok());
     }
@@ -614,7 +650,7 @@ mod tests {
     #[test]
     fn test_pause_kill_switch_activation() {
         let mut manager = IncidentResponseManager::new();
-        
+
         let switch = PauseKillSwitch {
             id: "test-switch".to_string(),
             target: "smart-contract".to_string(),
@@ -624,37 +660,38 @@ mod tests {
             expires_at: None,
             authorized_roles: vec!["admin".to_string()],
         };
-        
+
         assert!(manager.add_pause_kill_switch(switch).is_ok());
-        
+
         // Activate the switch
-        assert!(manager.activate_pause_kill_switch(
-            "test-switch",
-            "admin-user".to_string(),
-            "Security incident detected".to_string()
-        ).is_ok());
-        
+        assert!(manager
+            .activate_pause_kill_switch(
+                "test-switch",
+                "admin-user".to_string(),
+                "Security incident detected".to_string()
+            )
+            .is_ok());
+
         let switch = manager.get_pause_kill_switch("test-switch").unwrap();
         assert!(switch.active);
         assert!(switch.reason.is_some());
         assert!(switch.activated_at.is_some());
-        
+
         // Check audit log
         let audit_log = manager.get_audit_log(None);
         assert_eq!(audit_log.len(), 1);
         assert_eq!(audit_log[0].action_type, "activate_pause_kill_switch");
-        
+
         // Deactivate the switch
-        assert!(manager.deactivate_pause_kill_switch(
-            "test-switch",
-            "admin-user".to_string()
-        ).is_ok());
-        
+        assert!(manager
+            .deactivate_pause_kill_switch("test-switch", "admin-user".to_string())
+            .is_ok());
+
         let switch = manager.get_pause_kill_switch("test-switch").unwrap();
         assert!(!switch.active);
         assert!(switch.reason.is_none());
         assert!(switch.activated_at.is_none());
-        
+
         // Check audit log again
         let audit_log = manager.get_audit_log(None);
         assert_eq!(audit_log.len(), 2);
@@ -663,7 +700,7 @@ mod tests {
     #[test]
     fn test_invalid_configurations() {
         let mut manager = IncidentResponseManager::new();
-        
+
         // Test invalid pause/kill switch (empty ID)
         let switch = PauseKillSwitch {
             id: "".to_string(),
@@ -674,9 +711,9 @@ mod tests {
             expires_at: None,
             authorized_roles: vec!["admin".to_string()],
         };
-        
+
         assert!(manager.add_pause_kill_switch(switch).is_err());
-        
+
         // Test invalid backup (empty location)
         let backup = Backup {
             id: "backup-1".to_string(),
@@ -687,9 +724,9 @@ mod tests {
             status: BackupStatus::Completed,
             metadata: HashMap::new(),
         };
-        
+
         assert!(manager.add_backup(backup).is_err());
-        
+
         // Test validation with empty manager
         let empty_manager = IncidentResponseManager::new();
         assert!(empty_manager.validate_configuration().is_err());

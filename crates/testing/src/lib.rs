@@ -18,19 +18,19 @@ use std::time::SystemTime;
 pub struct TestConfig {
     /// Enable/disable unit testing
     pub enable_unit_tests: bool,
-    
+
     /// Enable/disable fuzz testing
     pub enable_fuzz_tests: bool,
-    
+
     /// Enable/disable invariant testing
     pub enable_invariant_tests: bool,
-    
+
     /// Enable/disable chaos engineering
     pub enable_chaos_tests: bool,
-    
+
     /// Minimum code coverage percentage
     pub min_coverage_percent: f64,
-    
+
     /// Enable/disable mainnet fork testing
     pub enable_mainnet_fork: bool,
 }
@@ -131,32 +131,40 @@ impl TestingAssurance {
             evidence_bundles: Vec::new(),
         }
     }
-    
+
     /// Record a test result
     pub fn record_test_result(&mut self, result: TestResult) -> Result<()> {
-        tracing::info!("Recording test result: {} - {:?}", result.name, result.status);
+        tracing::info!(
+            "Recording test result: {} - {:?}",
+            result.name,
+            result.status
+        );
         self.test_results.insert(result.id.clone(), result);
         Ok(())
     }
-    
+
     /// Record a test suite
     pub fn record_test_suite(&mut self, suite: TestSuite) -> Result<()> {
-        tracing::info!("Recording test suite: {} with {} tests", suite.name, suite.total_tests);
+        tracing::info!(
+            "Recording test suite: {} with {} tests",
+            suite.name,
+            suite.total_tests
+        );
         self.test_suites.push(suite);
         Ok(())
     }
-    
+
     /// Record a coverage report
     pub fn record_coverage_report(&mut self, report: CoverageReport) -> Result<()> {
         tracing::info!("Recording coverage report for: {}", report.file_path);
         self.coverage_reports.push(report);
         Ok(())
     }
-    
+
     /// Generate an evidence bundle for compliance
     pub fn generate_evidence_bundle(&mut self) -> Result<EvidenceBundle> {
         tracing::info!("Generating evidence bundle");
-        
+
         let bundle = EvidenceBundle {
             id: format!("evidence-{}", self.current_timestamp()),
             test_suites: self.test_suites.clone(),
@@ -164,11 +172,11 @@ impl TestingAssurance {
             timestamp: self.current_timestamp(),
             signature: None, // In a real implementation, this would be a digital signature
         };
-        
+
         self.evidence_bundles.push(bundle.clone());
         Ok(bundle)
     }
-    
+
     /// Check if all tests pass
     pub fn all_tests_pass(&self) -> bool {
         // Check if there are any failed tests
@@ -177,45 +185,45 @@ impl TestingAssurance {
                 return false;
             }
         }
-        
+
         // Check if coverage meets minimum requirements
         if !self.coverage_meets_minimum() {
             return false;
         }
-        
+
         true
     }
-    
+
     /// Check if coverage meets minimum requirements
     pub fn coverage_meets_minimum(&self) -> bool {
         let total_lines: usize = self.coverage_reports.iter().map(|r| r.lines_total).sum();
         if total_lines == 0 {
             return true; // No code to cover
         }
-        
+
         let covered_lines: usize = self.coverage_reports.iter().map(|r| r.lines_covered).sum();
         let coverage_percent = (covered_lines as f64 / total_lines as f64) * 100.0;
-        
+
         coverage_percent >= self.config.min_coverage_percent
     }
-    
+
     /// Get overall test statistics
     pub fn get_test_statistics(&self) -> (usize, usize, usize, usize) {
         let mut total = 0;
         let mut passed = 0;
         let mut failed = 0;
         let mut skipped = 0;
-        
+
         for suite in &self.test_suites {
             total += suite.total_tests;
             passed += suite.passed_tests;
             failed += suite.failed_tests;
             skipped += suite.skipped_tests;
         }
-        
+
         (total, passed, failed, skipped)
     }
-    
+
     /// Get test results by type
     pub fn get_results_by_type(&self, test_type: TestType) -> Vec<&TestResult> {
         self.test_results
@@ -223,7 +231,7 @@ impl TestingAssurance {
             .filter(|result| result.test_type == test_type)
             .collect()
     }
-    
+
     /// Current timestamp in seconds
     fn current_timestamp(&self) -> u64 {
         SystemTime::now()
@@ -236,7 +244,7 @@ impl TestingAssurance {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[test]
     fn test_testing_assurance_creation() {
         let config = TestConfig {
@@ -247,14 +255,14 @@ mod tests {
             min_coverage_percent: 80.0,
             enable_mainnet_fork: true,
         };
-        
+
         let assurance = TestingAssurance::new(config);
         assert_eq!(assurance.test_results.len(), 0);
         assert_eq!(assurance.test_suites.len(), 0);
         assert_eq!(assurance.coverage_reports.len(), 0);
         assert_eq!(assurance.evidence_bundles.len(), 0);
     }
-    
+
     #[test]
     fn test_record_test_result() {
         let config = TestConfig {
@@ -265,7 +273,7 @@ mod tests {
             min_coverage_percent: 80.0,
             enable_mainnet_fork: false,
         };
-        
+
         let mut assurance = TestingAssurance::new(config);
         let result = TestResult {
             id: "test-001".to_string(),
@@ -277,11 +285,11 @@ mod tests {
             timestamp: 1234567890,
             error_message: None,
         };
-        
+
         assert!(assurance.record_test_result(result).is_ok());
         assert_eq!(assurance.test_results.len(), 1);
     }
-    
+
     #[test]
     fn test_record_test_suite() {
         let config = TestConfig {
@@ -292,7 +300,7 @@ mod tests {
             min_coverage_percent: 80.0,
             enable_mainnet_fork: false,
         };
-        
+
         let mut assurance = TestingAssurance::new(config);
         let suite = TestSuite {
             id: "suite-001".to_string(),
@@ -306,11 +314,11 @@ mod tests {
             average_coverage: 85.0,
             timestamp: 1234567890,
         };
-        
+
         assert!(assurance.record_test_suite(suite).is_ok());
         assert_eq!(assurance.test_suites.len(), 1);
     }
-    
+
     #[test]
     fn test_coverage_check() {
         let config = TestConfig {
@@ -321,9 +329,9 @@ mod tests {
             min_coverage_percent: 80.0,
             enable_mainnet_fork: false,
         };
-        
+
         let mut assurance = TestingAssurance::new(config);
-        
+
         // Add a coverage report that meets minimum requirements
         let report = CoverageReport {
             file_path: "test.rs".to_string(),
@@ -337,11 +345,11 @@ mod tests {
             functions_covered: 90,
             functions_total: 100,
         };
-        
+
         assert!(assurance.record_coverage_report(report).is_ok());
         assert!(assurance.coverage_meets_minimum());
     }
-    
+
     #[test]
     fn test_all_tests_pass() {
         let config = TestConfig {
@@ -352,9 +360,9 @@ mod tests {
             min_coverage_percent: 80.0,
             enable_mainnet_fork: false,
         };
-        
+
         let mut assurance = TestingAssurance::new(config);
-        
+
         // Add a test suite with no failures
         let suite = TestSuite {
             id: "suite-001".to_string(),
@@ -368,7 +376,7 @@ mod tests {
             average_coverage: 85.0,
             timestamp: 1234567890,
         };
-        
+
         assert!(assurance.record_test_suite(suite).is_ok());
         assert!(assurance.all_tests_pass());
     }

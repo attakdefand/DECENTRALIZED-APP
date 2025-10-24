@@ -84,7 +84,10 @@ impl OrdersService {
     }
 
     /// Create a new order
-    pub async fn create_order(&self, request: CreateOrderRequest) -> Result<CreateOrderResponse, anyhow::Error> {
+    pub async fn create_order(
+        &self,
+        request: CreateOrderRequest,
+    ) -> Result<CreateOrderResponse, anyhow::Error> {
         self.client.post("/orders", &request).await
     }
 

@@ -2,8 +2,8 @@
 //!
 //! This module provides a central limit order book with price-time priority.
 
-use core::Result;
 use core::types::{Address, TokenAmount};
+use core::Result;
 use std::collections::BTreeMap;
 
 /// Order side (buy or sell)
@@ -28,13 +28,13 @@ pub struct Order {
 
 impl PartialEq for Order {
     fn eq(&self, other: &Self) -> bool {
-        self.id == other.id &&
-        self.trader == other.trader &&
-        self.base_token == other.base_token &&
-        self.quote_token == other.quote_token &&
-        self.side == other.side &&
-        self.price == other.price &&
-        self.timestamp == other.timestamp
+        self.id == other.id
+            && self.trader == other.trader
+            && self.base_token == other.base_token
+            && self.quote_token == other.quote_token
+            && self.side == other.side
+            && self.price == other.price
+            && self.timestamp == other.timestamp
         // Note: We're not comparing amount because TokenAmount doesn't implement PartialEq
     }
 }
@@ -57,23 +57,29 @@ impl OrderBook {
             asks: BTreeMap::new(),
         }
     }
-    
+
     /// Add an order to the book
     pub fn add_order(&mut self, order: Order) -> Result<()> {
         let price_key = (order.price * 1_000_000.0) as u64; // Convert to integer for sorting
-        
+
         match order.side {
             Side::Buy => {
-                self.bids.entry(price_key).or_insert_with(Vec::new).push(order);
+                self.bids
+                    .entry(price_key)
+                    .or_insert_with(Vec::new)
+                    .push(order);
             }
             Side::Sell => {
-                self.asks.entry(price_key).or_insert_with(Vec::new).push(order);
+                self.asks
+                    .entry(price_key)
+                    .or_insert_with(Vec::new)
+                    .push(order);
             }
         }
-        
+
         Ok(())
     }
-    
+
     /// Get the best bid (highest buy price)
     pub fn best_bid(&self) -> Option<&Order> {
         self.bids
@@ -82,7 +88,7 @@ impl OrderBook {
             .flat_map(|(_, orders)| orders.iter())
             .next()
     }
-    
+
     /// Get the best ask (lowest sell price)
     pub fn best_ask(&self) -> Option<&Order> {
         self.asks
@@ -90,17 +96,17 @@ impl OrderBook {
             .flat_map(|(_, orders)| orders.iter())
             .next()
     }
-    
+
     /// Match orders and execute trades
     pub fn match_orders(&mut self) -> Result<Vec<Trade>> {
         let trades = Vec::new();
-        
+
         // In a real implementation, this would:
         // 1. Match buy and sell orders based on price-time priority
         // 2. Execute trades
         // 3. Remove filled orders from the book
         // 4. Update trader balances
-        
+
         Ok(trades)
     }
 }
@@ -121,14 +127,11 @@ pub struct Trade {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[test]
     fn test_order_book() {
-        let orderbook = OrderBook::new(
-            Address("ETH".to_string()),
-            Address("USDC".to_string()),
-        );
-        
+        let orderbook = OrderBook::new(Address("ETH".to_string()), Address("USDC".to_string()));
+
         assert!(orderbook.best_bid().is_none());
         assert!(orderbook.best_ask().is_none());
     }

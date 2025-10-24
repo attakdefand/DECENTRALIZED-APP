@@ -113,7 +113,7 @@ impl CircuitBreaker {
     pub fn record_failure(&mut self, timestamp: u64) {
         self.failure_count += 1;
         self.last_failure = timestamp;
-        
+
         if self.failure_count >= self.failure_threshold {
             self.state = CircuitBreakerState::Open;
         }
@@ -164,8 +164,12 @@ impl std::fmt::Display for RpcResilienceError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             RpcResilienceError::ProviderNotFound(name) => write!(f, "Provider not found: {}", name),
-            RpcResilienceError::ProviderUnhealthy(name) => write!(f, "Provider unhealthy: {}", name),
-            RpcResilienceError::CircuitBreakerOpen(name) => write!(f, "Circuit breaker open: {}", name),
+            RpcResilienceError::ProviderUnhealthy(name) => {
+                write!(f, "Provider unhealthy: {}", name)
+            }
+            RpcResilienceError::CircuitBreakerOpen(name) => {
+                write!(f, "Circuit breaker open: {}", name)
+            }
             RpcResilienceError::TlsError(msg) => write!(f, "TLS error: {}", msg),
             RpcResilienceError::TimeoutError(msg) => write!(f, "Timeout error: {}", msg),
             RpcResilienceError::GenericError(msg) => write!(f, "Error: {}", msg),
@@ -219,7 +223,11 @@ impl RpcResilienceManager {
     }
 
     /// Update provider health status
-    pub fn update_provider_health(&mut self, name: &str, health: ProviderHealth) -> Result<(), RpcResilienceError> {
+    pub fn update_provider_health(
+        &mut self,
+        name: &str,
+        health: ProviderHealth,
+    ) -> Result<(), RpcResilienceError> {
         let timestamp = self.current_timestamp();
         if let Some(provider) = self.providers.get_mut(name) {
             provider.health_status = health;
@@ -241,24 +249,26 @@ impl RpcResilienceManager {
 
     /// Get healthy providers sorted by priority
     pub fn get_healthy_providers(&self) -> Vec<RpcProvider> {
-        let timestamp = self.current_timestamp();
         let mut healthy_providers: Vec<RpcProvider> = self
             .providers
             .iter()
             .filter(|(_, provider)| {
-                provider.active
-                    && provider.health_status == ProviderHealth::Healthy
+                provider.active && provider.health_status == ProviderHealth::Healthy
             })
             .map(|(_, provider)| provider.clone())
             .collect();
-        
+
         // Sort by priority (lower is higher priority)
         healthy_providers.sort_by_key(|p| p.priority);
         healthy_providers
     }
 
     /// Check if a provider is healthy based on circuit breaker status
-    fn is_provider_healthy(&mut self, name: &str, timestamp: u64) -> Result<bool, RpcResilienceError> {
+    fn is_provider_healthy(
+        &mut self,
+        name: &str,
+        timestamp: u64,
+    ) -> Result<bool, RpcResilienceError> {
         if let Some(cb) = self.circuit_breakers.get_mut(name) {
             Ok(cb.can_execute(timestamp))
         } else {
@@ -282,30 +292,41 @@ impl RpcResilienceManager {
     }
 
     /// Execute an RPC call with resilience measures
-    pub async fn execute_rpc_call<T, F, Fut>(&mut self, mut operation: F) -> Result<T, RpcResilienceError>
+    pub async fn execute_rpc_call<T, F, Fut>(
+        &mut self,
+        mut operation: F,
+    ) -> Result<T, RpcResilienceError>
     where
         F: FnMut(&RpcProvider) -> Fut,
         Fut: std::future::Future<Output = Result<T, Box<dyn std::error::Error + Send + Sync>>>,
     {
         let timestamp = self.current_timestamp();
         let healthy_providers = self.get_healthy_providers();
-        
+
         if healthy_providers.is_empty() {
-            return Err(RpcResilienceError::GenericError("No healthy providers available".to_string()));
+            return Err(RpcResilienceError::GenericError(
+                "No healthy providers available".to_string(),
+            ));
         }
 
         let mut last_error = None;
-        
+
         // Try each provider according to failover policy
         for (attempt, provider) in healthy_providers.iter().enumerate() {
             // Check circuit breaker
-            if !self.is_provider_healthy(&provider.name, timestamp).unwrap_or(false) {
-                last_error = Some(RpcResilienceError::CircuitBreakerOpen(provider.name.clone()));
+            if !self
+                .is_provider_healthy(&provider.name, timestamp)
+                .unwrap_or(false)
+            {
+                last_error = Some(RpcResilienceError::CircuitBreakerOpen(
+                    provider.name.clone(),
+                ));
                 continue;
             }
 
             // Execute with timeout
-            let timeout_duration = std::time::Duration::from_millis(self.failover_policy.timeout_ms);
+            let timeout_duration =
+                std::time::Duration::from_millis(self.failover_policy.timeout_ms);
             let result = tokio::time::timeout(timeout_duration, operation(provider)).await;
 
             match result {
@@ -315,7 +336,9 @@ impl RpcResilienceManager {
                 }
                 Ok(Err(_e)) => {
                     self.record_failure(&provider.name);
-                    last_error = Some(RpcResilienceError::GenericError("RPC call failed".to_string()));
+                    last_error = Some(RpcResilienceError::GenericError(
+                        "RPC call failed".to_string(),
+                    ));
                 }
                 Err(_) => {
                     self.record_failure(&provider.name);
@@ -334,10 +357,12 @@ impl RpcResilienceManager {
             } else {
                 self.failover_policy.retry_delay_ms
             };
-            
+
             tokio::time::sleep(std::time::Duration::from_millis(delay_ms)).await;
         }
 
-        Err(last_error.unwrap_or(RpcResilienceError::GenericError("All providers failed".to_string())))
+        Err(last_error.unwrap_or(RpcResilienceError::GenericError(
+            "All providers failed".to_string(),
+        )))
     }
 }

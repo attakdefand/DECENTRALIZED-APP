@@ -57,9 +57,13 @@ struct NavLinkProps {
 
 #[function_component(NavLink)]
 fn nav_link(props: &NavLinkProps) -> Html {
-    let NavLinkProps { route, current_route, children } = props;
+    let NavLinkProps {
+        route,
+        current_route,
+        children,
+    } = props;
     let is_active = route == current_route;
-    
+
     let class = if is_active {
         "border-indigo-500 text-gray-900 inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium"
     } else {
@@ -85,7 +89,7 @@ mod tests {
         let props = NavigationProps {
             current_route: Route::Home,
         };
-        
+
         // Just test that the props can be created, since Route doesn't implement Debug
         assert!(true);
     }

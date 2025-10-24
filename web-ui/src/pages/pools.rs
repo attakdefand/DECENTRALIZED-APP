@@ -45,7 +45,7 @@ pub fn pools() -> Html {
                     {"Create Pool"}
                 </button>
             </div>
-            
+
             <div class="mt-6 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
                 {pools.iter().map(|pool| {
                     html! {
@@ -53,7 +53,7 @@ pub fn pools() -> Html {
                     }
                 }).collect::<Html>()}
             </div>
-            
+
             <div class="mt-8">
                 <h3 class="text-lg font-medium text-gray-900">{"How to Provide Liquidity"}</h3>
                 <div class="mt-4 bg-white shadow overflow-hidden sm:rounded-lg">

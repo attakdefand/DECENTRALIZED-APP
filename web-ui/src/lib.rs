@@ -9,8 +9,8 @@ use yew_router::prelude::*;
 
 mod components;
 mod pages;
-mod services;
 mod router;
+mod services;
 
 use router::{switch, Route};
 

@@ -2,7 +2,7 @@
 //!
 //! This module provides centralized logging configuration using tracing.
 
-use tracing_subscriber::{EnvFilter, fmt, prelude::*};
+use tracing_subscriber::{fmt, prelude::*, EnvFilter};
 
 /// Initialize logging for the application
 pub fn init() {

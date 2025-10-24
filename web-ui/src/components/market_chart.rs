@@ -34,7 +34,10 @@ pub fn market_chart(props: &MarketChartProps) -> Html {
 
     // Calculate min and max values for scaling
     let min_price = data.iter().map(|d| d.price).fold(f64::INFINITY, f64::min);
-    let max_price = data.iter().map(|d| d.price).fold(f64::NEG_INFINITY, f64::max);
+    let max_price = data
+        .iter()
+        .map(|d| d.price)
+        .fold(f64::NEG_INFINITY, f64::max);
     let price_range = max_price - min_price;
 
     // Chart dimensions
@@ -79,10 +82,10 @@ pub fn market_chart(props: &MarketChartProps) -> Html {
                         // X and Y axes
                         <line x1={padding.to_string()} y1={(height - padding).to_string()} x2={(width - padding).to_string()} y2={(height - padding).to_string()} stroke="black" stroke-width="1"/>
                         <line x1={padding.to_string()} y1={padding.to_string()} x2={padding.to_string()} y2={(height - padding).to_string()} stroke="black" stroke-width="1"/>
-                        
+
                         // Chart line
                         <path d={path_data} fill="none" stroke="rgb(99, 102, 241)" stroke-width="2"/>
-                        
+
                         // Min and max price labels
                         <text x={0.to_string()} y={(height - padding + 15.0).to_string()} font-size="12" fill="black">
                             {format!("{:.2}", min_price)}

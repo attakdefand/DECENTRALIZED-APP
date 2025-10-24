@@ -25,7 +25,7 @@ impl CollateralFactor {
             max_exposure,
         }
     }
-    
+
     /// Calculate maximum borrowable amount
     pub fn max_borrow(&self, collateral_value: u128) -> u128 {
         (collateral_value * self.factor as u128) / 100
@@ -54,17 +54,17 @@ impl LiquidationThreshold {
             min_liquidation,
         }
     }
-    
+
     /// Check if position is liquidatable
     pub fn is_liquidatable(&self, collateral_value: u128, debt_value: u128) -> bool {
         if collateral_value == 0 {
             return false;
         }
-        
+
         let ratio = (debt_value * 100) / collateral_value;
         ratio >= self.threshold as u128
     }
-    
+
     /// Calculate liquidation penalty
     pub fn liquidation_penalty(&self, debt_value: u128) -> u128 {
         (debt_value * self.penalty as u128) / 100
@@ -93,12 +93,12 @@ impl LiquidationRatio {
             recovery_rate,
         }
     }
-    
+
     /// Check if liquidation should occur
     pub fn should_liquidate(&self, current_ratio: f64) -> bool {
         current_ratio >= self.target_ratio
     }
-    
+
     /// Calculate required collateral to maintain ratio
     pub fn required_collateral(&self, debt: f64) -> f64 {
         debt / self.target_ratio
@@ -119,12 +119,17 @@ pub struct FeeRouter {
 }
 
 impl FeeRouter {
-    pub fn new(insurance: f64, treasury: f64, stakers: f64, development: f64) -> Result<Self, &'static str> {
+    pub fn new(
+        insurance: f64,
+        treasury: f64,
+        stakers: f64,
+        development: f64,
+    ) -> Result<Self, &'static str> {
         let total = insurance + treasury + stakers + development;
         if (total - 1.0).abs() > 0.001 {
             return Err("Fee percentages must sum to 100%");
         }
-        
+
         Ok(Self {
             insurance,
             treasury,
@@ -132,7 +137,7 @@ impl FeeRouter {
             development,
         })
     }
-    
+
     /// Distribute fees according to configuration
     pub fn distribute_fees(&self, total_fees: u128) -> FeeDistribution {
         FeeDistribution {
@@ -175,13 +180,13 @@ impl InsuranceFund {
             claim_time,
         }
     }
-    
+
     /// Calculate coverage amount
     pub fn coverage_amount(&self, loss: u128) -> u128 {
         let covered = (loss as f64 * self.coverage) as u128;
         covered.min(self.max_payout)
     }
-    
+
     /// Check if fund is adequately capitalized
     pub fn is_adequately_capitalized(&self, current_size: u128) -> bool {
         current_size >= self.min_size
@@ -233,7 +238,13 @@ pub enum ScenarioImpact {
 }
 
 impl EconomicScenario {
-    pub fn new(name: String, volatility: f64, liquidity_stress: f64, duration: u64, impact: ScenarioImpact) -> Self {
+    pub fn new(
+        name: String,
+        volatility: f64,
+        liquidity_stress: f64,
+        duration: u64,
+        impact: ScenarioImpact,
+    ) -> Self {
         Self {
             name,
             volatility,
@@ -258,7 +269,12 @@ pub struct RiskMonitor {
 }
 
 impl RiskMonitor {
-    pub fn new(frequency: u64, collateral_alert: f64, liquidity_alert: f64, volatility_alert: f64) -> Self {
+    pub fn new(
+        frequency: u64,
+        collateral_alert: f64,
+        liquidity_alert: f64,
+        volatility_alert: f64,
+    ) -> Self {
         Self {
             frequency,
             collateral_alert,
@@ -266,17 +282,17 @@ impl RiskMonitor {
             volatility_alert,
         }
     }
-    
+
     /// Check if collateral ratio is concerning
     pub fn check_collateral_ratio(&self, ratio: f64) -> bool {
         ratio >= self.collateral_alert
     }
-    
+
     /// Check if liquidity is concerning
     pub fn check_liquidity(&self, ratio: f64) -> bool {
         ratio <= self.liquidity_alert
     }
-    
+
     /// Check if volatility is concerning
     pub fn check_volatility(&self, vol: f64) -> bool {
         vol >= self.volatility_alert
@@ -302,12 +318,12 @@ impl EmergencyProcedures {
             recovery_threshold,
         }
     }
-    
+
     /// Check if circuit breaker should trigger
     pub fn should_trigger_circuit_breaker(&self, current_loss: f64) -> bool {
         current_loss >= self.circuit_breaker
     }
-    
+
     /// Check if system can recover
     pub fn can_recover(&self, recovery_metric: f64) -> bool {
         recovery_metric >= self.recovery_threshold
@@ -338,66 +354,122 @@ impl RiskManager {
     /// Create a new risk manager with default configurations
     pub fn new() -> Result<Self, &'static str> {
         let fee_router = FeeRouter::new(0.30, 0.40, 0.20, 0.10)?;
-        
+
         let mut collateral_factors = HashMap::new();
-        collateral_factors.insert("ETH".to_string(), CollateralFactor::new("ETH".to_string(), 80, 1000000000000000000000000));
-        collateral_factors.insert("BTC".to_string(), CollateralFactor::new("BTC".to_string(), 70, 500000000000000000000000));
-        collateral_factors.insert("USDC".to_string(), CollateralFactor::new("USDC".to_string(), 90, 1000000000000000000000000000));
-        
+        collateral_factors.insert(
+            "ETH".to_string(),
+            CollateralFactor::new("ETH".to_string(), 80, 1000000000000000000000000),
+        );
+        collateral_factors.insert(
+            "BTC".to_string(),
+            CollateralFactor::new("BTC".to_string(), 70, 500000000000000000000000),
+        );
+        collateral_factors.insert(
+            "USDC".to_string(),
+            CollateralFactor::new("USDC".to_string(), 90, 1000000000000000000000000000),
+        );
+
         let mut liquidation_thresholds = HashMap::new();
-        liquidation_thresholds.insert("ETH".to_string(), LiquidationThreshold::new("ETH".to_string(), 85, 10, 1000000000000000000));
-        liquidation_thresholds.insert("BTC".to_string(), LiquidationThreshold::new("BTC".to_string(), 80, 12, 100000000));
-        liquidation_thresholds.insert("USDC".to_string(), LiquidationThreshold::new("USDC".to_string(), 95, 5, 1000000000));
-        
+        liquidation_thresholds.insert(
+            "ETH".to_string(),
+            LiquidationThreshold::new("ETH".to_string(), 85, 10, 1000000000000000000),
+        );
+        liquidation_thresholds.insert(
+            "BTC".to_string(),
+            LiquidationThreshold::new("BTC".to_string(), 80, 12, 100000000),
+        );
+        liquidation_thresholds.insert(
+            "USDC".to_string(),
+            LiquidationThreshold::new("USDC".to_string(), 95, 5, 1000000000),
+        );
+
         let mut liquidation_ratios = HashMap::new();
-        liquidation_ratios.insert("ETH/USD".to_string(), LiquidationRatio::new("ETH/USD".to_string(), 0.85, 0.90, 0.95));
-        liquidation_ratios.insert("BTC/USD".to_string(), LiquidationRatio::new("BTC/USD".to_string(), 0.80, 0.85, 0.90));
-        liquidation_ratios.insert("USDC/USD".to_string(), LiquidationRatio::new("USDC/USD".to_string(), 0.95, 0.98, 0.99));
-        
+        liquidation_ratios.insert(
+            "ETH/USD".to_string(),
+            LiquidationRatio::new("ETH/USD".to_string(), 0.85, 0.90, 0.95),
+        );
+        liquidation_ratios.insert(
+            "BTC/USD".to_string(),
+            LiquidationRatio::new("BTC/USD".to_string(), 0.80, 0.85, 0.90),
+        );
+        liquidation_ratios.insert(
+            "USDC/USD".to_string(),
+            LiquidationRatio::new("USDC/USD".to_string(), 0.95, 0.98, 0.99),
+        );
+
         let scenarios = vec![
-            EconomicScenario::new("Bull Market".to_string(), 0.02, 0.8, 28800, ScenarioImpact::Low),
-            EconomicScenario::new("Bear Market".to_string(), 0.05, 0.6, 28800, ScenarioImpact::Medium),
-            EconomicScenario::new("Flash Crash".to_string(), 0.15, 0.3, 1440, ScenarioImpact::High),
-            EconomicScenario::new("Black Swan".to_string(), 0.30, 0.1, 720, ScenarioImpact::Critical),
+            EconomicScenario::new(
+                "Bull Market".to_string(),
+                0.02,
+                0.8,
+                28800,
+                ScenarioImpact::Low,
+            ),
+            EconomicScenario::new(
+                "Bear Market".to_string(),
+                0.05,
+                0.6,
+                28800,
+                ScenarioImpact::Medium,
+            ),
+            EconomicScenario::new(
+                "Flash Crash".to_string(),
+                0.15,
+                0.3,
+                1440,
+                ScenarioImpact::High,
+            ),
+            EconomicScenario::new(
+                "Black Swan".to_string(),
+                0.30,
+                0.1,
+                720,
+                ScenarioImpact::Critical,
+            ),
         ];
-        
+
         Ok(Self {
             collateral_factors,
             liquidation_thresholds,
             liquidation_ratios,
             fee_router,
-            insurance_fund: InsuranceFund::new(1000000000000000000000000, 100000000000000000000000, 0.80, 7200),
+            insurance_fund: InsuranceFund::new(
+                1000000000000000000000000,
+                100000000000000000000000,
+                0.80,
+                7200,
+            ),
             risk_monitor: RiskMonitor::new(100, 0.80, 0.20, 0.10),
             emergency_procedures: EmergencyProcedures::new(0.05, 28800, 0.95),
             scenarios,
         })
     }
-    
+
     /// Get collateral factor for an asset
     pub fn get_collateral_factor(&self, asset: &str) -> Option<&CollateralFactor> {
         self.collateral_factors.get(asset)
     }
-    
+
     /// Get liquidation threshold for an asset
     pub fn get_liquidation_threshold(&self, asset: &str) -> Option<&LiquidationThreshold> {
         self.liquidation_thresholds.get(asset)
     }
-    
+
     /// Get liquidation ratio for a pair
     pub fn get_liquidation_ratio(&self, pair: &str) -> Option<&LiquidationRatio> {
         self.liquidation_ratios.get(pair)
     }
-    
+
     /// Distribute fees according to router configuration
     pub fn distribute_fees(&self, total_fees: u128) -> FeeDistribution {
         self.fee_router.distribute_fees(total_fees)
     }
-    
+
     /// Calculate insurance coverage for a loss
     pub fn calculate_coverage(&self, loss: u128) -> u128 {
         self.insurance_fund.coverage_amount(loss)
     }
-    
+
     /// Check if a position is liquidatable
     pub fn is_liquidatable(&self, asset: &str, collateral_value: u128, debt_value: u128) -> bool {
         if let Some(threshold) = self.get_liquidation_threshold(asset) {
@@ -406,36 +478,44 @@ impl RiskManager {
             false
         }
     }
-    
+
     /// Check if risk monitors should trigger alerts
-    pub fn check_risk_alerts(&self, collateral_ratio: f64, liquidity_ratio: f64, volatility: f64) -> Vec<String> {
+    pub fn check_risk_alerts(
+        &self,
+        collateral_ratio: f64,
+        liquidity_ratio: f64,
+        volatility: f64,
+    ) -> Vec<String> {
         let mut alerts = Vec::new();
-        
+
         if self.risk_monitor.check_collateral_ratio(collateral_ratio) {
             alerts.push("High collateral ratio detected".to_string());
         }
-        
+
         if self.risk_monitor.check_liquidity(liquidity_ratio) {
             alerts.push("Low liquidity detected".to_string());
         }
-        
+
         if self.risk_monitor.check_volatility(volatility) {
             alerts.push("High volatility detected".to_string());
         }
-        
+
         alerts
     }
-    
+
     /// Check if emergency procedures should be triggered
     pub fn check_emergency(&self, current_loss: f64, recovery_metric: f64) -> Option<String> {
-        if self.emergency_procedures.should_trigger_circuit_breaker(current_loss) {
+        if self
+            .emergency_procedures
+            .should_trigger_circuit_breaker(current_loss)
+        {
             return Some("Circuit breaker triggered due to excessive losses".to_string());
         }
-        
+
         if self.emergency_procedures.can_recover(recovery_metric) {
             return Some("System can recover from current state".to_string());
         }
-        
+
         None
     }
 }
@@ -455,14 +535,15 @@ mod tests {
     fn test_liquidation_threshold_check() {
         let lt = LiquidationThreshold::new("ETH".to_string(), 85, 10, 1000000000000000000);
         assert!(lt.is_liquidatable(100000000000000000000, 85000000000000000000)); // 100 ETH collateral, 85 ETH debt
-        assert!(!lt.is_liquidatable(100000000000000000000, 84000000000000000000)); // 100 ETH collateral, 84 ETH debt
+        assert!(!lt.is_liquidatable(100000000000000000000, 84000000000000000000));
+        // 100 ETH collateral, 84 ETH debt
     }
 
     #[test]
     fn test_fee_router_distribution() {
         let router = FeeRouter::new(0.30, 0.40, 0.20, 0.10).unwrap();
         let distribution = router.distribute_fees(100000000000000000000); // 100 tokens
-        
+
         assert_eq!(distribution.insurance, 30000000000000000000); // 30 tokens
         assert_eq!(distribution.treasury, 40000000000000000000); // 40 tokens
         assert_eq!(distribution.stakers, 20000000000000000000); // 20 tokens
@@ -471,16 +552,21 @@ mod tests {
 
     #[test]
     fn test_insurance_coverage() {
-        let fund = InsuranceFund::new(1000000000000000000000000, 100000000000000000000000, 0.80, 7200);
+        let fund = InsuranceFund::new(
+            1000000000000000000000000,
+            100000000000000000000000,
+            0.80,
+            7200,
+        );
         let coverage = fund.coverage_amount(100000000000000000000); // 100 token loss
-        
+
         assert_eq!(coverage, 80000000000000000000); // 80 tokens covered
     }
 
     #[test]
     fn test_risk_manager_creation() {
         let risk_manager = RiskManager::new().unwrap();
-        
+
         assert!(risk_manager.get_collateral_factor("ETH").is_some());
         assert!(risk_manager.get_liquidation_threshold("BTC").is_some());
         assert!(risk_manager.get_liquidation_ratio("ETH/USD").is_some());
@@ -489,7 +575,7 @@ mod tests {
     #[test]
     fn test_risk_alerts() {
         let risk_manager = RiskManager::new().unwrap();
-        
+
         let alerts = risk_manager.check_risk_alerts(0.85, 0.15, 0.15);
         assert_eq!(alerts.len(), 3); // All three alerts should trigger
     }

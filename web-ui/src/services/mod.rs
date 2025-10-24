@@ -3,9 +3,9 @@
 //! This module contains services for interacting with the backend API.
 
 pub mod api;
-pub mod pools;
-pub mod orders;
 pub mod markets;
+pub mod orders;
+pub mod pools;
 
 #[cfg(test)]
 mod tests {

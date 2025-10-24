@@ -91,7 +91,7 @@ mod tests {
             volume_24h: 50000.0,
             apr: 15.0,
         };
-        
+
         assert_eq!(pool.id, "test-pool");
         assert_eq!(pool.token_a, "ETH");
         assert_eq!(pool.token_b, "USDC");

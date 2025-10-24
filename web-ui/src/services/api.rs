@@ -40,10 +40,7 @@ impl ApiClient {
         U: DeserializeOwned,
     {
         let url = format!("{}{}", self.base_url, endpoint);
-        let resp = Request::post(&url)
-            .json(data)?
-            .send()
-            .await?;
+        let resp = Request::post(&url).json(data)?.send().await?;
         let json = resp.json::<U>().await?;
         Ok(json)
     }
@@ -55,10 +52,7 @@ impl ApiClient {
         U: DeserializeOwned,
     {
         let url = format!("{}{}", self.base_url, endpoint);
-        let resp = Request::put(&url)
-            .json(data)?
-            .send()
-            .await?;
+        let resp = Request::put(&url).json(data)?.send().await?;
         let json = resp.json::<U>().await?;
         Ok(json)
     }
