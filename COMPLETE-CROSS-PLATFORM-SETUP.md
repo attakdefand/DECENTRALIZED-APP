@@ -1,6 +1,6 @@
 # Complete Cross-Platform Setup Guide for DECENTRALIZED-APP
 
-This comprehensive guide provides detailed instructions for installing and running the DECENTRALIZED-APP on Windows, macOS, and Linux operating systems.
+This comprehensive guide provides detailed instructions for installing and running the DECENTRALIZED-APP on Windows, macOS, Linux, and Harmony OS operating systems.
 
 ## System Requirements
 
@@ -130,6 +130,40 @@ The installer will automatically install Rust if it's not present.
    ```
 
 2. **Open Terminal** and follow steps 2-5 from the Ubuntu/Debian section above.
+
+#### Harmony OS
+
+1. **Install Git** (if not already installed):
+   ```bash
+   # For Harmony OS (OpenHarmony-based)
+   pkg install git
+   # Or if using a Debian-based Harmony OS variant:
+   apt-get update && apt-get install git
+   ```
+
+2. **Open Terminal**:
+   - Navigate to your desired directory:
+     ```bash
+     cd ~/Documents
+     ```
+
+3. **Download the source code**:
+   ```bash
+   git clone https://github.com/attakdefand/DECENTRALIZED-APP.git
+   cd DECENTRALIZED-APP
+   ```
+
+4. **Make the installer executable**:
+   ```bash
+   chmod +x install.sh
+   ```
+
+5. **Run the installer**:
+   ```bash
+   ./install.sh
+   ```
+
+**Note**: Harmony OS support is experimental. Some features may require additional configuration or may not be fully supported depending on the specific Harmony OS variant and version.
 
 ### Method 2: Pre-built Packages
 

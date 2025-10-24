@@ -202,7 +202,7 @@ Options:
 
 ### Complete Cross-Platform Setup
 
-For detailed installation instructions for Windows, macOS, and Linux, see the [Complete Cross-Platform Setup Guide](COMPLETE-CROSS-PLATFORM-SETUP.md).
+For detailed installation instructions for Windows, macOS, Linux, and Harmony OS, see the [Complete Cross-Platform Setup Guide](COMPLETE-CROSS-PLATFORM-SETUP.md).
 
 ## Releases and Packages
 
