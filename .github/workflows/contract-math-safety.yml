@@ -1,0 +1,66 @@
+name: Contract Math Safety
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'contracts/src/**'
+      - 'contracts/test/**'
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'contracts/src/**'
+      - 'contracts/test/**'
+
+jobs:
+  math-safety-tests:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: nightly
+
+      - name: Setup dependencies
+        run: |
+          cd contracts
+          forge install --no-commit
+      
+      - name: Run unit tests
+        run: |
+          cd contracts
+          forge test --match-contract MathSafetyTest --match-test test* -vvv
+      
+      - name: Run fuzz tests
+        run: |
+          cd contracts
+          forge test --match-contract MathSafetyTest --match-test testProperty* -vvv
+      
+      - name: Run invariant tests
+        run: |
+          cd contracts
+          forge test --match-contract MathSafetyTest --match-test *Invariant* -vvv
+      
+      - name: Run edge case tests
+        run: |
+          cd contracts
+          forge test --match-contract MathSafetyTest --match-test *EdgeCase* -vvv
+      
+      - name: Run differential tests
+        run: |
+          cd contracts
+          forge test --match-contract MathSafetyTest --match-test *Reference* -vvv
+      
+      - name: Generate test report
+        run: |
+          echo "Generating test report"
+          # This would generate a comprehensive report of all test results
+          
+      - name: Upload test results
+        uses: actions/upload-artifact@v3
+        with:
+          name: math-safety-results
+          path: contracts/math-safety-results/

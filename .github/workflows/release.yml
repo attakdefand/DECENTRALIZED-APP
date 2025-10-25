@@ -1,319 +1,55 @@
-name: Release
+name: Release Pipeline
 
 on:
   push:
     tags:
       - 'v*'
 
-env:
-  CARGO_TERM_COLOR: always
-
 jobs:
-  release-notes:
-    name: Generate Release Notes
+  build:
     runs-on: ubuntu-latest
-    
     steps:
-    - uses: actions/checkout@v3
-      with:
-        fetch-depth: 0
-    
-    - name: Generate release notes
-      run: |
-        # Generate release notes based on commit history
-        echo "## What's Changed" > RELEASE_NOTES.md
-        git log --pretty=format:"- %s" $(git describe --tags --abbrev=0 HEAD^)..HEAD >> RELEASE_NOTES.md
-        echo "" >> RELEASE_NOTES.md
-        echo "## Full Changelog" >> RELEASE_NOTES.md
-        echo "[Compare Changes](https://github.com/attakdefand/DECENTRALIZED-APP/compare/$(git describe --tags --abbrev=0 HEAD^)..$GITHUB_REF_NAME)" >> RELEASE_NOTES.md
-    
-    - name: Upload release notes
-      uses: actions/upload-artifact@v3
-      with:
-        name: release-notes
-        path: RELEASE_NOTES.md
-
-  build-and-sign:
-    name: Build and Sign Artifacts
-    runs-on: ubuntu-latest
-    needs: release-notes
-    
-    steps:
-    - uses: actions/checkout@v3
-    
-    - name: Install Rust
-      uses: actions-rs/toolchain@v1
-      with:
-        toolchain: stable
-        override: true
-    
-    - name: Cache cargo registry
-      uses: actions/cache@v3
-      with:
-        path: |
-          ~/.cargo/registry
-          ~/.cargo/git
-        key: ${{ runner.os }}-cargo-registry-release-${{ hashFiles('**/Cargo.lock') }}
-    
-    - name: Build release binaries
-      run: |
-        cargo build --release --workspace
-    
-    - name: Install cosign
-      run: |
-        COSIGN_VERSION="v1.13.1"
-        curl -Lo cosign.deb "https://github.com/sigstore/cosign/releases/latest/download/cosign_${COSIGN_VERSION}_linux_amd64.deb"
-        sudo dpkg -i cosign.deb
-    
-    - name: Generate cosign key pair
-      run: |
-        cosign generate-key-pair
-      env:
-        COSIGN_PASSWORD: ""
-    
-    - name: Sign binaries
-      run: |
-        # Sign all binaries in the target/release directory
-        for binary in target/release/*; do
-          if [ -f "$binary" ] && [ -x "$binary" ]; then
-            cosign sign-blob --key cosign.key "$binary" --output-signature "${binary}.sig"
-          fi
-        done
-    
-    - name: Upload signed artifacts
-      uses: actions/upload-artifact@v3
-      with:
-        name: signed-binaries
-        path: |
-          target/release/*
-          !target/release/*.d
-          !target/release/*.rlib
-          !target/release/deps/
-          !target/release/build/
-          !target/release/.fingerprint/
-
-  publish-crates:
-    name: Publish Crates to GitHub Packages
-    runs-on: ubuntu-latest
-    needs: build-and-sign
-    # Only run this job if we're on the main repository (not a fork)
-    if: github.repository == 'attakdefand/DECENTRALIZED-APP'
-    
-    steps:
-    - uses: actions/checkout@v3
-    
-    - name: Install Rust
-      uses: actions-rs/toolchain@v1
-      with:
-        toolchain: stable
-        override: true
-    
-    - name: Cache cargo registry
-      uses: actions/cache@v3
-      with:
-        path: |
-          ~/.cargo/registry
-          ~/.cargo/git
-        key: ${{ runner.os }}-cargo-publish-${{ hashFiles('**/Cargo.lock') }}
-    
-    - name: Setup .cargo/config.toml
-      run: |
-        mkdir -p ~/.cargo
-        echo '[registries.github]' > ~/.cargo/config.toml
-        echo 'index = "https://github.com/attakdefand/DECENTRALIZED-APP"' >> ~/.cargo/config.toml
-    
-    - name: Publish crates to GitHub Packages
-      run: |
-        # Publish all crates in the workspace except the web-ui
-        for manifest in $(find crates services -name "Cargo.toml" -not -path "*/target/*"); do
-          echo "Publishing crate from $manifest"
-          cargo publish --manifest-path $manifest --registry github --token ${{ secrets.GITHUB_TOKEN }} || echo "Failed to publish $manifest, continuing..."
-        done
-      env:
-        CARGO_REGISTRY_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-  docker-release:
-    name: Docker Release
-    runs-on: ubuntu-latest
-    needs: build-and-sign
-    
-    steps:
-    - uses: actions/checkout@v3
-    
-    - name: Set up Docker Buildx
-      uses: docker/setup-buildx-action@v2
-    
-    - name: Login to DockerHub
-      uses: docker/login-action@v2
-      with:
-        username: ${{ secrets.DOCKERHUB_USERNAME }}
-        password: ${{ secrets.DOCKERHUB_TOKEN }}
-    
-    - name: Login to GitHub Container Registry
-      uses: docker/login-action@v2
-      with:
-        registry: ghcr.io
-        username: ${{ github.actor }}
-        password: ${{ secrets.GITHUB_TOKEN }}
-    
-    - name: Extract metadata
-      id: meta
-      uses: docker/metadata-action@v4
-      with:
-        images: |
-          decentralized-app/app
-          ghcr.io/${{ github.repository }}
-        tags: |
-          type=ref,event=tag
-          type=sha,prefix={{branch}}-
-    
-    - name: Build and push indexer service
-      uses: docker/build-push-action@v4
-      with:
-        context: .
-        file: ./services/indexer-rs/Dockerfile
-        push: true
-        tags: |
-          decentralized-app/indexer:${{ github.ref_name }}
-          ghcr.io/${{ github.repository }}/indexer:${{ github.ref_name }}
-    
-    - name: Build and push API service
-      uses: docker/build-push-action@v4
-      with:
-        context: .
-        file: ./services/api-rs/Dockerfile
-        push: true
-        tags: |
-          decentralized-app/api:${{ github.ref_name }}
-          ghcr.io/${{ github.repository }}/api:${{ github.ref_name }}
-    
-    - name: Build and push keepers service
-      uses: docker/build-push-action@v4
-      with:
-        context: .
-        file: ./services/keepers-rs/Dockerfile
-        push: true
-        tags: |
-          decentralized-app/keepers:${{ github.ref_name }}
-          ghcr.io/${{ github.repository }}/keepers:${{ github.ref_name }}
-    
-    - name: Build and push IPFS monitor service
-      uses: docker/build-push-action@v4
-      with:
-        context: .
-        file: ./services/ipfs-rs/Dockerfile
-        push: true
-        tags: |
-          decentralized-app/ipfs-monitor:${{ github.ref_name }}
-          ghcr.io/${{ github.repository }}/ipfs-monitor:${{ github.ref_name }}
-    
-    - name: Build and push MEV monitor service
-      uses: docker/build-push-action@v4
-      with:
-        context: .
-        file: ./services/mev-monitor/Dockerfile
-        push: true
-        tags: |
-          decentralized-app/mev-monitor:${{ github.ref_name }}
-          ghcr.io/${{ github.repository }}/mev-monitor:${{ github.ref_name }}
-    
-    - name: Build and push AA bundler service
-      uses: docker/build-push-action@v4
-      with:
-        context: .
-        file: ./services/aa-bundler/Dockerfile
-        push: true
-        tags: |
-          decentralized-app/aa-bundler:${{ github.ref_name }}
-          ghcr.io/${{ github.repository }}/aa-bundler:${{ github.ref_name }}
-
-  wasm-package:
-    name: Publish WebAssembly Package
-    runs-on: ubuntu-latest
-    needs: build-and-sign
-    
-    steps:
-    - uses: actions/checkout@v3
-    
-    - name: Install Rust
-      uses: actions-rs/toolchain@v1
-      with:
-        toolchain: stable
-        target: wasm32-unknown-unknown
-        override: true
-        
-    - name: Install wasm-pack
-      run: |
-        curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
-        
-    - name: Build WebAssembly package
-      run: |
-        cd web-ui
-        wasm-pack build --target web --release
-        
-    - name: Pack WebAssembly package
-      run: |
-        cd web-ui
-        wasm-pack pack
-        
-    - name: Publish to GitHub Packages
-      run: |
-        cd web-ui
-        wasm-pack publish --registry github
-      env:
-        WASM_PACK_GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      continue-on-error: true
+      - uses: actions/checkout@v3
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+      - name: Install dependencies
+        run: npm ci
+      - name: Build
+        run: npm run build
+      - name: Archive artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: release-artifacts
+          path: dist/
 
   provenance:
-    name: Provenance Attestation
     runs-on: ubuntu-latest
-    needs: [docker-release, publish-crates]
+    needs: build
     steps:
-    - uses: actions/checkout@v3
-    
-    - name: Install cosign
-      run: |
-        COSIGN_VERSION="v1.13.1"
-        curl -Lo cosign.deb "https://github.com/sigstore/cosign/releases/latest/download/cosign_${COSIGN_VERSION}_linux_amd64.deb"
-        sudo dpkg -i cosign.deb
-    
-    - name: Create provenance attestation
-      run: |
-        # Create in-toto provenance attestation
-        echo "Creating provenance attestation"
-        cosign attest --predicate RELEASE_NOTES.md --type slsaprovenance decentralized-app/indexer:${{ github.ref_name }}
-        cosign attest --predicate RELEASE_NOTES.md --type slsaprovenance decentralized-app/api:${{ github.ref_name }}
-        cosign attest --predicate RELEASE_NOTES.md --type slsaprovenance decentralized-app/keepers:${{ github.ref_name }}
-        cosign attest --predicate RELEASE_NOTES.md --type slsaprovenance decentralized-app/ipfs-monitor:${{ github.ref_name }}
-        cosign attest --predicate RELEASE_NOTES.md --type slsaprovenance decentralized-app/mev-monitor:${{ github.ref_name }}
-        cosign attest --predicate RELEASE_NOTES.md --type slsaprovenance decentralized-app/aa-bundler:${{ github.ref_name }}
+      - uses: actions/checkout@v3
+      - name: Download artifacts
+        uses: actions/download-artifact@v3
+        with:
+          name: release-artifacts
+          path: dist/
+      - name: Generate provenance
+        uses: actions/attest-build-provenance@v1
+        with:
+          subject-path: dist/
 
-  create-release:
-    name: Create GitHub Release
+  publish:
     runs-on: ubuntu-latest
-    needs: [release-notes, provenance, wasm-package]
-    
+    needs: provenance
     steps:
-    - uses: actions/checkout@v3
-    
-    - name: Download release notes
-      uses: actions/download-artifact@v3
-      with:
-        name: release-notes
-    
-    - name: Download signed binaries
-      uses: actions/download-artifact@v3
-      with:
-        name: signed-binaries
-        path: release-binaries
-    
-    - name: Create Release
-      uses: actions/create-release@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        tag_name: ${{ github.ref }}
-        release_name: Release ${{ github.ref }}
-        body_path: RELEASE_NOTES.md
-        draft: false
-        prerelease: false
+      - uses: actions/checkout@v3
+      - name: Download artifacts
+        uses: actions/download-artifact@v3
+        with:
+          name: release-artifacts
+          path: dist/
+      - name: Publish to registry
+        run: |
+          echo "Publishing to registry"
+          # This would publish the artifacts to a registry

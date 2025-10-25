@@ -6,6 +6,7 @@ Smart Contracts,Upgradeability,Proxy/UUPS/Timelock,"Upgrades gated by timelock &
 Smart Contracts,Pause/Circuit Breaker,Pausable/Rate-caps,"Pause paths, per-function caps, unpause",Emergency controls halt risky functions safely,Scenario tests; chaos toggles; role-based checks,MTTR to pause; paused-state coverage
 Smart Contracts,Eventing,Event schemas & indices,"Events emitted correctly, indexed topics, ids","Indexability, auditability, analytics readiness",Event snapshot comparison; ABI/event schema lint,"Event coverage %, schema contract-test export"
 DeFi,AMM - CPMM,"Swap, add/remove liquidity, fees","x*y=k conservation, fee accrual, slippage bounds",AMM math correctness & fee routing,Fuzz invariants; curve model cross-check; Foundry invariant,K conservation ≤ epsilon; fee ledger matches trades
+
 DeFi,AMM - StableSwap,"Amplification A, imbalance handling",Curve near-peg behavior; withdrawal under imbalances,Low slippage for like-assets; invariants,Numerical model parity tests; adversarial imbalance sims,Max slippage under tests; peg robustness score
 DeFi,CLAMM,"Ticks, range orders, fee growth","Tick crossing, per-tick liquidity, price math",Correct tick accounting and fee distribution,Reference math model; exhaustive edge-case ticks,No negative liquidity; fee sum reconciliation
 DeFi,Orderbook DEX,CLOB matching/settlement,"Place/cancel/match, partial fills, IOC/FOK",Price-time priority and fair matching,Engine unit tests; replay against fixtures; MEV sims,"Match correctness %, latency, fairness metrics"

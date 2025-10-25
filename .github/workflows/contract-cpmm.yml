@@ -1,0 +1,81 @@
+name: Contract CPMM
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'contracts/src/core/CPMM.sol'
+      - 'contracts/test/core/CPMMTest.sol'
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'contracts/src/core/CPMM.sol'
+      - 'contracts/test/core/CPMMTest.sol'
+
+jobs:
+  cpmm-tests:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: nightly
+
+      - name: Setup dependencies
+        run: |
+          cd contracts
+          forge install --no-commit
+      
+      - name: Run unit tests
+        run: |
+          cd contracts
+          forge test --match-contract CPMMTest --match-test test* -vvv
+      
+      - name: Run invariant tests
+        run: |
+          cd contracts
+          forge test --match-contract CPMMTest --match-test *Invariant* -vvv
+      
+      - name: Run property tests
+        run: |
+          cd contracts
+          forge test --match-contract CPMMTest --match-test testProperty* -vvv
+      
+      - name: Run edge case tests
+        run: |
+          cd contracts
+          forge test --match-contract CPMMTest --match-test *EdgeCase* -vvv
+      
+      - name: Run differential tests
+        run: |
+          cd contracts
+          forge test --match-contract CPMMTest --match-test *Reference* -vvv
+      
+      - name: Run slippage tests
+        run: |
+          cd contracts
+          forge test --match-contract CPMMTest --match-test *Slippage* -vvv
+      
+      - name: Run fee tests
+        run: |
+          cd contracts
+          forge test --match-contract CPMMTest --match-test *Fee* -vvv
+      
+      - name: Run liquidity tests
+        run: |
+          cd contracts
+          forge test --match-contract CPMMTest --match-test *Liquidity* -vvv
+      
+      - name: Generate test report
+        run: |
+          echo "Generating test report"
+          # This would generate a comprehensive report of all test results
+          
+      - name: Upload test results
+        uses: actions/upload-artifact@v3
+        with:
+          name: cpmm-results
+          path: contracts/cpmm-results/

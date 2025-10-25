@@ -118,6 +118,26 @@ forge inspect TokenV2 storage-layout > v2-layout.json
 # Custom diff tool to compare layouts
 ```
 
+Our implementation includes a comprehensive PowerShell-based storage layout diff tool that:
+1. Extracts storage layout information from contract implementations
+2. Compares layouts between versions to detect incompatibilities
+3. Validates slot ordering and type compatibility
+4. Generates detailed reports for review
+
+The tool can be found at: [storage-layout-diff.ps1](../scripts/storage-layout-diff.ps1)
+
+### Shadow-Fork Dry-Run
+Before any production upgrade, we conduct shadow-fork dry-runs to validate the entire process:
+
+1. **Isolated Environment**: Create a separate test environment that mirrors production
+2. **State Cloning**: Clone the current production state
+3. **Governance Simulation**: Execute the full governance flow (multisig approvals, timelock scheduling)
+4. **Storage Validation**: Run storage layout compatibility checks
+5. **Functionality Testing**: Verify all contract functions work correctly after upgrade
+6. **Reporting**: Generate comprehensive reports documenting the process and results
+
+The shadow-fork dry-run script can be found at: [shadow-fork-dry-run.ps1](../scripts/shadow-fork-dry-run.ps1)
+
 ## Timelock Mechanism
 
 ### Implementation
@@ -200,12 +220,13 @@ contract GuardianMultisig is AccessControl {
 
 ### Pre-Upgrade Checklist
 1. [ ] Complete security audit of new implementation
-2. [ ] Verify storage layout compatibility
+2. [ ] Verify storage layout compatibility using storage layout diff tool
 3. [ ] Test upgrade process in staging environment
-4. [ ] Prepare comprehensive test suite
-5. [ ] Document all changes and migration steps
-6. [ ] Obtain multi-signature approvals
-7. [ ] Schedule upgrade through timelock
+4. [ ] Conduct shadow-fork dry-run simulation
+5. [ ] Prepare comprehensive test suite
+6. [ ] Document all changes and migration steps
+7. [ ] Obtain multi-signature approvals
+8. [ ] Schedule upgrade through timelock
 
 ### Upgrade Execution
 1. **Deployment**: Deploy new implementation contract
@@ -237,7 +258,7 @@ contract GuardianMultisig is AccessControl {
 - **Layout Preservation**: Never break storage layout compatibility
 - **Initialization**: Ensure proper initialization of new storage
 - **Migration**: Implement safe data migration when needed
-- **Validation**: Verify storage integrity after upgrades
+- **Validation**: Verify storage integrity after upgrades using storage layout diff tool
 
 ### Emergency Procedures
 - **Pause Mechanism**: Ability to pause contracts during emergencies
@@ -264,6 +285,7 @@ contract GuardianMultisig is AccessControl {
 - **Load Testing**: Verify performance under load
 - **Edge Cases**: Test boundary conditions
 - **Failure Scenarios**: Test error handling
+- **Shadow-Fork Dry-Run**: Full simulation of upgrade process
 
 ## Monitoring and Alerting
 

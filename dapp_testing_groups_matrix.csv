@@ -1,6 +1,9 @@
 Group (A–F),Testing Domain,Main Type,Sub-type,Primary plane (Code/Infra/Hybrid),Functions / Scenarios,Tools / Techniques,CI Gate,Evidence link (to fill)
+
 A,Smart Contracts,Logic & Math,Unit / Fuzz / Invariant,Code,"Conservation, monotonicity, reentrancy, bounds, fee routing","Foundry (forge test/fuzz/invariant), Echidna, Slither",contracts: unit+fuzz+invariant must pass; Slither no criticals; gas snapshot threshold,contracts/test/INVARIANTS.md
+
 A,Upgradeability,Storage layout,Proxy/UUPS diff,Code,No storage slot collisions across upgrades; timelock/guardian flow,"OpenZeppelin Upgrades, storage-layout diff, shadow-fork dry-run",upgrade PRs require layout diff green + dry-run evidence,contracts/script/UPGRADE-PLAN.md
+
 A,AMM/DEX,Curve correctness,CPMM/Stable/CLAMM invariants,Code,"x*y=k, amplification behavior, per-tick liquidity/fees","Model-based tests (Python/Rust), Foundry invariants",amm invariant suite green; reconciliation within epsilon,docs/tests/AMM-INVARIANTS.md
 A,Orderbook,Matching engine,Price-time priority & partial fills,Code,Place/cancel/match; IOC/FOK; fairness,Engine unit tests; replay fixtures; MEV sims,LOB suite green; fairness metrics within target,docs/tests/LOB-TESTS.md
 A,Lending/Perps,Risk & Liquidations,"HF, Kink IR, funding/insurance",Code,Liquidate below HF; correct funding; insurance waterfall,Economic sims/backtests; invariant checks,Risk sims green; bad-debt in stress ≤ budget,docs/tests/RISK-SIMS.md
@@ -9,6 +12,7 @@ A,MEV & Fairness,Order protection,Commit-reveal / FBA,Hybrid,"Reveal windows, un
 A,Account Abstraction,UserOps validation,Paymaster/session key scope,Hybrid,"Nonces, signatures, budgets, capability scoping",4337 bundler harness; fuzz; scope-leak tests,AA suite green; budget adherence,docs/protocol/AA-TESTS.md
 A,Tx/Mempool,Privacy & replay,"Private routes, deadlines, permit",Hybrid,"EIP-155 replay, domain separator, expiry enforced",Permit fuzz; private route checks,Replay tests green; expired rejected,docs/infra/TX-ROUTING-TESTS.md
 A,Cross-chain / Bridges,Proof verification,Light/Optimistic/ZK,Hybrid,Header/receipt proof valid; challenge windows; replay guard,Fixture proofs; fraud-proof sims; ZK verifier tests,Bridge suite green; gas within cap,docs/protocol/BRIDGE-TESTS.md
+
 B,IAM,Human/Service access,SSO/MFA/RBAC reviews,Infra/App,Least privilege; periodic review; role scoping,IdP test flows; OPA/Cedar unit tests,Access review artifact required per release,docs/security/IAM-REVIEWS.md
 B,Key Management,Rotation & recovery,MPC/HSM/multisig drills,Infra/Code,Signer rotation; guardian recovery; threshold enforcement,KMS API tests; runbook drills; multisig testnet txs,Rotation drill evidence; threshold check,docs/runbooks/KEY-ROTATION-REPORT.md
 B,Policy Gatekeeping,Allow/Deny & rate-classes,Policy-as-code,App/Infra,Policy decisions traceable; provenance of bundles,"OPA (Rego), Cedar tests; partial eval checks",Policy test suite must pass; signed bundles,infra/policies/README.md
