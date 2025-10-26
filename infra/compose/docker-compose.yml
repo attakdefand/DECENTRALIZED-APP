@@ -18,6 +18,8 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
+    # Security: Run as non-root user
+    user: "70:70"
 
   # ClickHouse for analytics (OLAP)
   clickhouse:
@@ -33,6 +35,8 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
+    # Security: Run as non-root user
+    user: "101:101"
 
   # Redis for caching and queues
   redis:
@@ -48,6 +52,8 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
+    # Security: Run as non-root user
+    user: "999:1000"
 
   # NATS for event streaming
   nats:
@@ -59,6 +65,8 @@ services:
     command: "--jetstream"
     volumes:
       - nats_data:/tmp/nats
+    # Security: Run as non-root user
+    user: "65534:65534"
 
   # IPFS for content storage
   ipfs:
@@ -70,11 +78,65 @@ services:
       - "5001:5001"
     volumes:
       - ipfs_data:/data/ipfs
+    # Security: Run as non-root user
+    user: "1000:1000"
+
+  # API service
+  api:
+    build:
+      context: ../..
+      dockerfile: services/api-rs/Dockerfile
+    container_name: dex-api
+    ports:
+      - "3000:3000"
+    environment:
+      - RUST_LOG=info
+    depends_on:
+      - postgres
+      - redis
+      - nats
+    # Security: Network isolation
+    networks:
+      - backend
+
+  # Indexer service
+  indexer:
+    build:
+      context: ../..
+      dockerfile: services/indexer-rs/Dockerfile
+    container_name: dex-indexer
+    ports:
+      - "8080:8080"
+    environment:
+      - RUST_LOG=info
+    depends_on:
+      - postgres
+      - clickhouse
+      - nats
+    # Security: Network isolation
+    networks:
+      - backend
+
+  # Keeper service
+  keepers:
+    build:
+      context: ../..
+      dockerfile: services/keepers-rs/Dockerfile
+    container_name: dex-keepers
+    environment:
+      - RUST_LOG=info
+    depends_on:
+      - postgres
+      - redis
+      - nats
+    # Security: Network isolation
+    networks:
+      - backend
 
   # IPFS monitoring service
   ipfs-monitor:
     build:
-      context: ../../..
+      context: ../..
       dockerfile: services/ipfs-rs/Dockerfile
     container_name: dex-ipfs-monitor
     ports:
@@ -83,28 +145,67 @@ services:
       - ipfs
     environment:
       - RUST_LOG=info
+    # Security: Network isolation
+    networks:
+      - backend
 
   # MEV monitoring service
   mev-monitor:
     build:
-      context: ../../..
+      context: ../..
       dockerfile: services/mev-monitor/Dockerfile
     container_name: dex-mev-monitor
     ports:
       - "9094:9094"
     environment:
       - RUST_LOG=info
+    # Security: Network isolation
+    networks:
+      - backend
 
   # Account Abstraction Bundler service
   aa-bundler:
     build:
-      context: ../../..
+      context: ../..
       dockerfile: services/aa-bundler/Dockerfile
     container_name: dex-aa-bundler
     ports:
       - "9095:9095"
     environment:
       - RUST_LOG=info
+    # Security: Network isolation
+    networks:
+      - backend
+
+  # Web UI
+  web-ui:
+    build:
+      context: ../..
+      dockerfile: web-ui/Dockerfile
+    container_name: dex-web-ui
+    ports:
+      - "80:80"
+    # Security: Read-only root filesystem
+    read_only: true
+    tmpfs:
+      - /tmp
+    # Security: Network isolation
+    networks:
+      - frontend
+
+  # CLI service
+  cli:
+    build:
+      context: ../..
+      dockerfile: crates/cli/Dockerfile
+    container_name: dex-cli
+    # Security: Network isolation
+    networks:
+      - backend
+    # Security: Read-only root filesystem
+    read_only: true
+    tmpfs:
+      - /tmp
 
   # Prometheus for metrics
   prometheus:
@@ -123,6 +224,15 @@ services:
       - '--web.console.templates=/etc/prometheus/consoles'
       - '--storage.tsdb.retention.time=200h'
       - '--web.enable-lifecycle'
+    # Security: Run as non-root user
+    user: "65534:65534"
+    # Security: Read-only root filesystem
+    read_only: true
+    tmpfs:
+      - /tmp
+    # Security: Network isolation
+    networks:
+      - monitoring
 
   # Grafana for dashboards
   grafana:
@@ -140,6 +250,15 @@ services:
     environment:
       - GF_SECURITY_ADMIN_PASSWORD=admin
       - GF_USERS_ALLOW_SIGN_UP=false
+    # Security: Run as non-root user
+    user: "472:472"
+    # Security: Read-only root filesystem
+    read_only: true
+    tmpfs:
+      - /tmp
+    # Security: Network isolation
+    networks:
+      - monitoring
 
   # Jaeger for distributed tracing
   jaeger:
@@ -152,6 +271,11 @@ services:
       - "6831:6831/udp"  # Accepts jaeger.thrift in compact Thrift protocol
     environment:
       - COLLECTOR_ZIPKIN_HOST_PORT=:9411
+    # Security: Run as non-root user
+    user: "65534:65534"
+    # Security: Network isolation
+    networks:
+      - monitoring
 
   # Pushgateway for synthetic test metrics
   pushgateway:
@@ -161,6 +285,15 @@ services:
       - "9091:9091"
     volumes:
       - pushgateway_data:/data
+    # Security: Run as non-root user
+    user: "65534:65534"
+    # Security: Read-only root filesystem
+    read_only: true
+    tmpfs:
+      - /tmp
+    # Security: Network isolation
+    networks:
+      - monitoring
 
 volumes:
   postgres_data:
@@ -171,3 +304,11 @@ volumes:
   prometheus_data:
   grafana_data:
   pushgateway_data:
+
+networks:
+  frontend:
+    driver: bridge
+  backend:
+    driver: bridge
+  monitoring:
+    driver: bridge

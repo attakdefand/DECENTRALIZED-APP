@@ -1,5 +1,5 @@
 # Use Rust official image as base
-FROM rust:1.70 as builder
+FROM rust:1.75 as builder
 
 # Create app directory
 WORKDIR /app
@@ -15,6 +15,7 @@ RUN mkdir -p services/ipfs-rs/src && echo "fn main() {}" > services/ipfs-rs/src/
 
 # Build dependencies to cache them
 RUN cargo build --release -p ipfs-service
+RUN rm -f target/release/deps/ipfs*
 
 # Copy the actual source code
 COPY crates/core/src crates/core/src
@@ -24,19 +25,22 @@ COPY services/ipfs-rs/src services/ipfs-rs/src
 RUN cargo build --release -p ipfs-service
 
 # Production stage
-FROM debian:bullseye-slim
+FROM gcr.io/distroless/cc-debian12
 
-# Install ca-certificates for HTTPS requests
-RUN apt-get update && apt-get install -y ca-certificates && rm -rf /var/lib/apt/lists/*
+# Create non-root user
+RUN addgroup --gid 10001 app && adduser --uid 10000 --gid 10001 app
 
 # Create app directory
 WORKDIR /app
 
 # Copy the binary from builder stage
-COPY --from=builder /app/target/release/ipfs-monitor .
+COPY --from=builder --chown=10000:10001 /app/target/release/ipfs-monitor /usr/local/bin/ipfs-monitor
+
+# Switch to non-root user
+USER 10000:10001
 
 # Expose port
 EXPOSE 9093
 
 # Run the application
-CMD ["./ipfs-monitor"]
+ENTRYPOINT ["ipfs-monitor"]

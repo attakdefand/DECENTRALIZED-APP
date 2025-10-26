@@ -1,0 +1,49 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: {{ include "decentralized-app.serviceAccountName" . }}
+  labels:
+    {{- include "decentralized-app.labels" . | nindent 4 }}
+  {{- with .Values.serviceAccount.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{ include "decentralized-app.fullname" . }}-role
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "decentralized-app.labels" . | nindent 4 }}
+rules:
+# Allow reading pod information for service discovery
+- apiGroups: [""]
+  resources: ["pods"]
+  verbs: ["get", "list"]
+# Allow reading configmaps for configuration
+- apiGroups: [""]
+  resources: ["configmaps"]
+  verbs: ["get", "list", "watch"]
+# Allow reading secrets for sensitive configuration
+- apiGroups: [""]
+  resources: ["secrets"]
+  verbs: ["get", "list", "watch"]
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ include "decentralized-app.fullname" . }}-rolebinding
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "decentralized-app.labels" . | nindent 4 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: {{ include "decentralized-app.fullname" . }}-role
+subjects:
+- kind: ServiceAccount
+  name: {{ include "decentralized-app.serviceAccountName" . }}
+  namespace: {{ .Release.Namespace }}

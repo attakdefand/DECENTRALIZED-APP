@@ -1,0 +1,68 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "decentralized-app.fullname" . }}-indexer
+  labels:
+    {{- include "decentralized-app.labels" . | nindent 4 }}
+    component: indexer
+spec:
+  replicas: {{ .Values.indexerService.replicaCount | default 1 }}
+  selector:
+    matchLabels:
+      {{- include "decentralized-app.selectorLabels" . | nindent 6 }}
+      component: indexer
+  template:
+    metadata:
+      {{- with .Values.indexerService.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        {{- include "decentralized-app.selectorLabels" . | nindent 8 }}
+        component: indexer
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "decentralized-app.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+        - name: {{ .Chart.Name }}-indexer
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          image: "{{ .Values.indexerService.image.repository }}:{{ .Values.indexerService.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.indexerService.image.pullPolicy | default "IfNotPresent" }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.indexerService.service.port }}
+              protocol: TCP
+          env:
+            {{- toYaml .Values.indexerService.env | nindent 12 }}
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: http
+          resources:
+            {{- toYaml .Values.indexerService.resources | nindent 12 }}
+          volumeMounts:
+            {{- toYaml .Values.indexerService.volumeMounts | nindent 12 }}
+      volumes:
+        {{- toYaml .Values.indexerService.volumes | nindent 8 }}
+      {{- with .Values.indexerService.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.indexerService.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.indexerService.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

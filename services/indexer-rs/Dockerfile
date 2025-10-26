@@ -1,5 +1,5 @@
 # Use Rust official image as build environment
-FROM rust:1.70 as builder
+FROM rust:1.75 as builder
 
 # Create app directory
 WORKDIR /app
@@ -10,30 +10,40 @@ COPY crates/core/Cargo.toml ./crates/core/
 COPY crates/indexer/Cargo.toml ./crates/indexer/
 COPY services/indexer-rs/Cargo.toml ./services/indexer-rs/
 
-# Copy source code
+# Create dummy src files to satisfy Cargo
+RUN mkdir -p crates/core/src && echo "fn main() {}" > crates/core/src/lib.rs
+RUN mkdir -p crates/indexer/src && echo "fn main() {}" > crates/indexer/src/lib.rs
+RUN mkdir -p services/indexer-rs/src && echo "fn main() {}" > services/indexer-rs/src/main.rs
+
+# Build dependencies only (to cache them)
+RUN cargo build --release -p indexer-service
+RUN rm -f target/release/deps/indexer*
+
+# Copy the source code
 COPY crates/core/src ./crates/core/src
 COPY crates/indexer/src ./crates/indexer/src
 COPY services/indexer-rs/src ./services/indexer-rs/src
 
 # Build the application
-RUN cargo build --release --manifest-path services/indexer-rs/Cargo.toml
+RUN cargo build --release -p indexer-service
 
-# Use Debian slim image for runtime
-FROM debian:bullseye-slim
+# Runtime stage
+FROM gcr.io/distroless/cc-debian12
 
-# Install ca-certificates for HTTPS requests
-RUN apt-get update && apt-get install -y \
-    ca-certificates \
-    && rm -rf /var/lib/apt/lists/*
+# Create non-root user
+RUN addgroup --gid 10001 app && adduser --uid 10000 --gid 10001 app
 
 # Create app directory
 WORKDIR /app
 
 # Copy the binary from builder stage
-COPY --from=builder /app/target/release/indexer ./indexer
+COPY --from=builder --chown=10000:10001 /app/target/release/indexer /usr/local/bin/indexer
+
+# Switch to non-root user
+USER 10000:10001
 
 # Expose port
 EXPOSE 8080
 
-# Run the binary
-CMD ["./indexer"]
+# Run the application
+ENTRYPOINT ["indexer"]

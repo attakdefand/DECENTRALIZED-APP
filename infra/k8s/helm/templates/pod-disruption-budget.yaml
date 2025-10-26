@@ -1,0 +1,28 @@
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ include "decentralized-app.fullname" . }}-api-pdb
+  labels:
+    {{- include "decentralized-app.labels" . | nindent 4 }}
+    component: api
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      {{- include "decentralized-app.selectorLabels" . | nindent 6 }}
+      component: api
+
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ include "decentralized-app.fullname" . }}-indexer-pdb
+  labels:
+    {{- include "decentralized-app.labels" . | nindent 4 }}
+    component: indexer
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      {{- include "decentralized-app.selectorLabels" . | nindent 6 }}
+      component: indexer
