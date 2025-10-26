@@ -29,6 +29,7 @@ contract ConstantProductAMM is Ownable, ReentrancyGuard {
         uint256 totalSupply;
         uint256 feeBasisPoints;
         uint256 kLast; // Last calculated k value for fee tracking
+        uint256 amplification; // Amplification parameter for Stable/CLAMM behavior
         mapping(address => uint256) liquidityBalances;
     }
     
@@ -45,6 +46,7 @@ contract ConstantProductAMM is Ownable, ReentrancyGuard {
     event SwapExecuted(address indexed trader, bytes32 indexed poolId, address tokenIn, address tokenOut, uint256 amountIn, uint256 amountOut, uint256 fee);
     event FeeUpdated(uint256 protocolFeeBasisPoints);
     event ProtocolFeeCollected(address indexed token, uint256 amount);
+    event AmplificationUpdated(bytes32 indexed poolId, uint256 amplification);
     
     /// @notice Constructor to initialize the contract
     /// @param _feeRecipient Address to receive protocol fees
@@ -74,16 +76,19 @@ contract ConstantProductAMM is Ownable, ReentrancyGuard {
     /// @param tokenA First token
     /// @param tokenB Second token
     /// @param feeBasisPoints Fee for swaps in basis points
+    /// @param amplification Amplification parameter for Stable/CLAMM behavior (0 for pure CPMM)
     /// @return poolId Identifier for the created pool
     function createPool(
         address tokenA,
         address tokenB,
-        uint256 feeBasisPoints
+        uint256 feeBasisPoints,
+        uint256 amplification
     ) external onlyOwner returns (bytes32 poolId) {
         // Checks
         require(tokenA != tokenB, "Tokens must be different");
         require(tokenA != address(0) && tokenB != address(0), "Tokens cannot be zero");
         require(feeBasisPoints <= 1000, "Fee too high (max 10%)"); // Max 10% fee
+        require(amplification <= 10000, "Amplification too high (max 10000)");
         
         // Generate pool ID
         if (tokenA > tokenB) {
@@ -103,14 +108,30 @@ contract ConstantProductAMM is Ownable, ReentrancyGuard {
         pool.reserveB = 0;
         pool.totalSupply = 0;
         pool.kLast = 0;
+        pool.amplification = amplification;
         
         // Store pool ID mapping
         poolIds[tokenA][tokenB] = poolId;
         poolIds[tokenB][tokenA] = poolId;
         
         emit PoolCreated(tokenA, tokenB, feeBasisPoints, poolId);
+        if (amplification > 0) {
+            emit AmplificationUpdated(poolId, amplification);
+        }
         
         return poolId;
+    }
+    
+    /// @notice Update amplification parameter for a pool
+    /// @param poolId Pool identifier
+    /// @param amplification New amplification parameter
+    function updateAmplification(bytes32 poolId, uint256 amplification) external onlyOwner {
+        require(amplification <= 10000, "Amplification too high (max 10000)");
+        Pool storage pool = pools[poolId];
+        require(pool.tokenA != address(0), "Pool does not exist");
+        
+        pool.amplification = amplification;
+        emit AmplificationUpdated(poolId, amplification);
     }
     
     /// @notice Add liquidity to a pool
@@ -278,15 +299,22 @@ contract ConstantProductAMM is Ownable, ReentrancyGuard {
         
         require(reserveIn > 0 && reserveOut > 0, "Insufficient liquidity");
         
-        // Calculate fee and amount in with fee
-        uint256 fee = (amountIn * pool.feeBasisPoints) / MAX_FEE_BASIS_POINTS;
-        uint256 protocolFee = (fee * protocolFeeBasisPoints) / MAX_FEE_BASIS_POINTS;
-        uint256 amountInWithFee = amountIn - fee;
-        
-        // Calculate amount out using constant product formula: x * y = k
-        uint256 numerator = amountInWithFee * reserveOut;
-        uint256 denominator = reserveIn + amountInWithFee;
-        amountOut = numerator / denominator;
+        // Calculate amount out based on pool type
+        if (pool.amplification > 0) {
+            // Stable/CLAMM behavior with amplification
+            amountOut = calculateStableSwapAmountOut(pool, tokenIn, amountIn);
+        } else {
+            // Standard CPMM behavior
+            // Calculate fee and amount in with fee
+            uint256 fee = (amountIn * pool.feeBasisPoints) / MAX_FEE_BASIS_POINTS;
+            uint256 protocolFee = (fee * protocolFeeBasisPoints) / MAX_FEE_BASIS_POINTS;
+            uint256 amountInWithFee = amountIn - fee;
+            
+            // Calculate amount out using constant product formula: x * y = k
+            uint256 numerator = amountInWithFee * reserveOut;
+            uint256 denominator = reserveIn + amountInWithFee;
+            amountOut = numerator / denominator;
+        }
         
         require(amountOut >= minAmountOut, "Slippage too high");
         require(amountOut < reserveOut, "Insufficient liquidity");
@@ -306,16 +334,65 @@ contract ConstantProductAMM is Ownable, ReentrancyGuard {
         // Interactions - Transfer tokens
         IERC20(tokenIn).safeTransferFrom(msg.sender, address(this), amountIn);
         
-        // Transfer fee to fee recipient
-        if (protocolFee > 0) {
-            IERC20(tokenIn).safeTransfer(feeRecipient, protocolFee);
-            emit ProtocolFeeCollected(tokenIn, protocolFee);
+        // Transfer fee to fee recipient (for CPMM only, Stable swaps handle fees differently)
+        if (pool.amplification == 0) {
+            uint256 fee = (amountIn * pool.feeBasisPoints) / MAX_FEE_BASIS_POINTS;
+            uint256 protocolFee = (fee * protocolFeeBasisPoints) / MAX_FEE_BASIS_POINTS;
+            if (protocolFee > 0) {
+                IERC20(tokenIn).safeTransfer(feeRecipient, protocolFee);
+                emit ProtocolFeeCollected(tokenIn, protocolFee);
+            }
         }
         
         // Transfer output tokens to user
         IERC20(tokenOut).safeTransfer(msg.sender, amountOut);
         
-        emit SwapExecuted(msg.sender, poolId, tokenIn, tokenOut, amountIn, amountOut, fee);
+        emit SwapExecuted(msg.sender, poolId, tokenIn, tokenOut, amountIn, amountOut, 
+            (amountIn * pool.feeBasisPoints) / MAX_FEE_BASIS_POINTS);
+        
+        return amountOut;
+    }
+    
+    /// @notice Calculate amount out for stable swap with amplification
+    /// @param pool Pool storage reference
+    /// @param tokenIn Token to swap from
+    /// @param amountIn Amount of tokenIn to swap
+    /// @return amountOut Amount of tokenOut received
+    function calculateStableSwapAmountOut(
+        Pool storage pool,
+        address tokenIn,
+        uint256 amountIn
+    ) internal view returns (uint256 amountOut) {
+        // Simplified Stable swap calculation (x + y = D invariant with amplification)
+        // In a real implementation, this would be more complex
+        
+        uint256 reserveIn;
+        uint256 reserveOut;
+        
+        if (tokenIn == pool.tokenA) {
+            reserveIn = pool.reserveA;
+            reserveOut = pool.reserveB;
+        } else {
+            reserveIn = pool.reserveB;
+            reserveOut = pool.reserveA;
+        }
+        
+        // For demonstration, we'll use a simplified approach
+        // Actual StableSwap would use the invariant: A * (sum_xi) + D = A * D * n^n / (n^n * prod_xi)
+        
+        // Simplified calculation with amplification factor
+        uint256 amplificationFactor = pool.amplification;
+        uint256 fee = (amountIn * pool.feeBasisPoints) / MAX_FEE_BASIS_POINTS;
+        uint256 amountInWithFee = amountIn - fee;
+        
+        // Apply amplification to make the curve more stable (less slippage)
+        // This is a simplified approximation
+        uint256 adjustedAmountIn = (amountInWithFee * amplificationFactor) / 1000;
+        
+        // Calculate amount out using modified constant product formula
+        uint256 numerator = adjustedAmountIn * reserveOut;
+        uint256 denominator = reserveIn + adjustedAmountIn;
+        amountOut = numerator / denominator;
         
         return amountOut;
     }
@@ -352,14 +429,28 @@ contract ConstantProductAMM is Ownable, ReentrancyGuard {
         
         require(reserveIn > 0 && reserveOut > 0, "Insufficient liquidity");
         
-        // Calculate fee and amount in with fee
-        uint256 fee = (amountIn * pool.feeBasisPoints) / MAX_FEE_BASIS_POINTS;
-        uint256 amountInWithFee = amountIn - fee;
-        
-        // Calculate amount out using constant product formula
-        uint256 numerator = amountInWithFee * reserveOut;
-        uint256 denominator = reserveIn + amountInWithFee;
-        amountOut = numerator / denominator;
+        // Calculate amount out based on pool type
+        if (pool.amplification > 0) {
+            // Stable/CLAMM behavior with amplification
+            // For view function, we'll use a simplified approach
+            uint256 fee = (amountIn * pool.feeBasisPoints) / MAX_FEE_BASIS_POINTS;
+            uint256 amountInWithFee = amountIn - fee;
+            uint256 amplificationFactor = pool.amplification;
+            uint256 adjustedAmountIn = (amountInWithFee * amplificationFactor) / 1000;
+            uint256 numerator = adjustedAmountIn * reserveOut;
+            uint256 denominator = reserveIn + adjustedAmountIn;
+            amountOut = numerator / denominator;
+        } else {
+            // Standard CPMM behavior
+            // Calculate fee and amount in with fee
+            uint256 fee = (amountIn * pool.feeBasisPoints) / MAX_FEE_BASIS_POINTS;
+            uint256 amountInWithFee = amountIn - fee;
+            
+            // Calculate amount out using constant product formula
+            uint256 numerator = amountInWithFee * reserveOut;
+            uint256 denominator = reserveIn + amountInWithFee;
+            amountOut = numerator / denominator;
+        }
         
         return amountOut;
     }
@@ -397,10 +488,21 @@ contract ConstantProductAMM is Ownable, ReentrancyGuard {
         require(reserveIn > 0 && reserveOut > 0, "Insufficient liquidity");
         require(amountOut < reserveOut, "Insufficient liquidity");
         
-        // Calculate amount in using constant product formula
-        uint256 numerator = reserveIn * amountOut * MAX_FEE_BASIS_POINTS;
-        uint256 denominator = (reserveOut - amountOut) * (MAX_FEE_BASIS_POINTS - pool.feeBasisPoints);
-        amountIn = (numerator / denominator) + 1; // Add 1 for rounding
+        // Calculate amount in based on pool type
+        if (pool.amplification > 0) {
+            // Stable/CLAMM behavior with amplification
+            // Simplified calculation for view function
+            uint256 amplificationFactor = pool.amplification;
+            uint256 numerator = reserveIn * amountOut * MAX_FEE_BASIS_POINTS * 1000;
+            uint256 denominator = (reserveOut - amountOut) * (MAX_FEE_BASIS_POINTS - pool.feeBasisPoints) * amplificationFactor;
+            amountIn = (numerator / denominator) + 1; // Add 1 for rounding
+        } else {
+            // Standard CPMM behavior
+            // Calculate amount in using constant product formula
+            uint256 numerator = reserveIn * amountOut * MAX_FEE_BASIS_POINTS;
+            uint256 denominator = (reserveOut - amountOut) * (MAX_FEE_BASIS_POINTS - pool.feeBasisPoints);
+            amountIn = (numerator / denominator) + 1; // Add 1 for rounding
+        }
         
         return amountIn;
     }
@@ -474,6 +576,19 @@ contract ConstantProductAMM is Ownable, ReentrancyGuard {
         return (currentK >= expectedK, currentK, expectedK);
     }
     
+    /// @notice Check amplification behavior invariant
+    /// @param poolId Pool identifier
+    /// @return bool Whether the amplification invariant holds
+    /// @return uint256 Current amplification value
+    function checkAmplificationInvariant(bytes32 poolId) external view returns (bool, uint256) {
+        Pool storage pool = pools[poolId];
+        require(pool.tokenA != address(0), "Pool does not exist");
+        
+        // Amplification should be within bounds
+        bool invariantHolds = pool.amplification <= 10000;
+        return (invariantHolds, pool.amplification);
+    }
+    
     /// @notice Get pool information
     /// @param poolId Pool identifier
     /// @return tokenA First token
@@ -482,13 +597,15 @@ contract ConstantProductAMM is Ownable, ReentrancyGuard {
     /// @return reserveB Reserve of tokenB
     /// @return totalSupply Total liquidity tokens
     /// @return feeBasisPoints Swap fee in basis points
+    /// @return amplification Amplification parameter
     function getPoolInfo(bytes32 poolId) external view returns (
         address tokenA,
         address tokenB,
         uint256 reserveA,
         uint256 reserveB,
         uint256 totalSupply,
-        uint256 feeBasisPoints
+        uint256 feeBasisPoints,
+        uint256 amplification
     ) {
         Pool storage pool = pools[poolId];
         require(pool.tokenA != address(0), "Pool does not exist");
@@ -499,7 +616,8 @@ contract ConstantProductAMM is Ownable, ReentrancyGuard {
             pool.reserveA,
             pool.reserveB,
             pool.totalSupply,
-            pool.feeBasisPoints
+            pool.feeBasisPoints,
+            pool.amplification
         );
     }
     

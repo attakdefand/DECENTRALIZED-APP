@@ -1,0 +1,34 @@
+[package]
+name = "security_layers"
+version = "0.1.0"
+edition = "2021"
+license = "MIT OR Apache-2.0"
+description = "Implementation of all security layers from the Web3 protection layers matrix"
+
+[dependencies]
+tokio = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+anyhow = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+
+ethers = { workspace = true }
+alloy = { workspace = true }
+reqwest = { workspace = true }
+rand = "0.8"
+hex = "0.4"
+sha3 = "0.10"
+aes-gcm = "0.10"
+uuid = { version = "1.0", features = ["v4"] }
+base64 = "0.21"
+regex = "1.0"
+lazy_static = "1.4"
+
+[lib]
+crate-type = ["rlib"]
+
+[[bin]]
+name = "security_layers_simulation"
+path = "src/bin/security_layers_simulation.rs"

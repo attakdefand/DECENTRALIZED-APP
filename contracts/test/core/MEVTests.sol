@@ -16,7 +16,7 @@ contract MEVTests is Test {
     
     function setUp() public {
         vm.startPrank(owner);
-        commitReveal = new CommitReveal(5, 5, 1 ether, 0.1 ether);
+        commitReveal = new CommitReveal(5, 5, 1 ether, 0.1 ether, 12);
         batchAuction = new BatchAuction(12, feeRecipient, 10); // 12 seconds, 10 basis points fee
         vm.stopPrank();
     }
@@ -33,7 +33,7 @@ contract MEVTests is Test {
         bytes32 salt = keccak256("salt");
         bytes32 commitmentHash = keccak256(abi.encodePacked(data, salt));
         
-        commitReveal.commit(commitmentHash);
+        commitReveal.commit(commitmentHash, 100000, 20 gwei);
         
         // Move time forward to end commit phase
         vm.warp(block.timestamp + 6);
@@ -56,7 +56,7 @@ contract MEVTests is Test {
         bytes32 salt = keccak256("salt");
         bytes32 commitmentHash = keccak256(abi.encodePacked(data, salt));
         
-        commitReveal.commit(commitmentHash);
+        commitReveal.commit(commitmentHash, 100000, 20 gwei);
         
         // Move time forward to end both phases
         vm.warp(block.timestamp + 12);
@@ -87,11 +87,40 @@ contract MEVTests is Test {
     }
     
     function testSandwichBounds() public {
-        // This test would simulate sandwich attack scenarios
-        // and verify that the MEV mitigations prevent exploitation
-        // Implementation details would depend on the specific protection mechanisms
+        vm.startPrank(user1);
         
-        assertTrue(true); // Placeholder
+        // Add stake
+        vm.deal(user1, 2 ether);
+        commitReveal.addStake{value: 1 ether}();
+        
+        // Commit phase
+        bytes memory data = abi.encodeWithSignature("transfer(address,uint256)", user2, 100);
+        bytes32 salt = keccak256("salt");
+        bytes32 commitmentHash = keccak256(abi.encodePacked(data, salt));
+        
+        commitReveal.commit(commitmentHash, 100000, 20 gwei);
+        
+        // Move time forward to end commit phase
+        vm.warp(block.timestamp + 6);
+        
+        // Reveal phase
+        commitReveal.reveal(data, salt);
+        
+        // Try to reveal again immediately - should fail due to anti-sandwich window
+        bytes memory data2 = abi.encodeWithSignature("transfer(address,uint256)", user2, 200);
+        bytes32 salt2 = keccak256("salt2");
+        bytes32 commitmentHash2 = keccak256(abi.encodePacked(data2, salt2));
+        
+        commitReveal.commit(commitmentHash2, 100000, 20 gwei);
+        
+        // Move time forward but not enough to pass anti-sandwich window
+        vm.warp(block.timestamp + 1);
+        
+        // Try to reveal - should fail
+        vm.expectRevert("Anti-sandwich window active");
+        commitReveal.reveal(data2, salt2);
+        
+        vm.stopPrank();
     }
     
     function testCommitRevealCorrectness() public {
@@ -106,7 +135,7 @@ contract MEVTests is Test {
         bytes32 salt = keccak256("salt");
         bytes32 commitmentHash = keccak256(abi.encodePacked(data, salt));
         
-        commitReveal.commit(commitmentHash);
+        commitReveal.commit(commitmentHash, 100000, 20 gwei);
         
         // Move time forward
         vm.warp(block.timestamp + 6);
@@ -117,6 +146,118 @@ contract MEVTests is Test {
         // Try to reveal again - should fail
         vm.expectRevert("Already revealed");
         commitReveal.reveal(data, salt);
+        
+        vm.stopPrank();
+    }
+    
+    function testGasLimitBounds() public {
+        vm.startPrank(user1);
+        
+        // Add stake
+        vm.deal(user1, 2 ether);
+        commitReveal.addStake{value: 1 ether}();
+        
+        // Try to commit with gas limit below minimum - should fail
+        bytes memory data = abi.encodeWithSignature("transfer(address,uint256)", user2, 100);
+        bytes32 salt = keccak256("salt");
+        bytes32 commitmentHash = keccak256(abi.encodePacked(data, salt));
+        
+        vm.expectRevert("Gas limit out of bounds");
+        commitReveal.commit(commitmentHash, 1000, 20 gwei);
+        
+        // Try to commit with gas limit above maximum - should fail
+        vm.expectRevert("Gas limit out of bounds");
+        commitReveal.commit(commitmentHash, 100000000, 20 gwei);
+        
+        // Commit with valid gas limit - should succeed
+        commitReveal.commit(commitmentHash, 100000, 20 gwei);
+        
+        vm.stopPrank();
+    }
+    
+    function testBatchIntervalRespected() public {
+        vm.startPrank(user1);
+        
+        // Add stake
+        vm.deal(user1, 2 ether);
+        commitReveal.addStake{value: 1 ether}();
+        
+        // Commit phase
+        bytes memory data = abi.encodeWithSignature("transfer(address,uint256)", user2, 100);
+        bytes32 salt = keccak256("salt");
+        bytes32 commitmentHash = keccak256(abi.encodePacked(data, salt));
+        
+        commitReveal.commit(commitmentHash, 100000, 20 gwei);
+        
+        // Try to commit again immediately - should fail due to batch interval
+        bytes memory data2 = abi.encodeWithSignature("transfer(address,uint256)", user2, 200);
+        bytes32 salt2 = keccak256("salt2");
+        bytes32 commitmentHash2 = keccak256(abi.encodePacked(data2, salt2));
+        
+        vm.expectRevert("Batch interval not respected");
+        commitReveal.commit(commitmentHash2, 100000, 20 gwei);
+        
+        vm.stopPrank();
+    }
+    
+    function testFuzzCommitReveal(uint256 gasLimit, uint256 maxFeePerGas) public {
+        // Constrain inputs to valid ranges
+        vm.assume(gasLimit >= 50000 && gasLimit <= 10000000);
+        vm.assume(maxFeePerGas > 0 && maxFeePerGas <= 1000 gwei);
+        
+        vm.startPrank(user1);
+        
+        // Add stake
+        vm.deal(user1, 2 ether);
+        commitReveal.addStake{value: 1 ether}();
+        
+        // Commit phase
+        bytes memory data = abi.encodeWithSignature("transfer(address,uint256)", user2, 100);
+        bytes32 salt = keccak256("salt");
+        bytes32 commitmentHash = keccak256(abi.encodePacked(data, salt));
+        
+        commitReveal.commit(commitmentHash, gasLimit, maxFeePerGas);
+        
+        // Move time forward to end commit phase
+        vm.warp(block.timestamp + 6);
+        
+        // Reveal phase
+        commitReveal.reveal(data, salt);
+        
+        vm.stopPrank();
+    }
+    
+    function testInvariantCommitRevealState() public {
+        // Test that commitments are properly tracked
+        vm.startPrank(user1);
+        
+        // Add stake
+        vm.deal(user1, 2 ether);
+        commitReveal.addStake{value: 1 ether}();
+        
+        // Commit phase
+        bytes memory data = abi.encodeWithSignature("transfer(address,uint256)", user2, 100);
+        bytes32 salt = keccak256("salt");
+        bytes32 commitmentHash = keccak256(abi.encodePacked(data, salt));
+        
+        commitReveal.commit(commitmentHash, 100000, 20 gwei);
+        
+        // Check commitment exists
+        bytes32 commitId = keccak256(abi.encodePacked(commitmentHash, user1, block.timestamp, block.number));
+        CommitReveal.Commitment memory commitment = commitReveal.getCommitment(commitId);
+        assertEq(commitment.commitmentHash, commitmentHash);
+        assertEq(commitment.user, user1);
+        assertFalse(commitment.revealed);
+        
+        // Move time forward to end commit phase
+        vm.warp(block.timestamp + 6);
+        
+        // Reveal phase
+        commitReveal.reveal(data, salt);
+        
+        // Check commitment is now revealed
+        commitment = commitReveal.getCommitment(commitId);
+        assertTrue(commitment.revealed);
         
         vm.stopPrank();
     }

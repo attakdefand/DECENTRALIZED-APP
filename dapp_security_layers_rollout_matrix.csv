@@ -21,3 +21,6 @@ Layer #,Group (A–F),Primary plane,Owner,Required artifacts,CI gate,Evidence li
 20,A,Hybrid,Protocol/Bridge,Bridge contracts; proof system (light/opt/ZK); watchers/challengers,Proof verification tests; challenge window sims,docs/protocol/BRIDGE-SECURITY.md
 21,F,Process + Edge,Legal/Sec,Terms/privacy; geo/age gates; sanctions screening (if used),Policy tests; geo-block tests; consent logs,docs/compliance/LEGAL-GUARDRAILS.md
 22,F,CI + Code,QA/All teams,Unit/fuzz/invariant/chaos suites; mainnet-fork plan; reports,CI green on all suites; evidence bundle signed,docs/testing/ASSURANCE-EVIDENCE.md
+23,A,Orderbook,Matching engine,Price-time priority & partial fills,Code,Place/cancel/match; IOC/FOK; fairness,Engine unit tests; replay fixtures; MEV sims,LOB suite green; fairness metrics within target,docs/tests/LOB-TESTS.md
+24,A,Lending/Perps,Risk & Liquidations,"HF, Kink IR, funding/insurance",Code,Liquidate below HF; correct funding; insurance waterfall,Economic sims/backtests; invariant checks,Risk sims green; bad-debt in stress ≤ budget,docs/tests/RISK-SIMS.md
+25,A,MEV & Fairness,Order protection,Commit-reveal / FBA,Hybrid,"Reveal windows, uniform clearing, anti-sandwich bounds",Batch sims; solver cross-checks; timing tests,MEV sims green; bounds enforced,docs/protocol/MEV-TESTS.md

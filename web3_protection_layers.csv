@@ -1,0 +1,48 @@
+Layer #,Layer Name,Main Type,Sub Type,Component / Mechanism,Goal,Evidence / Telemetry
+1,Governance & Policy,Policy Management,Security Policy Catalog,"Org-wide security policy, coding standards, infra hardening guidelines, data handling rules","Make security mandatory and auditable","Signed policy docs, control mapping, approvals"
+1,Governance & Policy,Exception Management,Risk Acceptance Workflow,"Exception register, owner+expiry, tracked in repo / ticket","Force accountability for any deviation","Open exceptions with expiry and sign-off"
+1,Governance & Policy,Audit & Assurance,Internal/External Audit Tracking,"Security audit issues labeled in tracker, remediation SLAs","Close gaps found by audit / pen test","% audit findings closed on time, PR links"
+2,Identity & Access Control,AuthN (Who are you),User/Auth Service,"Password hashing, MFA, OAuth2/OIDC, JWT signing/verification","Only legit users can enter","Auth logs, failed login attempts, token issuance logs"
+2,Identity & Access Control,AuthZ (What can you do),RBAC/ABAC/PBAC,"Role-based access control, attribute-based access control, policy-based access (OPA / Cedar)","Stop privilege abuse / lateral movement","Access decision logs, denied actions"
+2,Identity & Access Control,Session & Token Hygiene,Token Lifecycle,"Short-lived access tokens, refresh tokens, rotation, revocation list","Reduce stolen-token blast radius","Token expiry histogram, revoked token hits"
+2,Identity & Access Control,Secrets Hygiene,Secret Distribution,"Vault / KMS, no secrets in code, per-service credentials","Stop credential leaks","Secrets rotation logs, secret age report"
+
+3,Application Security,Input Protection,Validation & Sanitization,"Strict type validation, regex allowlists, length limits, unicode normalization","Block injection, XSS, deserialization attacks","Rejected request counts by rule"
+3,Application Security,Output Protection,Encoding/Escaping,"HTML encode, JSON encode, header encode","Stop stored/reflective XSS","CSP violation reports, browser security reports"
+3,Application Security,Business Logic Controls,Rate/Velocity Rules,"OTP retry limits, withdrawal limits, anti-bruteforce counters, anti-spam throttles","Stop abuse of legit flows","Per-user throttle hits, lockouts"
+3,Application Security,Dependency Safety,SAST/SCA,"Static code scanning, dependency vulnerability scan, SBOM, license scan","Stop known-vuln libs from shipping","Critical vuln count, unresolved vuln age"
+3,Application Security,Runtime Protections,WAF / RASP,"WAF rulesets (OWASP Top 10), runtime self-protection hooks in app","Block exploit patterns pre-database","WAF block events, rule hit rate"
+
+###
+4,API & Gateway Security,Protocol Safety,Schema Enforcement,"Strongly typed request/response contract, OpenAPI/GraphQL schema validation","Reject malformed/unknown fields before logic runs","% rejected at gateway vs app"
+4,API & Gateway Security,Abuse Mitigation,Rate Limit / Throttle / Burst Control,"Per-IP rate limit, per-token rate limit, circuit breakers, quota windows","Stop DoS / scraping / brute force","HTTP 429 counts, surge graphs"
+4,API & Gateway Security,Auth at Edge,JWT / mTLS at Gateway,"mTLS between client and gateway, gateway verifies signature/claims before forwarding","Drop bad traffic early","Gateway auth failure logs"
+4,API & Gateway Security,Data Filtering,Header/Body Scrubbers,"Strip dangerous headers, reject unsupported verbs, block oversized payloads","Reduce attack surface","Blocked verb stats, oversized body rejections"
+4,API & Gateway Security,Allowlisting,Service Contract Allowlist,"Only allow specific routes/methods per client/app tier","Make public surface area explicit","Denied route attempts by client id"
+
+5,Data Security,Data Classification,Sensitivity Tiering,"Classify data: public / internal / confidential / restricted","Know which data needs strong controls","Data inventory with labels"
+5,Data Security,Data-in-Transit,TLS Everywhere,"HTTPS/TLS 1.2+, HSTS, mTLS service-to-service","Stop sniffing / MITM","TLS handshake logs, cert rotation logs"
+5,Data Security,Data-at-Rest,Encryption at Rest,"KMS-managed disk/volume/db encryption, envelope encryption for fields like PII","Protect data if disk/db is stolen","Key rotation logs, KMS access logs"
+5,Data Security,Data Minimization,Field Reduction / Masking,"Store only required attributes, redact PII in logs, tokenize high-risk values","Shrink breach impact","PII in logs scanner report"
+5,Data Security,Backup & Restore,Signed/Encrypted Backups,"Periodic encrypted snapshots, offline copy, tested restore drill","Survive ransomware / data loss","Successful restore drill evidence, RPO/RTO metrics"
+
+6,Network & Infrastructure Security,Perimeter Defense,Edge Firewall / CDN,"CDN DDoS absorb, geo/IP blocklists, L4/L7 filtering","Keep junk traffic out","Edge drop rate, DDoS absorbed volume"
+6,Network & Infrastructure Security,Segmentation,Zero Trust / Microsegmentation,"Isolate services/namespaces/VPCs, block east-west except allowlisted","Contain compromise blast radius","Denied east-west attempts"
+6,Network & Infrastructure Security,OSI Hardening,Protocol/Port Hygiene,"Close unused ports, disable legacy TLS ciphers, strict DNS rules","Cut legacy attack paths","Open port diff vs baseline"
+6,Network & Infrastructure Security,Host Hardening,Baseline Images & CIS Benchmarks,"Read-only root FS, minimal base images, kernel hardening, SSH lockdown","Reduce exploitable surface on hosts/containers","Drift reports from baseline, CIS score"
+6,Network & Infrastructure Security,Secrets on Host,Runtime Secret Mounting,"Inject secrets at runtime (tmpfs, env vars via agent) instead of baked into image","Stop image leaks of creds","Secrets-in-image scan results"
+
+7,Resilience & Availability,Redundancy,HA/Failover,"Multi-AZ deploy, load balancer health checks, replicas per service","Survive node/zone loss","Failover event logs, uptime %"
+7,Resilience & Availability,Traffic Protection,Circuit Breakers / Bulkheads / Rate Shaping,"Trip breaker on slow dependency, isolate noisy tenants, shed load gracefully","Protect core systems during incidents","Breaker open/close timeline, shed %"
+7,Resilience & Availability,Graceful Degradation,Feature Flags / Read-only Mode,"Serve cached data when DB down, put system into withdraw-disabled mode instead of full outage","Keep partial service alive","Time spent in degraded mode vs full outage"
+7,Resilience & Availability,Disaster Recovery,DR Playbook & Chaos Testing,"Regular chaos drills, region evacuation practice, RPO/RTO tracking","Know we can recover under stress","Chaos test reports, RTO achieved"
+
+8,Observability & Detection,Telemetry,Basic Monitoring/Logging/Tracing,"Centralized logs, metrics, traces, span IDs across hops","See attacks and failures fast","p95 latency, error rate, auth failures over time"
+8,Observability & Detection,Security Detection,SIEM / IDS / Anomaly Alerts,"Login anomaly detection, data exfil alerts, container breakout alerts","Catch intrusion quickly","Mean time to detect (MTTD)"
+8,Observability & Detection,Forensics & Evidence,Immutable Audit Logs,"Append-only audit trail for admin actions, config changes, withdrawals, policy edits","Prove who did what and when","Audit log integrity check, tamper alerts"
+8,Observability & Detection,Incident Response,Runbooks & Pager,"Who wakes up, what they do, communication path, rollback steps","Shorten incident lifetime","Mean time to recover (MTTR), postmortem quality"
+
+9,Software Supply Chain,Artifact Integrity,Build Signing / Provenance,"Sigstore/cosign signed container images, SBOM attached to artifact","Ensure what runs = what we built","Unsigned image block count"
+9,Software Supply Chain,Dependency Trust,SCA / Pin / Verify,"Pin versions via lockfiles, verify checksums, disallow typosquat packages","Stop malicious libs","Unapproved dependency install attempts"
+9,Software Supply Chain,CI/CD Gatekeeping,Policy-as-Code in Pipeline,"CI enforces tests, security scans, lint, license policy before deploy","Block unsafe code from production","% builds blocked by policy gate"
+9,Software Supply Chain,Runtime Drift Control,Image Drift / Host Drift,"Continuously check what's running vs approved manifest","Detect sneaky containers","Drift incidents per week"

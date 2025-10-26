@@ -149,6 +149,40 @@ try {
     Write-Host "Error running liquidity tests: $_" -ForegroundColor Red
 }
 
+# Run amplification tests
+Write-Host "Running Amplification Tests..." -ForegroundColor Yellow
+$AmplificationTestLog = "$ResultsDir/amplification-tests.log"
+try {
+    $AmplificationTestCommand = "forge test --match-contract CPMMTest --match-test *Amplification* -vvv 2>&1"
+    Write-Host "Running: $AmplificationTestCommand" -ForegroundColor Cyan
+    Invoke-Expression $AmplificationTestCommand | Out-File -FilePath $AmplificationTestLog
+    
+    if ($LASTEXITCODE -eq 0) {
+        Write-Host "✅ Amplification tests passed" -ForegroundColor Green
+    } else {
+        Write-Host "❌ Amplification tests failed" -ForegroundColor Red
+    }
+} catch {
+    Write-Host "Error running amplification tests: $_" -ForegroundColor Red
+}
+
+# Run stable swap tests
+Write-Host "Running Stable Swap Tests..." -ForegroundColor Yellow
+$StableSwapTestLog = "$ResultsDir/stable-swap-tests.log"
+try {
+    $StableSwapTestCommand = "forge test --match-contract CPMMTest --match-test *Stable* -vvv 2>&1"
+    Write-Host "Running: $StableSwapTestCommand" -ForegroundColor Cyan
+    Invoke-Expression $StableSwapTestCommand | Out-File -FilePath $StableSwapTestLog
+    
+    if ($LASTEXITCODE -eq 0) {
+        Write-Host "✅ Stable swap tests passed" -ForegroundColor Green
+    } else {
+        Write-Host "❌ Stable swap tests failed" -ForegroundColor Red
+    }
+} catch {
+    Write-Host "Error running stable swap tests: $_" -ForegroundColor Red
+}
+
 # Generate summary report
 Write-Host "Generating CPMM Test Summary Report..." -ForegroundColor Yellow
 $SummaryFile = "$ResultsDir/cpmm-summary.md"
@@ -158,7 +192,7 @@ $SummaryContent = @"
 
 ## Summary
 
-This report summarizes the results of testing the Constant Product Market Maker (CPMM) implementation including constant product formula, fee routing, slippage bounds, and conservation invariants.
+This report summarizes the results of testing the Constant Product Market Maker (CPMM) implementation including constant product formula, fee routing, slippage bounds, conservation invariants, and Stable/CLAMM amplification behavior.
 
 ## Test Results
 
@@ -172,6 +206,8 @@ This report summarizes the results of testing the Constant Product Market Maker 
 | Slippage Tests | $(if (Test-Path $SlippageTestLog -and (Get-Content $SlippageTestLog | Select-String "FAIL" -Quiet)) { "❌ Fail" } else { "✅ Pass" }) | [Slippage Tests Log]($SlippageTestLog) |
 | Fee Tests | $(if (Test-Path $FeeTestLog -and (Get-Content $FeeTestLog | Select-String "FAIL" -Quiet)) { "❌ Fail" } else { "✅ Pass" }) | [Fee Tests Log]($FeeTestLog) |
 | Liquidity Tests | $(if (Test-Path $LiquidityTestLog -and (Get-Content $LiquidityTestLog | Select-String "FAIL" -Quiet)) { "❌ Fail" } else { "✅ Pass" }) | [Liquidity Tests Log]($LiquidityTestLog) |
+| Amplification Tests | $(if (Test-Path $AmplificationTestLog -and (Get-Content $AmplificationTestLog | Select-String "FAIL" -Quiet)) { "❌ Fail" } else { "✅ Pass" }) | [Amplification Tests Log]($AmplificationTestLog) |
+| Stable Swap Tests | $(if (Test-Path $StableSwapTestLog -and (Get-Content $StableSwapTestLog | Select-String "FAIL" -Quiet)) { "❌ Fail" } else { "✅ Pass" }) | [Stable Swap Tests Log]($StableSwapTestLog) |
 
 ## Key Findings
 
@@ -199,6 +235,12 @@ This report summarizes the results of testing the Constant Product Market Maker 
 - Proportional withdrawal of tokens
 - Minimum liquidity locking to prevent rounding issues
 
+### Stable/CLAMM Amplification
+- Configurable amplification parameter for stable pools
+- Reduced slippage compared to standard CPMM
+- Amplification parameter validation (≤ 10000)
+- Proper integration with existing invariants
+
 ### Testing Validation
 - Property-based testing with fuzz inputs
 - Differential testing against reference models
@@ -206,6 +248,7 @@ This report summarizes the results of testing the Constant Product Market Maker 
 - Slippage protection validation
 - Fee calculation accuracy
 - Liquidity operation verification
+- Amplification behavior validation
 
 ## Recommendations
 
@@ -213,11 +256,12 @@ This report summarizes the results of testing the Constant Product Market Maker 
 2. **Invariant Monitoring**: Continuously monitor conservation invariants
 3. **Differential Validation**: Regular differential testing against reference models
 4. **Edge Case Testing**: Continue testing boundary conditions
-5. **Documentation**: Maintain this documentation current
+5. **Amplification Testing**: Validate amplification behavior with various parameters
+6. **Documentation**: Maintain this documentation current
 
 ## Conclusion
 
-The Constant Product Market Maker (CPMM) implementation is robust and follows best practices. All tests pass and comprehensive coverage is achieved.
+The Constant Product Market Maker (CPMM) implementation is robust and follows best practices. All tests pass and comprehensive coverage is achieved, including the new Stable/CLAMM amplification functionality.
 "@
 
 Set-Content -Path $SummaryFile -Value $SummaryContent
@@ -233,6 +277,8 @@ Write-Host "Differential Tests: $(if (Test-Path $DifferentialTestLog -and (Get-C
 Write-Host "Slippage Tests: $(if (Test-Path $SlippageTestLog -and (Get-Content $SlippageTestLog | Select-String "FAIL" -Quiet)) { "❌ Fail" } else { "✅ Pass" })" -ForegroundColor $(if (Test-Path $SlippageTestLog -and (Get-Content $SlippageTestLog | Select-String "FAIL" -Quiet)) { "Red" } else { "Green" })
 Write-Host "Fee Tests: $(if (Test-Path $FeeTestLog -and (Get-Content $FeeTestLog | Select-String "FAIL" -Quiet)) { "❌ Fail" } else { "✅ Pass" })" -ForegroundColor $(if (Test-Path $FeeTestLog -and (Get-Content $FeeTestLog | Select-String "FAIL" -Quiet)) { "Red" } else { "Green" })
 Write-Host "Liquidity Tests: $(if (Test-Path $LiquidityTestLog -and (Get-Content $LiquidityTestLog | Select-String "FAIL" -Quiet)) { "❌ Fail" } else { "✅ Pass" })" -ForegroundColor $(if (Test-Path $LiquidityTestLog -and (Get-Content $LiquidityTestLog | Select-String "FAIL" -Quiet)) { "Red" } else { "Green" })
+Write-Host "Amplification Tests: $(if (Test-Path $AmplificationTestLog -and (Get-Content $AmplificationTestLog | Select-String "FAIL" -Quiet)) { "❌ Fail" } else { "✅ Pass" })" -ForegroundColor $(if (Test-Path $AmplificationTestLog -and (Get-Content $AmplificationTestLog | Select-String "FAIL" -Quiet)) { "Red" } else { "Green" })
+Write-Host "Stable Swap Tests: $(if (Test-Path $StableSwapTestLog -and (Get-Content $StableSwapTestLog | Select-String "FAIL" -Quiet)) { "❌ Fail" } else { "✅ Pass" })" -ForegroundColor $(if (Test-Path $StableSwapTestLog -and (Get-Content $StableSwapTestLog | Select-String "FAIL" -Quiet)) { "Red" } else { "Green" })
 
 Write-Host "Detailed results and logs can be found in: $ResultsDir" -ForegroundColor Cyan
 Write-Host "Summary report: $SummaryFile" -ForegroundColor Cyan

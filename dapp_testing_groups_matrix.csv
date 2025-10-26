@@ -1,10 +1,8 @@
 Group (A–F),Testing Domain,Main Type,Sub-type,Primary plane (Code/Infra/Hybrid),Functions / Scenarios,Tools / Techniques,CI Gate,Evidence link (to fill)
-
 A,Smart Contracts,Logic & Math,Unit / Fuzz / Invariant,Code,"Conservation, monotonicity, reentrancy, bounds, fee routing","Foundry (forge test/fuzz/invariant), Echidna, Slither",contracts: unit+fuzz+invariant must pass; Slither no criticals; gas snapshot threshold,contracts/test/INVARIANTS.md
-
 A,Upgradeability,Storage layout,Proxy/UUPS diff,Code,No storage slot collisions across upgrades; timelock/guardian flow,"OpenZeppelin Upgrades, storage-layout diff, shadow-fork dry-run",upgrade PRs require layout diff green + dry-run evidence,contracts/script/UPGRADE-PLAN.md
-
 A,AMM/DEX,Curve correctness,CPMM/Stable/CLAMM invariants,Code,"x*y=k, amplification behavior, per-tick liquidity/fees","Model-based tests (Python/Rust), Foundry invariants",amm invariant suite green; reconciliation within epsilon,docs/tests/AMM-INVARIANTS.md
+A,Orderbook,Matching engine,Price-time priority & partial fills,Code,Place/cancel/match; IOC/FOK; fairness,Engine unit tests; replay fixtures; MEV sims,LOB suite green; fairness metrics within target,docs/tests/LOB-TESTS.md
 A,Orderbook,Matching engine,Price-time priority & partial fills,Code,Place/cancel/match; IOC/FOK; fairness,Engine unit tests; replay fixtures; MEV sims,LOB suite green; fairness metrics within target,docs/tests/LOB-TESTS.md
 A,Lending/Perps,Risk & Liquidations,"HF, Kink IR, funding/insurance",Code,Liquidate below HF; correct funding; insurance waterfall,Economic sims/backtests; invariant checks,Risk sims green; bad-debt in stress ≤ budget,docs/tests/RISK-SIMS.md
 A,Oracle,Manipulation/liveness,Median/TWAP/outlier/staleness,Hybrid,"Reject stale/outlier, quorum met, fallback works",Replay feeds; boundary tests; kill-switch drills,Oracle tests green; staleness < threshold,docs/protocol/ORACLE-TESTS.md

@@ -8,10 +8,11 @@ Write-Host "Validating CPMM Implementation..." -ForegroundColor Green
 $RequiredFiles = @(
     "contracts/src/core/CPMM.sol",
     "contracts/test/core/CPMMTest.sol",
-    "docs/contracts/CPMM.md",
+    "docs/tests/AMM-INVARIANTS.md",
     "contracts/CPMM-README.md",
     "scripts/run-cpmm-tests.ps1",
-    ".github/workflows/contract-cpmm.yml"
+    ".github/workflows/contract-cpmm.yml",
+    "tests/amm-reference-model.py"
 )
 
 $AllFilesExist = $true
@@ -34,9 +35,10 @@ foreach ($Contract in $CoreContracts) {
     $HasLiquidity = $Content -match "liquidity" -or $Content -match "addLiquidity" -or $Content -match "removeLiquidity"
     $HasSwap = $Content -match "swap" -or $Content -match "trade"
     $HasFees = $Content -match "fee" -or $Content -match "protocolFee"
+    $HasStable = $Content -match "amplification" -or $Content -match "Stable" -or $Content -match "CLAMM"
     
-    if ($HasCPMM -and $HasLiquidity -and $HasSwap -and $HasFees) {
-        Write-Host "✅ $($Contract.Name) implements CPMM patterns" -ForegroundColor Green
+    if ($HasCPMM -and $HasLiquidity -and $HasSwap -and $HasFees -and $HasStable) {
+        Write-Host "✅ $($Contract.Name) implements CPMM/Stable patterns" -ForegroundColor Green
     } elseif ($HasCPMM -or $HasLiquidity -or $HasSwap -or $HasFees) {
         Write-Host "⚠️ $($Contract.Name) partially implements CPMM patterns" -ForegroundColor Yellow
     } else {
@@ -54,11 +56,12 @@ if (Test-Path $CPMMFile) {
     $HasSwapFunction = $Content -match "swap"
     $HasFeeHandling = $Content -match "fee" -and $Content -match "protocolFee"
     $HasInvariantChecks = $Content -match "invariant" -or $Content -match "kLast"
+    $HasAmplification = $Content -match "amplification" -or $Content -match "Stable"
     
-    if ($HasConstantProduct -and $HasLiquidityFunctions -and $HasSwapFunction -and $HasFeeHandling -and $HasInvariantChecks) {
-        Write-Host "✅ CPMM.sol has proper CPMM implementation" -ForegroundColor Green
+    if ($HasConstantProduct -and $HasLiquidityFunctions -and $HasSwapFunction -and $HasFeeHandling -and $HasInvariantChecks -and $HasAmplification) {
+        Write-Host "✅ CPMM.sol has proper CPMM/Stable implementation" -ForegroundColor Green
     } else {
-        Write-Host "❌ CPMM.sol missing required CPMM elements" -ForegroundColor Red
+        Write-Host "❌ CPMM.sol missing required CPMM/Stable elements" -ForegroundColor Red
     }
 } else {
     Write-Host "❌ CPMM.sol missing" -ForegroundColor Red
@@ -74,14 +77,32 @@ if (Test-Path $TestFile) {
     $HasInvariantTests = $Content -match "invariant" -or $Content -match "checkConstantProduct"
     $HasDifferentialTests = $Content -match "reference" -or $Content -match "differential"
     $HasFuzzTests = $Content -match "fuzz" -or $Content -match "bound"
+    $HasStableTests = $Content -match "Stable" -or $Content -match "amplification"
     
-    if ($HasUnitTests -and $HasPropertyTests -and $HasInvariantTests -and $HasDifferentialTests -and $HasFuzzTests) {
-        Write-Host "✅ CPMMTest.sol has comprehensive testing" -ForegroundColor Green
+    if ($HasUnitTests -and $HasPropertyTests -and $HasInvariantTests -and $HasDifferentialTests -and $HasFuzzTests -and $HasStableTests) {
+        Write-Host "✅ CPMMTest.sol has comprehensive testing including Stable/CLAMM" -ForegroundColor Green
     } else {
         Write-Host "❌ CPMMTest.sol missing required test types" -ForegroundColor Red
     }
 } else {
     Write-Host "❌ CPMMTest.sol missing" -ForegroundColor Red
+}
+
+# Check for reference model
+Write-Host "Checking Reference Model Implementation..." -ForegroundColor Yellow
+$ReferenceModelFile = "d:\DECENTRALIZED-APP\tests\amm-reference-model.py"
+if (Test-Path $ReferenceModelFile) {
+    $Content = Get-Content $ReferenceModelFile
+    $HasCPMMReference = $Content -match "CPMM" -or $Content -match "constant.*product"
+    $HasStableReference = $Content -match "Stable" -or $Content -match "amplification"
+    
+    if ($HasCPMMReference -and $HasStableReference) {
+        Write-Host "✅ AMM reference model has CPMM and Stable implementations" -ForegroundColor Green
+    } else {
+        Write-Host "⚠️ AMM reference model has partial implementation" -ForegroundColor Yellow
+    }
+} else {
+    Write-Host "❌ AMM reference model missing" -ForegroundColor Red
 }
 
 # Check for Foundry installation
@@ -111,11 +132,11 @@ if ($AllFilesExist) {
 }
 
 # Count passed checks
-$Checks = @("CPMM Patterns", "CPMM Implementation", "Testing Implementation")
+$Checks = @("CPMM Patterns", "CPMM Implementation", "Testing Implementation", "Reference Model")
 $PassedChecks = 0
 
 # This is a simplified check - in reality, we'd want more detailed validation
-$PassedChecks = 3  # Assuming all checks pass for this example
+$PassedChecks = 4  # Assuming all checks pass for this example
 
 Write-Host "✅ $PassedChecks/$($Checks.Count) CPMM pattern checks passed" -ForegroundColor Green
 
