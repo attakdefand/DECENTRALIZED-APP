@@ -4,98 +4,56 @@
 
 use anyhow::Result;
 use axum::{
-    extract::State,
+    extract::{Json, Query, State},
     http::{Request, StatusCode},
-    middleware::{self, Next},
+    middleware::Next,
     response::Response,
     routing::get,
     Router,
 };
-use core::logging;
+use axum::middleware::from_fn_with_state;
 use std::net::SocketAddr;
 use tracing::info;
 
-// Add Prometheus metrics imports
-use prometheus_client::{
-    encoding::text::encode,
-    metrics::{counter::Counter, family::Family, histogram::Histogram},
-    registry::Registry,
-};
-use std::sync::Arc;
-use std::time::Instant;
-use tokio::sync::Mutex;
-
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt, EnvFilter};
 
-// Create a struct to hold our metrics
-#[derive(Clone)]
-struct Metrics {
-    request_durations: Family<Vec<(String, String)>, Histogram>,
-    request_errors: Family<Vec<(String, String)>, Counter>,
-    total_requests: Counter,
-}
+// Import modules
+mod api_middleware;
+mod models;
+mod contract;
+mod contract_middleware;
+mod malformed_field_middleware;
+mod rate_limit_middleware;
+mod auth_middleware;
+mod allowlist_middleware;
 
-// Create a struct to hold our application state
-#[derive(Clone)]
-struct AppState {
-    metrics: Metrics,
-    registry: Arc<Mutex<Registry>>,
-}
+use api_middleware::validate_payload;
+use models::{Market, Order, Pool};
+use models::pool::PoolRequest;
+use models::pool::PoolResponse;
+use models::order::OrderRequest;
+use models::order::OrderResponse;
+use models::market::MarketRequest;
+use models::market::MarketResponse;
+
+use contract_middleware::contract_validation_middleware;
+use malformed_field_middleware::malformed_field_rejection_middleware;
+use rate_limit_middleware::rate_limit_middleware;
+use auth_middleware::auth_middleware;
+use allowlist_middleware::allowlist_middleware;
+
+// Import AppState and Metrics from the library
+use api_service::AppState;
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    // Initialize OpenTelemetry tracing
+    // Initialize tracing
     init_tracing();
-
-    // Initialize logging
-    logging::init();
 
     info!("Starting API service");
 
-    // Initialize metrics
-    let mut registry = Registry::default();
-    let request_durations: Family<Vec<(String, String)>, Histogram> =
-        Family::new_with_constructor(|| {
-            Histogram::new(
-                [
-                    0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1.0, 2.5, 5.0, 10.0,
-                ]
-                .into_iter(),
-            )
-        });
-
-    let request_errors: Family<Vec<(String, String)>, Counter> =
-        Family::new_with_constructor(Counter::default);
-    let total_requests = Counter::default();
-
-    registry.register(
-        "http_request_duration_seconds",
-        "HTTP request latencies in seconds",
-        request_durations.clone(),
-    );
-
-    registry.register(
-        "http_request_errors_total",
-        "Total number of HTTP request errors",
-        request_errors.clone(),
-    );
-
-    registry.register(
-        "http_requests_total",
-        "Total number of HTTP requests",
-        total_requests.clone(),
-    );
-
-    let metrics = Metrics {
-        request_durations,
-        request_errors,
-        total_requests,
-    };
-
-    let state = AppState {
-        metrics: metrics.clone(),
-        registry: Arc::new(Mutex::new(registry)),
-    };
+    // Initialize state with all components
+    let state = AppState::new();
 
     // Build our application with routes
     let app = Router::new()
@@ -107,13 +65,17 @@ async fn main() -> Result<()> {
         .route("/metrics", get(metrics_handler))
         .with_state(state.clone())
         // Add middleware to track request durations
-        .layer(middleware::from_fn_with_state(state.clone(), track_metrics));
-
-    // In a real implementation, we would:
-    // 1. Connect to the database
-    // 2. Set up connection pools
-    // 3. Add middleware for tracing, CORS, etc.
-    // 4. Start the HTTP server
+        .layer(from_fn_with_state(state.clone(), track_metrics))
+        // Add allowlist middleware (Service Contract Allowlist)
+        .layer(from_fn_with_state(state.clone(), allowlist_middleware))
+        // Add authentication middleware (Auth at Edge)
+        .layer(from_fn_with_state(state.clone(), auth_middleware))
+        // Add rate limiting middleware
+        .layer(from_fn_with_state(state.clone(), rate_limit_middleware))
+        // Add contract validation middleware
+        .layer(from_fn_with_state(state.clone(), contract_validation_middleware))
+        // Add malformed field rejection middleware
+        .layer(from_fn_with_state(state.clone(), malformed_field_rejection_middleware));
 
     // Run our app with hyper on localhost:3000
     let addr = SocketAddr::from(([127, 0, 0, 1], 3000));
@@ -125,22 +87,13 @@ async fn main() -> Result<()> {
     Ok(())
 }
 
-// Initialize tracing
-fn init_tracing() {
-    // Simple tracing initialization
-    tracing_subscriber::registry()
-        .with(EnvFilter::try_from_default_env().unwrap_or_else(|_| "info".into()))
-        .with(tracing_subscriber::fmt::layer())
-        .init();
-}
-
 // Middleware to track request metrics
 async fn track_metrics(
     State(state): State<AppState>,
     request: Request<axum::body::Body>,
     next: Next,
 ) -> Response {
-    let start = Instant::now();
+    let start = std::time::Instant::now();
     let method = request.method().clone();
     let path = request.uri().path().to_string();
 
@@ -212,37 +165,106 @@ async fn health_check() -> &'static str {
     "OK"
 }
 
-async fn get_pools() -> &'static str {
+async fn get_pools(Query(params): Query<PoolRequest>) -> Result<Json<PoolResponse>, (StatusCode, String)> {
     // Add a trace for this endpoint
     let span = tracing::info_span!("get_pools_endpoint");
     let _enter = span.enter();
 
+    // Validate the request parameters
+    if let Err(e) = validate_payload(&params) {
+        return Err((StatusCode::BAD_REQUEST, e));
+    }
+
     // Simulate some work
     tokio::time::sleep(tokio::time::Duration::from_millis(10)).await;
 
-    "Pool data would be returned here"
+    // Create sample pools
+    let pools = vec![
+        Pool {
+            id: "pool1".to_string(),
+            token_a: params.token_a.clone(),
+            token_b: params.token_b.clone(),
+            reserve_a: 1000.0,
+            reserve_b: 2000.0,
+        },
+        Pool {
+            id: "pool2".to_string(),
+            token_a: params.token_a.clone(),
+            token_b: params.token_b.clone(),
+            reserve_a: 500.0,
+            reserve_b: 1500.0,
+        },
+    ];
+
+    Ok(Json(PoolResponse { pools }))
 }
 
-async fn get_orders() -> &'static str {
+async fn get_orders(Query(params): Query<OrderRequest>) -> Result<Json<OrderResponse>, (StatusCode, String)> {
     // Add a trace for this endpoint
     let span = tracing::info_span!("get_orders_endpoint");
     let _enter = span.enter();
 
+    // Validate the request parameters
+    if let Err(e) = validate_payload(&params) {
+        return Err((StatusCode::BAD_REQUEST, e));
+    }
+
     // Simulate some work
     tokio::time::sleep(tokio::time::Duration::from_millis(15)).await;
 
-    "Order data would be returned here"
+    // Create sample orders
+    let orders = vec![
+        Order {
+            id: "order1".to_string(),
+            user: params.user.clone(),
+            market: params.market.clone(),
+            side: "buy".to_string(),
+            price: 100.0,
+            amount: 10.0,
+        },
+        Order {
+            id: "order2".to_string(),
+            user: params.user.clone(),
+            market: params.market.clone(),
+            side: "sell".to_string(),
+            price: 99.0,
+            amount: 5.0,
+        },
+    ];
+
+    Ok(Json(OrderResponse { orders }))
 }
 
-async fn get_markets() -> &'static str {
+async fn get_markets(Query(params): Query<MarketRequest>) -> Result<Json<MarketResponse>, (StatusCode, String)> {
     // Add a trace for this endpoint
     let span = tracing::info_span!("get_markets_endpoint");
     let _enter = span.enter();
 
+    // Validate the request parameters
+    if let Err(e) = validate_payload(&params) {
+        return Err((StatusCode::BAD_REQUEST, e));
+    }
+
     // Simulate some work
     tokio::time::sleep(tokio::time::Duration::from_millis(20)).await;
 
-    "Market data would be returned here"
+    // Create sample markets
+    let markets = vec![
+        Market {
+            id: "market1".to_string(),
+            base_token: params.base_token.clone(),
+            quote_token: params.quote_token.clone(),
+            price: 100.0,
+        },
+        Market {
+            id: "market2".to_string(),
+            base_token: params.base_token.clone(),
+            quote_token: params.quote_token.clone(),
+            price: 99.5,
+        },
+    ];
+
+    Ok(Json(MarketResponse { markets }))
 }
 
 // Handler for Prometheus metrics endpoint
@@ -250,8 +272,17 @@ async fn metrics_handler(state: State<AppState>) -> Result<String, (StatusCode, 
     let registry = state.registry.lock().await;
     let mut buffer = String::new();
 
-    encode(&mut buffer, &registry)
+    prometheus_client::encoding::text::encode(&mut buffer, &registry)
         .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
     Ok(buffer)
+}
+
+// Initialize tracing
+fn init_tracing() {
+    // Simple tracing initialization
+    tracing_subscriber::registry()
+        .with(EnvFilter::try_from_default_env().unwrap_or_else(|_| "info".into()))
+        .with(tracing_subscriber::fmt::layer())
+        .init();
 }

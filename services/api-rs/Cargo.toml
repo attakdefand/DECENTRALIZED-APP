@@ -18,6 +18,17 @@ tracing-subscriber = { workspace = true }
 axum = "0.7"
 tower = "0.5"
 tower-http = { version = "0.5", features = ["cors", "trace"] }
+hyper = "0.14"
+
+# Schema validation
+utoipa = "5.4"
+utoipa-swagger-ui = "9.0"
+validator = { version = "0.16", features = ["derive"] }
+schema = "0.1"
+chrono = { version = "0.4", features = ["serde"] }
+
+# Authentication
+jsonwebtoken = "8.0.0-beta.8"
 
 # Database
 sqlx = { workspace = true }
@@ -34,6 +45,15 @@ opentelemetry-stdout = { workspace = true }
 
 # Local dependencies
 core = { path = "../../crates/core" }
+
+[lib]
+path = "src/lib.rs"
+
+[dev-dependencies]
+axum-test = "14.0"
+tokio-test = "0.4"
+jsonwebtoken = "8.0.0-beta.8"
+tokio = { version = "1", features = ["full"] }
 
 [[bin]]
 name = "api"

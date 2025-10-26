@@ -13,13 +13,13 @@ Layer #,Layer Name,Main Type,Sub Type,Component / Mechanism,Goal,Evidence / Tele
 3,Application Security,Dependency Safety,SAST/SCA,"Static code scanning, dependency vulnerability scan, SBOM, license scan","Stop known-vuln libs from shipping","Critical vuln count, unresolved vuln age"
 3,Application Security,Runtime Protections,WAF / RASP,"WAF rulesets (OWASP Top 10), runtime self-protection hooks in app","Block exploit patterns pre-database","WAF block events, rule hit rate"
 
-###
 4,API & Gateway Security,Protocol Safety,Schema Enforcement,"Strongly typed request/response contract, OpenAPI/GraphQL schema validation","Reject malformed/unknown fields before logic runs","% rejected at gateway vs app"
 4,API & Gateway Security,Abuse Mitigation,Rate Limit / Throttle / Burst Control,"Per-IP rate limit, per-token rate limit, circuit breakers, quota windows","Stop DoS / scraping / brute force","HTTP 429 counts, surge graphs"
 4,API & Gateway Security,Auth at Edge,JWT / mTLS at Gateway,"mTLS between client and gateway, gateway verifies signature/claims before forwarding","Drop bad traffic early","Gateway auth failure logs"
 4,API & Gateway Security,Data Filtering,Header/Body Scrubbers,"Strip dangerous headers, reject unsupported verbs, block oversized payloads","Reduce attack surface","Blocked verb stats, oversized body rejections"
 4,API & Gateway Security,Allowlisting,Service Contract Allowlist,"Only allow specific routes/methods per client/app tier","Make public surface area explicit","Denied route attempts by client id"
 
+### 
 5,Data Security,Data Classification,Sensitivity Tiering,"Classify data: public / internal / confidential / restricted","Know which data needs strong controls","Data inventory with labels"
 5,Data Security,Data-in-Transit,TLS Everywhere,"HTTPS/TLS 1.2+, HSTS, mTLS service-to-service","Stop sniffing / MITM","TLS handshake logs, cert rotation logs"
 5,Data Security,Data-at-Rest,Encryption at Rest,"KMS-managed disk/volume/db encryption, envelope encryption for fields like PII","Protect data if disk/db is stolen","Key rotation logs, KMS access logs"
