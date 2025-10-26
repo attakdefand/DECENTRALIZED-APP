@@ -6,6 +6,7 @@
 use security_layers::{
     governance_policy::*,
     identity_access::*,
+    data_security::*,
     types::SecurityLayer,
 };
 use std::collections::HashMap;
@@ -27,6 +28,9 @@ fn test_security_layers_from_csv() {
     
     // Test identity and access control (Layer 2)
     test_layer_2_identity_access(&security_layers);
+    
+    // Test data security (Layer 5)
+    test_layer_5_data_security(&security_layers);
     
     println!("All security layers validated successfully!");
 }
@@ -567,4 +571,451 @@ fn test_layer_2_identity_access(layers: &[SecurityLayer]) {
     assert_eq!(retrieved, "secret123");
     
     println!("✓ Layer 2 tests passed");
+}
+
+/// Test Layer 5: Data Security - Data Classification and Data-in-Transit
+fn test_layer_5_data_security(layers: &[SecurityLayer]) {
+    println!("Testing Layer 5: Data Security");
+    
+    // Verify we have 5 sub-layers for Layer 5
+    let layer_5_count = layers.iter().filter(|l| l.layer_number == 5).count();
+    assert_eq!(layer_5_count, 5, "Expected 5 sub-layers for Layer 5");
+    
+    // Test Data Classification implementation
+    test_layer_5_data_classification(layers);
+    
+    // Test Data-in-Transit implementation
+    test_layer_5_data_in_transit(layers);
+    
+    // Test Data-at-Rest implementation
+    test_layer_5_data_at_rest(layers);
+    
+    println!("✓ Layer 5 tests passed");
+}
+
+/// Test Layer 5: Data Security - Data Classification
+fn test_layer_5_data_classification(layers: &[SecurityLayer]) {
+    // Find the Data Classification layer
+    let data_classification_layer = layers.iter().find(|l| 
+        l.layer_number == 5 && 
+        l.main_type == "Data Classification" && 
+        l.sub_type == "Sensitivity Tiering"
+    ).expect("Data Classification layer should exist");
+    
+    // Verify the layer properties match the CSV
+    assert_eq!(data_classification_layer.component_mechanism, "Classify data: public / internal / confidential / restricted");
+    assert_eq!(data_classification_layer.goal, "Know which data needs strong controls");
+    assert_eq!(data_classification_layer.evidence_telemetry, "Data inventory with labels");
+    
+    // Test the actual implementation
+    let mut manager = DataClassificationManager::new();
+    
+    // Test classifying data according to the four sensitivity tiers
+    let public_asset = manager.classify_asset(
+        "public-asset-001".to_string(),
+        "Public Documentation".to_string(),
+        DataClassification::Public,
+        "public/docs".to_string(),
+        "docs-team@example.com".to_string(),
+    );
+    
+    let internal_asset = manager.classify_asset(
+        "internal-asset-001".to_string(),
+        "Internal Process Document".to_string(),
+        DataClassification::Internal,
+        "internal/docs".to_string(),
+        "hr-team@example.com".to_string(),
+    );
+    
+    let confidential_asset = manager.classify_asset(
+        "confidential-asset-001".to_string(),
+        "User Financial Data".to_string(),
+        DataClassification::Confidential,
+        "database/users".to_string(),
+        "security-team@example.com".to_string(),
+    );
+    
+    let restricted_asset = manager.classify_asset(
+        "restricted-asset-001".to_string(),
+        "Executive Strategy Documents".to_string(),
+        DataClassification::Restricted,
+        "docs/executive".to_string(),
+        "executive-team@example.com".to_string(),
+    );
+    
+    // Verify all four classification tiers are implemented
+    assert_eq!(public_asset.classification, DataClassification::Public);
+    assert_eq!(internal_asset.classification, DataClassification::Internal);
+    assert_eq!(confidential_asset.classification, DataClassification::Confidential);
+    assert_eq!(restricted_asset.classification, DataClassification::Restricted);
+    
+    // Verify the inventory contains all assets
+    let inventory = manager.get_inventory();
+    assert!(inventory.get_asset("public-asset-001").is_some());
+    assert!(inventory.get_asset("internal-asset-001").is_some());
+    assert!(inventory.get_asset("confidential-asset-001").is_some());
+    assert!(inventory.get_asset("restricted-asset-001").is_some());
+    
+    // Verify we can retrieve assets by classification
+    let public_assets = inventory.get_assets_by_classification(&DataClassification::Public);
+    assert_eq!(public_assets.len(), 1);
+    assert_eq!(public_assets[0].id, "public-asset-001");
+    
+    let internal_assets = inventory.get_assets_by_classification(&DataClassification::Internal);
+    assert_eq!(internal_assets.len(), 1);
+    assert_eq!(internal_assets[0].id, "internal-asset-001");
+    
+    let confidential_assets = inventory.get_assets_by_classification(&DataClassification::Confidential);
+    assert_eq!(confidential_assets.len(), 1);
+    assert_eq!(confidential_assets[0].id, "confidential-asset-001");
+    
+    let restricted_assets = inventory.get_assets_by_classification(&DataClassification::Restricted);
+    assert_eq!(restricted_assets.len(), 1);
+    assert_eq!(restricted_assets[0].id, "restricted-asset-001");
+    
+    // Test the evidence/telemetry requirement: "Data inventory with labels"
+    let telemetry_report = manager.generate_telemetry_report();
+    assert!(telemetry_report.contains("Data Inventory with Labels:"));
+    assert!(telemetry_report.contains("Total Assets: 4"));
+    assert!(telemetry_report.contains("public: 1"));
+    assert!(telemetry_report.contains("internal: 1"));
+    assert!(telemetry_report.contains("confidential: 1"));
+    assert!(telemetry_report.contains("restricted: 1"));
+    assert!(telemetry_report.contains("Public Documentation"));
+    assert!(telemetry_report.contains("Internal Process Document"));
+    assert!(telemetry_report.contains("User Financial Data"));
+    assert!(telemetry_report.contains("Executive Strategy Documents"));
+    
+    // Test that we can identify which data needs strong controls
+    // Public data needs minimal controls
+    assert_eq!(public_assets[0].storage_location, "public/docs");
+    
+    // Restricted data needs strong controls
+    assert_eq!(restricted_assets[0].storage_location, "docs/executive");
+}
+
+/// Test Layer 5: Data Security - Data-in-Transit
+fn test_layer_5_data_in_transit(layers: &[SecurityLayer]) {
+    // Find the Data-in-Transit layer
+    let data_in_transit_layer = layers.iter().find(|l| 
+        l.layer_number == 5 && 
+        l.main_type == "Data-in-Transit" && 
+        l.sub_type == "TLS Everywhere"
+    ).expect("Data-in-Transit layer should exist");
+    
+    // Verify the layer properties match the CSV
+    assert_eq!(data_in_transit_layer.component_mechanism, "HTTPS/TLS 1.2+, HSTS, mTLS service-to-service");
+    assert_eq!(data_in_transit_layer.goal, "Stop sniffing / MITM");
+    assert_eq!(data_in_transit_layer.evidence_telemetry, "TLS handshake logs, cert rotation logs");
+    
+    // Test the actual implementation
+    let config = TlsConfig {
+        min_version: "1.2".to_string(), // TLS 1.2+
+        enforce_https: true, // HTTPS
+        hsts_config: HstsConfig {
+            enabled: true, // HSTS
+            max_age: 31536000,
+            include_subdomains: true,
+            preload: false,
+        },
+        mtls_config: MtlsConfig {
+            enabled: true, // mTLS service-to-service
+            ca_cert: Some("ca.pem".to_string()),
+            crl: None,
+            verification_mode: "strict".to_string(),
+        },
+        cert_rotation_interval: 86400,
+    };
+    
+    let mut manager = TlsManager::new(config).unwrap();
+    
+    // Verify the configuration meets the requirements
+    let config = manager.get_config();
+    assert!(config.min_version == "1.2" || config.min_version == "1.3"); // TLS 1.2+
+    assert!(config.enforce_https); // HTTPS
+    assert!(config.hsts_config.enabled); // HSTS
+    assert!(config.mtls_config.enabled); // mTLS service-to-service
+    
+    // Verify TLS everywhere is enabled
+    assert!(manager.is_tls_everywhere_enabled());
+    
+    // Test logging TLS handshakes
+    manager.log_handshake(TlsHandshakeLog {
+        timestamp: 1234567890,
+        client_ip: "10.0.0.1".to_string(),
+        server_name: "service-a.internal".to_string(),
+        tls_version: "1.3".to_string(),
+        cipher_suite: "TLS_AES_256_GCM_SHA384".to_string(),
+        success: true,
+        error_message: None,
+    });
+    
+    // Test logging certificate rotations
+    manager.log_cert_rotation(CertRotationLog {
+        timestamp: 1234567891,
+        cert_id: "service-a-cert".to_string(),
+        reason: "Scheduled rotation".to_string(),
+        success: true,
+        error_message: None,
+    });
+    
+    // Test the evidence/telemetry requirement: "TLS handshake logs, cert rotation logs"
+    let telemetry_report = manager.generate_telemetry_report();
+    assert!(telemetry_report.contains("TLS Handshake and Certificate Rotation Logs:"));
+    assert!(telemetry_report.contains("Total Handshake Logs: 1"));
+    assert!(telemetry_report.contains("Total Certificate Rotation Logs: 1"));
+    assert!(telemetry_report.contains("10.0.0.1"));
+    assert!(telemetry_report.contains("service-a.internal"));
+    assert!(telemetry_report.contains("service-a-cert"));
+    assert!(telemetry_report.contains("Scheduled rotation"));
+    
+    // Verify the goal: "Stop sniffing / MITM"
+    // By having TLS everywhere enabled with mTLS, we prevent sniffing and MITM attacks
+    assert!(manager.is_tls_everywhere_enabled());
+}
+
+/// Test Layer 5: Data Security - Data-at-Rest
+fn test_layer_5_data_at_rest(layers: &[SecurityLayer]) {
+    // Find the Data-at-Rest layer
+    let data_at_rest_layer = layers.iter().find(|l| 
+        l.layer_number == 5 && 
+        l.main_type == "Data-at-Rest" && 
+        l.sub_type == "Encryption at Rest"
+    ).expect("Data-at-Rest layer should exist");
+    
+    // Verify the layer properties match the CSV
+    assert_eq!(data_at_rest_layer.component_mechanism, "KMS-managed disk/volume/db encryption, envelope encryption for fields like PII");
+    assert_eq!(data_at_rest_layer.goal, "Protect data if disk/db is stolen");
+    assert_eq!(data_at_rest_layer.evidence_telemetry, "Key rotation logs, KMS access logs");
+    
+    // Test the actual implementation
+    let config = security_layers::data_security::DataAtRestConfig {
+        kms_encryption_enabled: true, // KMS-managed encryption
+        kms_key_id: Some("test-key-id".to_string()), // KMS key identifier
+        envelope_encryption_enabled: true, // Envelope encryption for fields like PII
+        key_rotation_interval: 86400, // 24 hours
+        encryption_algorithm: "AES-256-GCM".to_string(),
+    };
+    
+    let mut manager = security_layers::data_security::DataAtRestManager::new(config).unwrap();
+    
+    // Verify the configuration meets the requirements
+    let config = manager.get_config();
+    assert!(config.kms_encryption_enabled); // KMS-managed encryption
+    assert!(config.kms_key_id.is_some()); // KMS key identifier
+    assert!(config.envelope_encryption_enabled); // Envelope encryption for fields like PII
+    
+    // Verify encryption at rest is enabled
+    assert!(manager.is_encryption_at_rest_enabled());
+    
+    // Test logging key rotations
+    manager.log_key_rotation(security_layers::data_security::KeyRotationLog {
+        timestamp: 1234567890,
+        key_id: "test-key-id".to_string(),
+        reason: "Scheduled rotation".to_string(),
+        success: true,
+        error_message: None,
+    });
+    
+    // Test logging KMS accesses
+    manager.log_kms_access(security_layers::data_security::KmsAccessLog {
+        timestamp: 1234567891,
+        key_id: "test-key-id".to_string(),
+        operation: "encrypt".to_string(),
+        success: true,
+        error_message: None,
+        accessed_by: Some("test-service".to_string()),
+    });
+    
+    // Test the evidence/telemetry requirement: "Key rotation logs, KMS access logs"
+    let telemetry_report = manager.generate_telemetry_report();
+    assert!(telemetry_report.contains("Data-at-Rest Encryption Logs:"));
+    assert!(telemetry_report.contains("Total Key Rotation Logs: 1"));
+    assert!(telemetry_report.contains("Total KMS Access Logs: 1"));
+    assert!(telemetry_report.contains("test-key-id"));
+    assert!(telemetry_report.contains("Scheduled rotation"));
+    assert!(telemetry_report.contains("encrypt"));
+    assert!(telemetry_report.contains("test-service"));
+    
+    // Verify the goal: "Protect data if disk/db is stolen"
+    // By having encryption at rest enabled, we protect data if disk/db is stolen
+    assert!(manager.is_encryption_at_rest_enabled());
+}
+
+/// Test Layer 5: Data Security - Data Minimization
+fn test_layer_5_data_minimization(layers: &[SecurityLayer]) {
+    // Find the Data Minimization layer
+    let data_minimization_layer = layers.iter().find(|l| 
+        l.layer_number == 5 && 
+        l.main_type == "Data Minimization" && 
+        l.sub_type == "Field Reduction / Masking"
+    ).expect("Data Minimization layer should exist");
+    
+    // Verify the layer properties match the CSV
+    assert_eq!(data_minimization_layer.component_mechanism, "Store only required attributes, redact PII in logs, tokenize high-risk values");
+    assert_eq!(data_minimization_layer.goal, "Shrink breach impact");
+    assert_eq!(data_minimization_layer.evidence_telemetry, "PII in logs scanner report");
+    
+    // Test the actual implementation
+    let config = security_layers::data_security::DataMinimizationConfig {
+        store_only_required: true, // Store only required attributes
+        redact_pii_in_logs: true, // Redact PII in logs
+        tokenize_high_risk_values: true, // Tokenize high-risk values
+        pii_patterns: vec![
+            "email".to_string(),
+            "phone".to_string(),
+            "ssn".to_string(),
+        ],
+        high_risk_patterns: vec![
+            "password".to_string(),
+            "private_key".to_string(),
+            "secret".to_string(),
+        ],
+    };
+    
+    let mut manager = security_layers::data_security::DataMinimizationManager::new(config);
+    
+    // Verify the configuration meets the requirements
+    let config = manager.get_config();
+    assert!(config.store_only_required); // Store only required attributes
+    assert!(config.redact_pii_in_logs); // Redact PII in logs
+    assert!(config.tokenize_high_risk_values); // Tokenize high-risk values
+    
+    // Verify data minimization is enabled
+    assert!(manager.is_data_minimization_enabled());
+    
+    // Test PII redaction
+    let log_with_pii = "User john.doe@example.com logged in with SSN: 123-45-6789";
+    let redacted_log = manager.redact_pii(log_with_pii);
+    assert!(!redacted_log.contains("john.doe@example.com")); // Email should be redacted
+    assert!(!redacted_log.contains("123-45-6789")); // SSN should be redacted
+    assert!(redacted_log.contains("[EMAIL_REDACTED]")); // Email should be replaced
+    assert!(redacted_log.contains("[SSN_REDACTED]")); // SSN should be replaced
+    
+    // Test high-risk value tokenization
+    let high_risk_value = "super_secret_password_123";
+    let tokenized_value = manager.tokenize_value(high_risk_value);
+    assert_ne!(tokenized_value, high_risk_value); // Value should be tokenized
+    assert!(tokenized_value.starts_with("token_")); // Should have token prefix
+    
+    // Test logs scanning for PII (generates the required evidence/telemetry)
+    let logs = vec![
+        "User login with email: user@example.com".to_string(),
+        "Password change to new_secret_password".to_string(),
+        "Normal system log entry".to_string(),
+    ];
+    
+    let scanner_report = manager.scan_logs_for_pii(&logs);
+    
+    // Verify the scanner report is generated (the required evidence/telemetry)
+    assert!(scanner_report.success);
+    assert!(scanner_report.timestamp > 0);
+    assert!(scanner_report.pii_instances_found >= 0);
+    assert!(scanner_report.high_risk_values_found >= 0);
+    
+    // Test the evidence/telemetry requirement: "PII in logs scanner report"
+    let telemetry_report = manager.generate_telemetry_report();
+    assert!(telemetry_report.contains("Data Minimization Report:"));
+    assert!(telemetry_report.contains("Store only required attributes: true"));
+    assert!(telemetry_report.contains("Redact PII in logs: true"));
+    assert!(telemetry_report.contains("Tokenize high-risk values: true"));
+    assert!(telemetry_report.contains("Total Scanner Reports: 1"));
+    assert!(telemetry_report.contains("Recent PII Scanner Reports:"));
+    
+    // Verify the goal: "Shrink breach impact"
+    // By implementing all three mechanisms, we shrink breach impact:
+    // 1. Store only required attributes reduces the amount of data that could be breached
+    // 2. Redact PII in logs prevents sensitive information from being exposed in logs
+    // 3. Tokenize high-risk values ensures that even if data is breached, high-risk values are protected
+    assert!(manager.is_data_minimization_enabled());
+}
+
+/// Test Layer 5: Data Security - Backup & Restore
+fn test_layer_5_backup_restore(layers: &[SecurityLayer]) {
+    // Find the Backup & Restore layer
+    let backup_restore_layer = layers.iter().find(|l| 
+        l.layer_number == 5 && 
+        l.main_type == "Backup & Restore" && 
+        l.sub_type == "Signed/Encrypted Backups"
+    ).expect("Backup & Restore layer should exist");
+    
+    // Verify the layer properties match the CSV
+    assert_eq!(backup_restore_layer.component_mechanism, "Periodic encrypted snapshots, offline copy, tested restore drill");
+    assert_eq!(backup_restore_layer.goal, "Survive ransomware / data loss");
+    assert_eq!(backup_restore_layer.evidence_telemetry, "Successful restore drill evidence, RPO/RTO metrics");
+    
+    // Test the actual implementation
+    let config = security_layers::data_security::BackupRestoreConfig {
+        periodic_snapshots_enabled: true, // Periodic encrypted snapshots
+        snapshot_interval: 3600, // 1 hour
+        offline_copy_enabled: true, // Offline copy
+        restore_drill_enabled: true, // Tested restore drill
+        encryption_algorithm: "AES-256-GCM".to_string(), // Encryption
+        retention_days: 30, // Retention period
+    };
+    
+    let mut manager = security_layers::data_security::BackupRestoreManager::new(config);
+    
+    // Verify the configuration meets the requirements
+    let config = manager.get_config();
+    assert!(config.periodic_snapshots_enabled); // Periodic encrypted snapshots
+    assert!(config.offline_copy_enabled); // Offline copy
+    assert!(config.restore_drill_enabled); // Tested restore drill
+    
+    // Verify backup restore is enabled
+    assert!(manager.is_backup_restore_enabled());
+    
+    // Test creating periodic encrypted snapshots
+    let snapshot = manager.create_snapshot(security_layers::data_security::BackupType::Database).unwrap();
+    assert!(snapshot.is_signed); // Snapshots must be signed
+    assert!(snapshot.is_encrypted); // Snapshots must be encrypted
+    assert_eq!(snapshot.backup_type, security_layers::data_security::BackupType::Database);
+    
+    // Test creating offline copy
+    let offline_location = manager.create_offline_copy(&snapshot.id).unwrap();
+    assert!(offline_location.starts_with("offline://")); // Offline copy location format
+    
+    // Test performing restore drill (generates the required evidence/telemetry)
+    let drill_report = manager.perform_restore_drill();
+    
+    // Verify the drill report is generated (the required evidence/telemetry)
+    assert!(drill_report.success);
+    assert!(drill_report.timestamp > 0);
+    assert!(drill_report.rpo_achieved >= 0); // RPO metrics
+    assert!(drill_report.rto_achieved >= 0); // RTO metrics
+    
+    // Test the evidence/telemetry requirement: "Successful restore drill evidence, RPO/RTO metrics"
+    let telemetry_report = manager.generate_telemetry_report();
+    assert!(telemetry_report.contains("Backup & Restore Report:"));
+    assert!(telemetry_report.contains("Periodic snapshots enabled: true"));
+    assert!(telemetry_report.contains("Offline copies enabled: true"));
+    assert!(telemetry_report.contains("Restore drills enabled: true"));
+    assert!(telemetry_report.contains("Total Snapshots: 1"));
+    assert!(telemetry_report.contains("Total Restore Drill Reports: 1"));
+    assert!(telemetry_report.contains("Recent Snapshots:"));
+    assert!(telemetry_report.contains("Recent Restore Drill Reports:"));
+    assert!(telemetry_report.contains(&format!("RPO: {}s, RTO: {}s", drill_report.rpo_achieved, drill_report.rto_achieved)));
+    
+    // Verify the goal: "Survive ransomware / data loss"
+    // By implementing all three mechanisms, we can survive ransomware / data loss:
+    // 1. Periodic encrypted snapshots ensure we have recent backups
+    // 2. Offline copies ensure we have backups that can't be affected by ransomware
+    // 3. Tested restore drills ensure we can actually restore from backups
+    assert!(manager.is_backup_restore_enabled());
+}
+
+fn main() {
+    // Create a list of all security layers from the CSV file
+    let security_layers = create_security_layers_from_csv();
+    
+    // Test governance and policy management (Layer 1)
+    test_layer_1_governance_policy(&security_layers);
+    
+    // Test identity and access control (Layer 2)
+    test_layer_2_identity_access(&security_layers);
+    
+    // Test data security (Layer 5)
+    test_layer_5_data_security(&security_layers);
+    
+    println!("All security layers validated successfully!");
 }

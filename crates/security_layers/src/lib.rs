@@ -21,6 +21,14 @@ pub use identity_access::{
     AuthNManager, AuthZManager, JwtToken, MfaChallenge, PasswordHash, RbacPolicy, SecretManager,
     SessionManager, TokenLifecycle,
 };
+pub use data_security::{
+    DataClassification, ClassifiedDataAsset, DataInventory, DataClassificationManager,
+    TlsConfig, HstsConfig, MtlsConfig, TlsHandshakeLog, CertRotationLog, TlsManager,
+    DataAtRestConfig, KeyRotationLog, KmsAccessLog, DataAtRestManager,
+    DataMinimizationConfig, PiiInLogsScannerReport, DataMinimizationManager,
+    BackupRestoreConfig, BackupSnapshot, RestoreDrillReport, RestoreMetrics, 
+    BackupType, BackupStatus, BackupRestoreManager,
+};
 
 /// Common error types used across security layers
 #[derive(Debug)]
