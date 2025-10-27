@@ -29,6 +29,12 @@ pub use data_security::{
     BackupRestoreConfig, BackupSnapshot, RestoreDrillReport, RestoreMetrics, 
     BackupType, BackupStatus, BackupRestoreManager,
 };
+pub use network_infra::{
+    EdgeFirewallConfig, EdgeFirewallTelemetry, NetworkSegmentationConfig, 
+    NetworkSegmentationTelemetry, OsiHardeningConfig, OsiHardeningTelemetry,
+    HostHardeningConfig, HostHardeningTelemetry, RuntimeSecretConfig, 
+    RuntimeSecretTelemetry, NetworkInfraManager, SshLockdownConfig
+};
 
 /// Common error types used across security layers
 #[derive(Debug)]
