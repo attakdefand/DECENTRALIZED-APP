@@ -10,6 +10,11 @@ cargo test --manifest-path services/indexer-rs/Cargo.toml
 cargo test --manifest-path services/api-rs/Cargo.toml
 cargo test --manifest-path services/keepers-rs/Cargo.toml
 
+# Run resilience and availability tests
+Write-Host "Running resilience and availability tests..." -ForegroundColor Yellow
+cargo test --package core --test resilience_availability_integration
+cargo run --package core --bin resilience_availability_simulation
+
 if ($LASTEXITCODE -eq 0) {
     Write-Host "All tests passed!" -ForegroundColor Green
 } else {

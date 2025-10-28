@@ -45,3 +45,7 @@ path = "src/bin/observability_simulation.rs"
 [[bin]]
 name = "incident_response_simulation"
 path = "src/bin/incident_response_simulation.rs"
+
+[[bin]]
+name = "resilience_availability_simulation"
+path = "src/bin/resilience_availability_simulation.rs"

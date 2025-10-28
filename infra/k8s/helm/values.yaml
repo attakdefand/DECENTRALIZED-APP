@@ -288,3 +288,33 @@ serviceMonitor:
   enabled: false
   additionalLabels: {}
   interval: 30s
+
+# Resilience and Availability configuration
+resilienceAvailability:
+  enabled: true
+  haFailover:
+    multiAzEnabled: true
+    healthCheckInterval: 30
+    replicasPerService: 3
+    failoverTimeoutMs: 10000
+  trafficProtection:
+    circuitBreakerThreshold: 5
+    circuitBreakerTimeoutMs: 60000
+    bulkheadConcurrencyLimit: 100
+    rateShaping:
+      maxRps: 1000
+      burstSize: 200
+      shedPercentage: 10
+  gracefulDegradation:
+    featureFlagsEnabled: true
+    readOnlyModeEnabled: true
+    cacheTtlSeconds: 300
+    fallbackDataSources:
+      - "redis_cache"
+      - "local_cache"
+  disasterRecovery:
+    drPlaybookEnabled: true
+    chaosTestingEnabled: true
+    rpoSeconds: 300
+    rtoSeconds: 600
+    backupRetentionDays: 30

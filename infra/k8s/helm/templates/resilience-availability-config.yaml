@@ -1,0 +1,43 @@
+{{- if .Values.resilienceAvailability.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "decentralized-app.fullname" . }}-resilience-availability
+  labels:
+    {{- include "decentralized-app.labels" . | nindent 4 }}
+    component: resilience-availability
+data:
+  ha-failover-config.json: |-
+    {
+      "multi_az_enabled": {{ .Values.resilienceAvailability.haFailover.multiAzEnabled }},
+      "health_check_interval": {{ .Values.resilienceAvailability.haFailover.healthCheckInterval }},
+      "replicas_per_service": {{ .Values.resilienceAvailability.haFailover.replicasPerService }},
+      "failover_timeout_ms": {{ .Values.resilienceAvailability.haFailover.failoverTimeoutMs }}
+    }
+  traffic-protection-config.json: |-
+    {
+      "circuit_breaker_threshold": {{ .Values.resilienceAvailability.trafficProtection.circuitBreakerThreshold }},
+      "circuit_breaker_timeout_ms": {{ .Values.resilienceAvailability.trafficProtection.circuitBreakerTimeoutMs }},
+      "bulkhead_concurrency_limit": {{ .Values.resilienceAvailability.trafficProtection.bulkheadConcurrencyLimit }},
+      "rate_shaping": {
+        "max_rps": {{ .Values.resilienceAvailability.trafficProtection.rateShaping.maxRps }},
+        "burst_size": {{ .Values.resilienceAvailability.trafficProtection.rateShaping.burstSize }},
+        "shed_percentage": {{ .Values.resilienceAvailability.trafficProtection.rateShaping.shedPercentage }}
+      }
+    }
+  graceful-degradation-config.json: |-
+    {
+      "feature_flags_enabled": {{ .Values.resilienceAvailability.gracefulDegradation.featureFlagsEnabled }},
+      "read_only_mode_enabled": {{ .Values.resilienceAvailability.gracefulDegradation.readOnlyModeEnabled }},
+      "cache_ttl_seconds": {{ .Values.resilienceAvailability.gracefulDegradation.cacheTtlSeconds }},
+      "fallback_data_sources": {{ .Values.resilienceAvailability.gracefulDegradation.fallbackDataSources | toJson }}
+    }
+  disaster-recovery-config.json: |-
+    {
+      "dr_playbook_enabled": {{ .Values.resilienceAvailability.disasterRecovery.drPlaybookEnabled }},
+      "chaos_testing_enabled": {{ .Values.resilienceAvailability.disasterRecovery.chaosTestingEnabled }},
+      "rpo_seconds": {{ .Values.resilienceAvailability.disasterRecovery.rpoSeconds }},
+      "rto_seconds": {{ .Values.resilienceAvailability.disasterRecovery.rtoSeconds }},
+      "backup_retention_days": {{ .Values.resilienceAvailability.disasterRecovery.backupRetentionDays }}
+    }
+{{- end }}

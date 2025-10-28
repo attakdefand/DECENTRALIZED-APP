@@ -11,6 +11,7 @@ pub mod logging;
 pub mod mev_mitigation;
 pub mod observability;
 pub mod rate_limiting;
+pub mod resilience_availability;
 pub mod risk;
 pub mod rpc_resilience;
 pub mod supply_chain;
@@ -45,6 +46,11 @@ pub use observability::{
 };
 pub use rate_limiting::{
     IdempotencyManager, JobError, JobGuard, RateLimiter, Request, TokenBucket, WAFError, WAFRules,
+};
+pub use resilience_availability::{
+    Bulkhead, CircuitBreakerState as ResilienceCircuitBreakerState, DisasterRecoveryConfig,
+    GracefulDegradationConfig, HaFailoverConfig, RateShapingConfig, ResilienceAvailabilityError,
+    ResilienceAvailabilityManager, ServiceHealth, ServiceInstance, TrafficProtectionConfig,
 };
 pub use risk::{CollateralFactor, FeeRouter, InsuranceFund};
 pub use rpc_resilience::{
