@@ -64,6 +64,10 @@ fn test_complete_supply_chain_workflow() {
         uri: artifact_uri.to_string(),
         hash: artifact_hash.to_string(),
         size: 2048,
+        signature: None,
+        sbom: None,
+        is_signed: false,
+        created: 0,
     }];
 
     let provenance = manager
@@ -99,6 +103,13 @@ fn test_complete_supply_chain_workflow() {
     assert!(is_pinned);
     println!("✓ Dependency pinning validation passed");
 
+    // 13. Validate dependency trust
+    let is_trusted = manager
+        .validate_dependency_trust(sbom_for_scanning)
+        .unwrap();
+    assert!(is_trusted);
+    println!("✓ Dependency trust validation passed");
+
     println!("Complete supply chain workflow test passed!");
 }
 
@@ -121,6 +132,9 @@ fn test_supply_chain_component_configurations() {
             hash: format!("sha256:hash{}", i),
             is_direct: i % 2 == 0,
             vulnerabilities: vec![],
+            is_pinned: true,
+            checksum_verified: true,
+            is_approved: true,
         });
     }
 
@@ -152,6 +166,9 @@ fn test_supply_chain_component_configurations() {
             description: "Buffer overflow vulnerability".to_string(),
             fix_available: true,
         }],
+        is_pinned: true,
+        checksum_verified: true,
+        is_approved: true,
     };
 
     let sbom_with_vulns = Sbom {

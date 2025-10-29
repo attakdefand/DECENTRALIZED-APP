@@ -144,11 +144,13 @@ fn test_supply_chain_under_stress() {
             name: format!("dependency-{}", i),
             version: format!("1.{}.0", i % 10),
             purl: format!("pkg:cargo/dependency-{}@1.{}.0", i, i % 10),
-            licenses: vec![
-                if i % 3 == 0 { "MIT".to_string() } 
-                else if i % 3 == 1 { "Apache-2.0".to_string() } 
-                else { "BSD-3-Clause".to_string() }
-            ],
+            licenses: vec![if i % 3 == 0 {
+                "MIT".to_string()
+            } else if i % 3 == 1 {
+                "Apache-2.0".to_string()
+            } else {
+                "BSD-3-Clause".to_string()
+            }],
             hash: format!("sha256:hash{}", i),
             is_direct: i % 5 == 0,
             vulnerabilities: if i % 20 == 0 {
@@ -161,6 +163,9 @@ fn test_supply_chain_under_stress() {
             } else {
                 vec![]
             },
+            is_pinned: true,
+            checksum_verified: true,
+            is_approved: true,
         });
     }
     
@@ -286,6 +291,9 @@ fn test_supply_chain_error_scenarios() {
             hash: format!("sha256:large-hash-{}", i),
             is_direct: false,
             vulnerabilities: vec![],
+            is_pinned: true,
+            checksum_verified: true,
+            is_approved: true,
         });
     }
     

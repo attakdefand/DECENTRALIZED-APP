@@ -208,19 +208,6 @@ pub struct CicdGatekeepingStats {
     pub tests_executed: Arc<AtomicU64>,
 }
 
-/// Runtime Drift Control statistics
-#[derive(Debug, Clone)]
-pub struct RuntimeDriftStats {
-    /// Total drift checks performed
-    pub total_drift_checks: Arc<AtomicU64>,
-    /// Drift incidents detected
-    pub drift_incidents: Arc<AtomicU64>,
-    /// Sneaky containers detected
-    pub sneaky_containers: Arc<AtomicU64>,
-    /// Approved manifests compared against
-    pub approved_manifests: Arc<AtomicU64>,
-}
-
 /// Represents a CI/CD policy rule
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PolicyRule {
@@ -303,83 +290,6 @@ pub struct TestResult {
     pub passed: bool,
 }
 
-/// Represents an approved manifest for runtime comparison
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ApprovedManifest {
-    /// Unique identifier for the manifest
-    pub id: String,
-    /// Name of the application/service
-    pub name: String,
-    /// Version of the application/service
-    pub version: String,
-    /// Expected running processes
-    pub expected_processes: Vec<String>,
-    /// Expected file system changes
-    pub expected_file_changes: Vec<String>,
-    /// Expected network connections
-    pub expected_network_connections: Vec<String>,
-    /// Expected environment variables
-    pub expected_env_vars: HashMap<String, String>,
-    /// Timestamp of manifest creation
-    pub created: u64,
-    /// Hash of the manifest content
-    pub hash: String,
-}
-
-/// Represents a runtime drift report
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct DriftReport {
-    /// Unique identifier for the report
-    pub id: String,
-    /// Reference to the approved manifest
-    pub manifest_id: String,
-    /// Actual running processes observed
-    pub actual_processes: Vec<String>,
-    /// Actual file system changes observed
-    pub actual_file_changes: Vec<String>,
-    /// Actual network connections observed
-    pub actual_network_connections: Vec<String>,
-    /// Actual environment variables observed
-    pub actual_env_vars: HashMap<String, String>,
-    /// Process deviations detected
-    pub process_deviations: Vec<String>,
-    /// File system deviations detected
-    pub file_deviations: Vec<String>,
-    /// Network connection deviations detected
-    pub network_deviations: Vec<String>,
-    /// Environment variable deviations detected
-    pub env_var_deviations: Vec<String>,
-    /// Whether this represents a drift incident
-    pub is_drift_incident: bool,
-    /// Whether this represents a sneaky container
-    pub is_sneaky_container: bool,
-    /// Timestamp of report creation
-    pub created: u64,
-}
-
-/// Represents a running container for drift monitoring
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct RunningContainer {
-    /// Container ID
-    pub id: String,
-    /// Container name
-    pub name: String,
-    /// Container image
-    pub image: String,
-    /// Running processes
-    pub processes: Vec<String>,
-    /// File system changes
-    pub file_changes: Vec<String>,
-    /// Network connections
-    pub network_connections: Vec<String>,
-    /// Environment variables
-    pub env_vars: HashMap<String, String>,
-    /// Timestamp of last check
-    pub last_checked: u64,
-    /// Associated manifest ID
-    pub manifest_id: String,
-}
-
 /// Custom error type for supply chain operations
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum SupplyChainError {
@@ -443,8 +353,6 @@ pub struct SupplyChainManager {
     pub trust_stats: DependencyTrustStats,
     /// CI/CD gatekeeping statistics
     pub cicd_stats: CicdGatekeepingStats,
-    /// Runtime drift control statistics
-    pub drift_stats: RuntimeDriftStats,
     /// Approved dependencies list
     pub approved_dependencies: HashMap<String, String>, // name -> version regex
     /// Known typosquat packages
@@ -457,12 +365,6 @@ pub struct SupplyChainManager {
     pub security_scans: HashMap<String, SecurityScanResult>,
     /// Test results
     pub test_results: HashMap<String, TestResult>,
-    /// Approved manifests for runtime drift control
-    pub approved_manifests: HashMap<String, ApprovedManifest>,
-    /// Drift reports
-    pub drift_reports: HashMap<String, DriftReport>,
-    /// Running containers for drift monitoring
-    pub running_containers: HashMap<String, RunningContainer>,
 }
 
 impl SupplyChainManager {
@@ -491,21 +393,12 @@ impl SupplyChainManager {
                 security_scans: Arc::new(AtomicU64::new(0)),
                 tests_executed: Arc::new(AtomicU64::new(0)),
             },
-            drift_stats: RuntimeDriftStats {
-                total_drift_checks: Arc::new(AtomicU64::new(0)),
-                drift_incidents: Arc::new(AtomicU64::new(0)),
-                sneaky_containers: Arc::new(AtomicU64::new(0)),
-                approved_manifests: Arc::new(AtomicU64::new(0)),
-            },
             approved_dependencies: HashMap::new(),
             typosquat_packages: HashMap::new(),
             policy_rules: HashMap::new(),
             builds: HashMap::new(),
             security_scans: HashMap::new(),
             test_results: HashMap::new(),
-            approved_manifests: HashMap::new(),
-            drift_reports: HashMap::new(),
-            running_containers: HashMap::new(),
         };
         
         // Initialize with some default approved dependencies and known typosquat packages
@@ -1320,207 +1213,6 @@ impl SupplyChainManager {
         rule.enabled = false;
         Ok(())
     }
-
-    /// Create an approved manifest for runtime drift control
-    pub fn create_approved_manifest(
-        &mut self,
-        name: &str,
-        version: &str,
-        expected_processes: Vec<String>,
-        expected_file_changes: Vec<String>,
-        expected_network_connections: Vec<String>,
-        expected_env_vars: HashMap<String, String>,
-    ) -> ApprovedManifest {
-        let manifest = ApprovedManifest {
-            id: format!("manifest-{}-{}", name, version),
-            name: name.to_string(),
-            version: version.to_string(),
-            expected_processes,
-            expected_file_changes,
-            expected_network_connections,
-            expected_env_vars,
-            created: self.current_timestamp(),
-            hash: "sha256:manifesthash123...".to_string(), // In a real implementation, this would be a proper hash
-        };
-        
-        self.drift_stats.approved_manifests.fetch_add(1, Ordering::Relaxed);
-        manifest
-    }
-
-    /// Store an approved manifest
-    pub fn store_approved_manifest(&mut self, manifest: ApprovedManifest) -> Result<(), SupplyChainError> {
-        self.approved_manifests.insert(manifest.id.clone(), manifest);
-        Ok(())
-    }
-
-    /// Get an approved manifest by ID
-    pub fn get_approved_manifest(&self, id: &str) -> Option<&ApprovedManifest> {
-        self.approved_manifests.get(id)
-    }
-
-    /// Create a running container for drift monitoring
-    pub fn create_running_container(
-        &mut self,
-        id: &str,
-        name: &str,
-        image: &str,
-        processes: Vec<String>,
-        file_changes: Vec<String>,
-        network_connections: Vec<String>,
-        env_vars: HashMap<String, String>,
-        manifest_id: &str,
-    ) -> RunningContainer {
-        RunningContainer {
-            id: id.to_string(),
-            name: name.to_string(),
-            image: image.to_string(),
-            processes,
-            file_changes,
-            network_connections,
-            env_vars,
-            last_checked: self.current_timestamp(),
-            manifest_id: manifest_id.to_string(),
-        }
-    }
-
-    /// Store a running container
-    pub fn store_running_container(&mut self, container: RunningContainer) -> Result<(), SupplyChainError> {
-        self.running_containers.insert(container.id.clone(), container);
-        Ok(())
-    }
-
-    /// Get a running container by ID
-    pub fn get_running_container(&self, id: &str) -> Option<&RunningContainer> {
-        self.running_containers.get(id)
-    }
-
-    /// Check for drift between a running container and its approved manifest
-    pub fn check_runtime_drift(&mut self, container_id: &str) -> Result<DriftReport, SupplyChainError> {
-        // Update statistics
-        self.drift_stats.total_drift_checks.fetch_add(1, Ordering::Relaxed);
-        
-        // Get the running container
-        let container = self.running_containers.get(container_id).ok_or_else(|| {
-            SupplyChainError::ConfigurationError("Container not found".to_string())
-        })?;
-        
-        // Get the approved manifest
-        let manifest = self.approved_manifests.get(&container.manifest_id).ok_or_else(|| {
-            SupplyChainError::ConfigurationError("Approved manifest not found".to_string())
-        })?;
-        
-        // Check for process deviations
-        let mut process_deviations = Vec::new();
-        for process in &container.processes {
-            if !manifest.expected_processes.contains(process) {
-                process_deviations.push(process.clone());
-            }
-        }
-        
-        // Check for file system deviations
-        let mut file_deviations = Vec::new();
-        for file_change in &container.file_changes {
-            if !manifest.expected_file_changes.contains(file_change) {
-                file_deviations.push(file_change.clone());
-            }
-        }
-        
-        // Check for network connection deviations
-        let mut network_deviations = Vec::new();
-        for connection in &container.network_connections {
-            if !manifest.expected_network_connections.contains(connection) {
-                network_deviations.push(connection.clone());
-            }
-        }
-        
-        // Check for environment variable deviations
-        let mut env_var_deviations = Vec::new();
-        for (key, value) in &container.env_vars {
-            if let Some(expected_value) = manifest.expected_env_vars.get(key) {
-                if expected_value != value {
-                    env_var_deviations.push(format!("{}: expected '{}', got '{}'", key, expected_value, value));
-                }
-            } else {
-                env_var_deviations.push(format!("{}: unexpected variable with value '{}'", key, value));
-            }
-        }
-        
-        // Check for missing expected environment variables
-        for (key, expected_value) in &manifest.expected_env_vars {
-            if !container.env_vars.contains_key(key) {
-                env_var_deviations.push(format!("{}: missing expected variable with value '{}'", key, expected_value));
-            }
-        }
-        
-        // Determine if this is a drift incident or sneaky container
-        let is_drift_incident = !process_deviations.is_empty() || 
-                               !file_deviations.is_empty() || 
-                               !network_deviations.is_empty() || 
-                               !env_var_deviations.is_empty();
-        
-        let is_sneaky_container = process_deviations.len() > 2 || 
-                                 file_deviations.len() > 5 || 
-                                 network_deviations.len() > 3;
-        
-        // Update statistics if incidents detected
-        if is_drift_incident {
-            self.drift_stats.drift_incidents.fetch_add(1, Ordering::Relaxed);
-        }
-        
-        if is_sneaky_container {
-            self.drift_stats.sneaky_containers.fetch_add(1, Ordering::Relaxed);
-        }
-        
-        let report = DriftReport {
-            id: format!("drift-report-{}-{}", container_id, self.current_timestamp()),
-            manifest_id: manifest.id.clone(),
-            actual_processes: container.processes.clone(),
-            actual_file_changes: container.file_changes.clone(),
-            actual_network_connections: container.network_connections.clone(),
-            actual_env_vars: container.env_vars.clone(),
-            process_deviations,
-            file_deviations,
-            network_deviations,
-            env_var_deviations,
-            is_drift_incident,
-            is_sneaky_container,
-            created: self.current_timestamp(),
-        };
-        
-        // Store the drift report
-        self.drift_reports.insert(report.id.clone(), report.clone());
-        
-        Ok(report)
-    }
-
-    /// Get a drift report by ID
-    pub fn get_drift_report(&self, id: &str) -> Option<&DriftReport> {
-        self.drift_reports.get(id)
-    }
-
-    /// Get runtime drift statistics
-    pub fn get_drift_stats(&self) -> (u64, u64, u64, u64) {
-        let total_checks = self.drift_stats.total_drift_checks.load(Ordering::Relaxed);
-        let incidents = self.drift_stats.drift_incidents.load(Ordering::Relaxed);
-        let sneaky = self.drift_stats.sneaky_containers.load(Ordering::Relaxed);
-        let manifests = self.drift_stats.approved_manifests.load(Ordering::Relaxed);
-        (total_checks, incidents, sneaky, manifests)
-    }
-
-    /// Get drift reports for a specific manifest
-    pub fn get_drift_reports_for_manifest(&self, manifest_id: &str) -> Vec<&DriftReport> {
-        self.drift_reports
-            .values()
-            .filter(|report| report.manifest_id == manifest_id)
-            .collect()
-    }
-
-    /// Get drift incidents per week for reporting
-    pub fn get_drift_incidents_per_week(&self) -> u64 {
-        // In a real implementation, this would calculate incidents per week
-        // For now, we'll just return the total incidents
-        self.drift_stats.drift_incidents.load(Ordering::Relaxed)
-    }
 }
 
 impl Default for SupplyChainManager {
@@ -2116,7 +1808,234 @@ mod tests {
         // Check statistics
         let (total, blocked, scans, tests) = manager.get_cicd_stats();
         assert_eq!(total, 1); // One build processed
-        assert_eq!(blocked, 0); // No builds blocked since all policies passed
+        assert_eq!(blocked, 0); // No builds blocked
+        assert_eq!(scans, 1); // One security scan performed
+        assert_eq!(tests, 1); // One test executed
+    }
+
+    #[test]
+    fn test_build_blocking_by_policy() {
+        let mut manager = SupplyChainManager::new();
+        
+        let source = SourceInfo {
+use std::collections::HashMap;
+
+#[derive(Debug, Clone)]
+struct SourceInfo {
+    repo_url: String,
+    commit_hash: String,
+    branch: String,
+    tag: Option<String>,
+}
+
+#[derive(Debug, Clone)]
+struct BuildConfig {
+    build_script: String,
+    environment: HashMap<String, String>,
+    tools: HashMap<String, String>,
+}
+
+#[derive(Debug, Clone)]
+struct Artifact {
+    name: String,
+    uri: String,
+    hash: String,
+    size: u64,
+    signature: Option<String>,
+    sbom: Option<String>,
+    is_signed: bool,
+    created: u64,
+}
+
+#[derive(Debug, Clone)]
+struct Vulnerability {
+    id: String,
+    severity: f64,
+    description: String,
+    fix_available: bool,
+}
+
+#[derive(Debug, Clone)]
+struct SecurityScanResult {
+    id: String,
+    build_id: String,
+    scan_type: String,
+    vulnerabilities: Vec<Vulnerability>,
+    licenses: Vec<String>,
+    completed: u64,
+    passed: bool,
+}
+
+#[derive(Debug, Clone)]
+struct Build {
+    id: String,
+    source: SourceInfo,
+    config: BuildConfig,
+    artifacts: Vec<Artifact>,
+    passed_policies: bool,
+}
+
+struct SupplyChainManager {
+    builds: HashMap<String, Build>,
+    security_scans: HashMap<String, SecurityScanResult>,
+    test_results: HashMap<String, HashMap<String, (u64, u64, u64, f64)>>,
+}
+
+impl SupplyChainManager {
+    fn new() -> Self {
+        SupplyChainManager {
+            builds: HashMap::new(),
+            security_scans: HashMap::new(),
+            test_results: HashMap::new(),
+        }
+    }
+
+    fn create_build(
+        &self,
+        id: &str,
+        source: SourceInfo,
+        config: BuildConfig,
+        artifacts: Vec<Artifact>,
+    ) -> Result<Build, String> {
+        Ok(Build {
+            id: id.to_string(),
+            source,
+            config,
+            artifacts,
+            passed_policies: false,
+        })
+    }
+
+    fn store_build(&mut self, build: Build) -> Result<(), String> {
+        self.builds.insert(build.id.clone(), build);
+        Ok(())
+    }
+
+    fn record_test_results(
+        &mut self,
+        build_id: &str,
+        test_type: &str,
+        total: u64,
+        passed: u64,
+        failed: u64,
+        coverage: f64,
+    ) -> Result<(), String> {
+        let results = self.test_results.entry(build_id.to_string()).or_insert_with(HashMap::new);
+        results.insert(test_type.to_string(), (total, passed, failed, coverage));
+        Ok(())
+    }
+
+    fn evaluate_policies(&self, build_id: &str) -> Result<bool, String> {
+        let build = self.builds.get(build_id).ok_or("Build not found")?;
+        let scans = build
+            .artifacts
+            .iter()
+            .flat_map(|artifact| {
+                self.security_scans
+                    .values()
+                    .filter(|scan| scan.build_id == build.id && scan.artifacts.contains(&artifact.name))
+            })
+            .collect::<Vec<_>>();
+
+        let has_critical_vulnerability = scans.iter().any(|scan| {
+            scan.vulnerabilities.iter().any(|vuln| vuln.severity >= 9.0)
+        });
+
+        if has_critical_vulnerability {
+            Ok(false)
+        } else {
+            Ok(true)
+        }
+    }
+
+    fn get_build(&self, build_id: &str) -> Result<Build, String> {
+        self.builds.get(build_id).cloned().ok_or("Build not found")
+    }
+
+    fn current_timestamp(&self) -> u64 {
+        1633072800 // Example timestamp
+    }
+
+    fn get_cicd_stats(&self) -> (usize, usize, usize, usize) {
+        let total = self.builds.len();
+        let blocked = self.builds.values().filter(|build| !build.passed_policies).count();
+        let scans = self.security_scans.len();
+        let tests = self.test_results.len();
+        (total, blocked, scans, tests)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_build_blocking_by_policy() {
+        let mut manager = SupplyChainManager::new();
+        
+        let source = SourceInfo {
+            repo_url: "https://github.com/example/test-app".to_string(),
+            commit_hash: "a1b2c3d4e5f".to_string(),
+            branch: "main".to_string(),
+            tag: Some("v1.0.0".to_string()),
+        };
+
+        let build_config = BuildConfig {
+            build_script: "build.sh".to_string(),
+            environment: std::collections::HashMap::new(),
+            tools: std::collections::HashMap::new(),
+        };
+
+        let artifacts = vec![Artifact {
+            name: "test-app-binary".to_string(),
+            uri: "artifact://test-app-v1.0.0".to_string(),
+            hash: "sha256:test123".to_string(),
+            size: 2048,
+            signature: None,
+            sbom: None,
+            is_signed: false,
+            created: 0,
+        }];
+        
+        let build = manager.create_build("123", source, build_config, artifacts).unwrap();
+        manager.store_build(build.clone()).unwrap();
+        
+        // Add a critical vulnerability to trigger policy failure
+        let critical_vuln = Vulnerability {
+            id: "CVE-2023-99999".to_string(),
+            severity: 9.5,
+            description: "Critical vulnerability".to_string(),
+            fix_available: false,
+        };
+        
+        let scan_id = format!("scan-{}-{}", build.id, manager.current_timestamp());
+        let critical_scan = SecurityScanResult {
+            id: scan_id,
+            build_id: build.id.clone(),
+            scan_type: "sast".to_string(),
+            vulnerabilities: vec![critical_vuln],
+            licenses: vec!["MIT".to_string()],
+            completed: manager.current_timestamp(),
+            passed: false,
+        };
+        
+        manager.security_scans.insert(critical_scan.id.clone(), critical_scan);
+        
+        // Record test results
+        manager.record_test_results(&build.id, "unit", 100, 100, 0, 95.0).unwrap();
+        
+        // Evaluate policies - should fail due to critical vulnerability
+        let result = manager.evaluate_policies(&build.id).unwrap();
+        assert!(!result); // Should fail due to critical vulnerability
+        
+        // Check that the build was blocked
+        let updated_build = manager.get_build(&build.id).unwrap();
+        assert!(!updated_build.passed_policies);
+        
+        // Check statistics
+        let (total, blocked, scans, tests) = manager.get_cicd_stats();
+        assert_eq!(total, 1); // One build processed
+        assert_eq!(blocked, 1); // One build blocked
         assert_eq!(scans, 1); // One security scan performed
         assert_eq!(tests, 1); // One test executed
     }

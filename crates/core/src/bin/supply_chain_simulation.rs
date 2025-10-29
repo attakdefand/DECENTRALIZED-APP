@@ -95,12 +95,20 @@ fn test_realistic_supply_chain_scenario() {
             uri: "artifact://decentralized-app-binary".to_string(),
             hash: "sha256:binary-hash".to_string(),
             size: 1024000,
+            signature: None,
+            sbom: None,
+            is_signed: false,
+            created: 0,
         },
         Artifact {
             name: "decentralized-app-config".to_string(),
             uri: "artifact://decentralized-app-config".to_string(),
             hash: "sha256:config-hash".to_string(),
             size: 5120,
+            signature: None,
+            sbom: None,
+            is_signed: false,
+            created: 0,
         },
     ];
 
@@ -178,6 +186,9 @@ fn test_supply_chain_under_stress() {
             } else {
                 vec![]
             },
+            is_pinned: true,
+            checksum_verified: true,
+            is_approved: true,
         });
     }
 
@@ -241,6 +252,10 @@ fn test_supply_chain_under_stress() {
             uri: format!("artifact://test-{}", i),
             hash: format!("sha256:hash-{}", i),
             size: 1024 + i as u64,
+            signature: None,
+            sbom: None,
+            is_signed: false,
+            created: 0,
         }];
 
         let provenance = manager
@@ -316,6 +331,9 @@ fn test_supply_chain_error_scenarios() {
             hash: format!("sha256:large-hash-{}", i),
             is_direct: false,
             vulnerabilities: vec![],
+            is_pinned: true,
+            checksum_verified: true,
+            is_approved: true,
         });
     }
 
