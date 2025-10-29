@@ -1,0 +1,23 @@
+# CodeQL Query Suite for Rust Features
+# This suite includes all custom queries for detecting Rust language features
+
+- queries/primitive-types/boolean.ql
+- queries/primitive-types/integer.ql
+- queries/primitive-types/float.ql
+- queries/primitive-types/string.ql
+- queries/primitive-types/date.ql
+- queries/character-types/char.ql
+- queries/class-types/structs.ql
+- queries/class-types/enums.ql
+- queries/class-types/functions.ql
+- queries/class-types/traits.ql
+- queries/class-domain-types/expressions.ql
+- queries/class-domain-types/statements.ql
+- queries/algebraic-data-types/enums.ql
+- queries/algebraic-data-types/options.ql
+- queries/algebraic-data-types/results.ql
+- queries/type-unions/enums.ql
+- queries/type-unions/dynamic-dispatch.ql
+- queries/database-types/elements.ql
+- queries/database-types/locations.ql
+- queries/database-types/files.ql
