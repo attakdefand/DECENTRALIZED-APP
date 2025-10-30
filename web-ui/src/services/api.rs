@@ -4,7 +4,8 @@
 
 use gloo_net::http::Request;
 use serde::{de::DeserializeOwned, Serialize};
-use wasm_bindgen_futures::JsFuture;
+use gloo_net::websocket::{futures::WebSocket};
+use gloo_utils::errors::JsError;
 
 /// API client
 pub struct ApiClient {
@@ -72,6 +73,14 @@ impl ApiClient {
         let resp = Request::delete(&url).send().await?;
         let json = resp.json::<T>().await?;
         Ok(json)
+    }
+
+    /// Create a WebSocket connection for real-time updates
+    pub fn connect_websocket(&self, endpoint: &str) -> Result<WebSocket, JsError> {
+        let ws_url = format!("ws://{}/{}", 
+            self.base_url.strip_prefix("http://").unwrap_or(&self.base_url), 
+            endpoint.strip_prefix("/").unwrap_or(endpoint));
+        WebSocket::open(&ws_url)
     }
 }
 

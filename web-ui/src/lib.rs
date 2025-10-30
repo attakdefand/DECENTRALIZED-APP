@@ -13,10 +13,14 @@ mod services;
 mod router;
 
 use router::{switch, Route};
+use services::run_all_demos;
 
 /// Initialize the web application
 #[wasm_bindgen(start)]
 pub fn run_app() {
+    // Run our demo services to showcase the new features
+    run_all_demos();
+    
     yew::Renderer::<Main>::new().render();
 }
 
