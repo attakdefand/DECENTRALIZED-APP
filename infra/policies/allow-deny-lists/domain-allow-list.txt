@@ -1,0 +1,21 @@
+# Domain Allow List
+# List of domains allowed for external communication
+
+# Official Domains
+decentralized-app.org
+www.decentralized-app.org
+api.decentralized-app.org
+docs.decentralized-app.org
+
+# Trusted Services
+github.com
+npmjs.com
+crates.io
+docker.com
+cloudflare.com
+aws.amazon.com
+
+# Certificate Authorities
+letsencrypt.org
+digicert.com
+globalsign.com

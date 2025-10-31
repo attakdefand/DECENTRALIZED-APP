@@ -1,0 +1,61 @@
+name: MEV Mitigation Tests
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'contracts/src/core/CommitReveal.sol'
+      - 'contracts/src/core/BatchAuction.sol'
+      - 'contracts/test/core/MEVTests.sol'
+      - 'contracts/test/core/MEVAndFairnessTest.sol'
+      - 'crates/core/src/mev_mitigation.rs'
+      - '.github/workflows/mev-mitigation.yml'
+  pull_request:
+    paths:
+      - 'contracts/src/core/CommitReveal.sol'
+      - 'contracts/src/core/BatchAuction.sol'
+      - 'contracts/test/core/MEVTests.sol'
+      - 'contracts/test/core/MEVAndFairnessTest.sol'
+      - 'crates/core/src/mev_mitigation.rs'
+      - '.github/workflows/mev-mitigation.yml'
+
+jobs:
+  mev-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Install Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          override: true
+
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
+
+      - name: Run Rust MEV tests
+        run: |
+          cargo test -p core mev_mitigation
+
+      - name: Run Solidity MEV tests
+        run: |
+          cd contracts
+          forge test --match-contract MEVTests -vvv
+
+      - name: Run MEV and Fairness tests
+        run: |
+          cd contracts
+          forge test --match-contract MEVAndFairnessTest -vvv
+
+      - name: Run MEV simulation tests
+        run: |
+          chmod +x scripts/run-mev-tests.sh
+          ./scripts/run-mev-tests.sh
+
+      - name: Validate MEV implementation
+        run: |
+          chmod +x scripts/validate-mev.ps1
+          pwsh -ExecutionPolicy Bypass -File scripts/validate-mev.ps1

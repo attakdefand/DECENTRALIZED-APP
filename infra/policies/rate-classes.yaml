@@ -1,0 +1,41 @@
+# Rate Classes Configuration
+# Defines rate limiting classes for different types of requests
+
+# API Rate Limits
+api:
+  anonymous:
+    requests_per_minute: 60
+    burst_limit: 10
+  authenticated:
+    requests_per_minute: 600
+    burst_limit: 100
+  premium:
+    requests_per_minute: 6000
+    burst_limit: 1000
+
+# Web Rate Limits
+web:
+  anonymous:
+    requests_per_minute: 120
+    burst_limit: 20
+  authenticated:
+    requests_per_minute: 1200
+    burst_limit: 200
+
+# Internal Service Rate Limits
+internal:
+  service_to_service:
+    requests_per_minute: 10000
+    burst_limit: 2000
+  monitoring:
+    requests_per_minute: 1000
+    burst_limit: 200
+
+# Special Rate Limits
+special:
+  admin:
+    requests_per_minute: 1000
+    burst_limit: 200
+  emergency:
+    requests_per_minute: 100000
+    burst_limit: 20000

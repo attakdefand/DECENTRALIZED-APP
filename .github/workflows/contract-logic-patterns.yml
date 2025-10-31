@@ -1,0 +1,64 @@
+name: Contract Logic Patterns
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'contracts/src/**'
+      - 'contracts/test/**'
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'contracts/src/**'
+      - 'contracts/test/**'
+
+jobs:
+  logic-patterns-tests:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: nightly
+
+      - name: Setup dependencies
+        run: |
+          cd contracts
+          forge install --no-commit
+      
+      - name: Run unit tests
+        run: |
+          cd contracts
+          forge test --match-contract LogicPatternsTest --match-test test* -vvv
+      
+      - name: Run fuzz tests
+        run: |
+          cd contracts
+          forge test --match-contract LogicPatternsTest --match-test testProperty* -vvv
+      
+      - name: Run invariant tests
+        run: |
+          cd contracts
+          forge test --match-contract SafetyTests --match-test test*Invariant* -vvv
+      
+      - name: Run Slither analysis
+        run: |
+          cd contracts
+          # Install Slither
+          pip3 install slither-analyzer
+          # Run analysis
+          slither . --filter-paths lib --triage-mode || true
+      
+      - name: Generate test report
+        run: |
+          echo "Generating test report"
+          # This would generate a comprehensive report of all test results
+          
+      - name: Upload test results
+        uses: actions/upload-artifact@v3
+        with:
+          name: logic-patterns-results
+          path: contracts/logic-patterns-results/

@@ -1,7 +1,8 @@
 //! Integration tests for web-ui features
 //!
 //! This module contains comprehensive tests for authentication, caching,
-//! retry logic, throttling, and WebSocket functionality with security validation.
+//! retry logic, throttling, WebSocket functionality, and backend integration
+//! with security validation.
 
 #[cfg(test)]
 mod security_tests;
@@ -11,3 +12,6 @@ mod integration_tests;
 
 #[cfg(test)]
 mod component_tests;
+
+#[cfg(test)]
+mod backend_tests;

@@ -1,0 +1,56 @@
+name: Testing Assurance Tests
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'crates/testing/**'
+      - 'crates/core/src/types.rs'
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'crates/testing/**'
+      - 'crates/core/src/types.rs'
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Install Rust
+      uses: actions-rs/toolchain@v1
+      with:
+        profile: minimal
+        toolchain: stable
+        override: true
+
+    - name: Cache cargo registry
+      uses: actions/cache@v3
+      with:
+        path: |
+          ~/.cargo/registry
+          ~/.cargo/git
+          target
+        key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+
+    - name: Run testing assurance unit tests
+      run: |
+        cd crates/testing
+        cargo test --lib
+
+    - name: Run testing assurance integration tests
+      run: |
+        cd crates/testing
+        cargo test --test testing_assurance_integration
+
+    - name: Run testing assurance binary simulation
+      run: |
+        cd crates/testing
+        cargo run --bin testing_assurance_simulation
+
+    - name: Check for compilation warnings
+      run: |
+        cargo check --workspace --quiet

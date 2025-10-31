@@ -1,0 +1,45 @@
+name: Data Integrity Security Tests
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'crates/core/src/data_integrity.rs'
+      - 'tests/data_integrity_simulation.rs'
+      - '.github/workflows/data-integrity-security.yml'
+  pull_request:
+    paths:
+      - 'crates/core/src/data_integrity.rs'
+      - 'tests/data_integrity_simulation.rs'
+      - '.github/workflows/data-integrity-security.yml'
+
+jobs:
+  data-integrity-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Install Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          override: true
+
+      - name: Run Rust data integrity tests
+        run: |
+          cargo test -p core data_integrity
+
+      - name: Run data integrity integration tests
+        run: |
+          cargo test -p core --test data_integrity_integration
+
+      - name: Run data integrity simulation tests
+        run: |
+          cargo test --test data_integrity_simulation
+
+      - name: Run data integrity security simulation tests
+        run: |
+          chmod +x scripts/run-data-integrity-tests.sh
+          ./scripts/run-data-integrity-tests.sh

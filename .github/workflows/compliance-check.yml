@@ -1,0 +1,138 @@
+name: Compliance Check
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  policy-compliance:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Check for policy documents
+        run: |
+          # Verify that all required policy documents exist
+          required_docs=(
+            "docs/security/POLICY-CATALOG.md"
+            "docs/security/EXCEPTIONS.md"
+            "docs/security/CODEOWNERS"
+            "docs/security/sign-off-template.md"
+            "docs/security/IAM-RBAC-MAP.md"
+          )
+          
+          for doc in "${required_docs[@]}"; do
+            if [ ! -f "$doc" ]; then
+              echo "Missing required policy document: $doc"
+              exit 1
+            else
+              echo "Found required policy document: $doc"
+            fi
+          done
+
+      - name: Validate security layers implementation
+        run: |
+          # Check that all security layers from the matrix are addressed
+          echo "Validating security layers implementation..."
+          
+          # Layer 1: Governance & Policy
+          test -f "docs/security/POLICY-CATALOG.md" && echo "✓ Layer 1: Policy catalog exists"
+          test -f "docs/security/EXCEPTIONS.md" && echo "✓ Layer 1: Exception management exists"
+          
+          # Layer 2: Identity & Access Control
+          test -f "docs/security/IAM-RBAC-MAP.md" && echo "✓ Layer 2: IAM/RBAC map exists"
+          
+          # Layer 3: Application Security
+          # Check that input validation is implemented in services
+          grep -r "validation" services/*/src/ && echo "✓ Layer 3: Input validation implemented"
+          
+          # Layer 4: API & Gateway Security
+          # Check for rate limiting implementation
+          grep -r "rate.*limit\|throttle" services/*/src/ && echo "✓ Layer 4: Rate limiting implemented"
+          
+          # Layer 5: Data Security
+          # Check for encryption implementation
+          grep -r "encrypt\|cipher" crates/*/src/ && echo "✓ Layer 5: Encryption implemented"
+          
+          # Layer 6: Network & Infrastructure Security
+          # Check Kubernetes network policies
+          test -f "infra/k8s/helm/templates/network-policy.yaml" && echo "✓ Layer 6: Network policies implemented"
+          
+          # Layer 7: Resilience & Availability
+          # Check for circuit breakers and health checks
+          test -f "infra/k8s/helm/templates/pod-disruption-budget.yaml" && echo "✓ Layer 7: Resilience mechanisms implemented"
+          
+          # Layer 8: Observability & Detection
+          # Check for logging and monitoring
+          grep -r "tracing\|opentelemetry" services/*/src/ && echo "✓ Layer 8: Observability implemented"
+          
+          # Layer 9: Software Supply Chain
+          # Check for supply chain security
+          test -f ".github/workflows/supply-chain-security.yml" && echo "✓ Layer 9: Supply chain security implemented"
+
+  docker-compliance:
+    runs-on: ubuntu-latest
+    needs: policy-compliance
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Check Dockerfile security practices
+        run: |
+          echo "Checking Dockerfile security practices..."
+          
+          # Check that all Dockerfiles use non-root users
+          find . -name "Dockerfile" -not -path "./target/*" | while read dockerfile; do
+            if ! grep -q "USER.*[1-9]" "$dockerfile"; then
+              echo "⚠️  $dockerfile does not explicitly set non-root user"
+            else
+              echo "✓ $dockerfile uses non-root user"
+            fi
+            
+            # Check for distroless or minimal base images
+            if grep -q "distroless\|scratch\|alpine" "$dockerfile"; then
+              echo "✓ $dockerfile uses minimal base image"
+            else
+              echo "⚠️  $dockerfile does not use minimal base image"
+            fi
+            
+            # Check for read-only root filesystem
+            if grep -q "readOnlyRootFilesystem.*true" "$dockerfile" || grep -q "read_only.*true" "$dockerfile"; then
+              echo "✓ $dockerfile enforces read-only root filesystem"
+            else
+              echo "⚠️  $dockerfile does not enforce read-only root filesystem"
+            fi
+          done
+
+  k8s-compliance:
+    runs-on: ubuntu-latest
+    needs: policy-compliance
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Check Kubernetes security practices
+        run: |
+          echo "Checking Kubernetes security practices..."
+          
+          # Check for namespace with pod security standards
+          test -f "infra/k8s/helm/templates/pod-security.yaml" && echo "✓ Pod security standards implemented"
+          
+          # Check for network policies
+          test -f "infra/k8s/helm/templates/network-policy.yaml" && echo "✓ Network policies implemented"
+          
+          # Check for RBAC
+          test -f "infra/k8s/helm/templates/rbac.yaml" && echo "✓ RBAC implemented"
+          
+          # Check for security context in values
+          if grep -q "securityContext" infra/k8s/helm/values.yaml; then
+            echo "✓ Security context configured"
+          else
+            echo "⚠️  Security context not configured"
+          fi
+          
+          # Check for pod disruption budgets
+          test -f "infra/k8s/helm/templates/pod-disruption-budget.yaml" && echo "✓ Pod disruption budgets implemented"

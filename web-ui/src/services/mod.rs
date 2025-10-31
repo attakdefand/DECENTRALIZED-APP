@@ -8,6 +8,8 @@ pub mod cache;
 pub mod retry;
 pub mod throttle;
 pub mod demo;
+pub mod config;
+pub mod models;
 
 // Re-export the main types for convenience
 pub use api::{ApiClient, create_client};

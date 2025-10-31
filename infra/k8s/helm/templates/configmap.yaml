@@ -1,0 +1,24 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "decentralized-app.fullname" . }}-config
+  labels:
+    {{- include "decentralized-app.labels" . | nindent 4 }}
+data:
+  # Application configuration
+  RUST_LOG: {{ .Values.apiService.env.RUST_LOG | default "info" | quote }}
+  
+  # Database configuration
+  DATABASE_URL: "postgresql://{{ .Values.postgresql.auth.username }}:{{ .Values.postgresql.auth.password }}@{{ include "decentralized-app.fullname" . }}-postgresql:5432/{{ .Values.postgresql.auth.database }}"
+  
+  # Redis configuration
+  REDIS_URL: "redis://{{ include "decentralized-app.fullname" . }}-redis:6379"
+  
+  # NATS configuration
+  NATS_URL: "nats://{{ include "decentralized-app.fullname" . }}-nats:4222"
+  
+  # ClickHouse configuration
+  CLICKHOUSE_URL: "http://{{ include "decentralized-app.fullname" . }}-clickhouse:8123"
+  
+  # IPFS configuration
+  IPFS_URL: "http://{{ include "decentralized-app.fullname" . }}-ipfs:5001"

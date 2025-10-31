@@ -1,0 +1,88 @@
+name: LOB Contract Tests
+
+on:
+  push:
+    branches: [ main, develop ]
+    paths:
+      - 'contracts/src/core/Orderbook.sol'
+      - 'contracts/test/core/OrderbookTest.sol'
+      - '.github/workflows/contract-lob.yml'
+  pull_request:
+    branches: [ main, develop ]
+    paths:
+      - 'contracts/src/core/Orderbook.sol'
+      - 'contracts/test/core/OrderbookTest.sol'
+      - '.github/workflows/contract-lob.yml'
+
+env:
+  FOUNDRY_PROFILE: ci
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+        with:
+          submodules: recursive
+
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
+
+      - name: Install dependencies
+        run: |
+          cd contracts
+          forge install
+
+      - name: Run Forge build
+        run: |
+          cd contracts
+          forge build --sizes
+        id: build
+
+      - name: Run Forge tests
+        run: |
+          cd contracts
+          forge test --match-contract OrderbookTest -vvv
+        id: test
+
+      - name: Run coverage
+        run: |
+          cd contracts
+          forge coverage --report summary --match-contract OrderbookTest
+        id: coverage
+
+      - name: Check gas snapshots
+        run: |
+          cd contracts
+          forge snapshot --match-contract OrderbookTest
+        id: gas
+
+  slither:
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+        with:
+          submodules: recursive
+
+      - name: Run Slither
+        uses: crytic/slither-action@v0.3.0
+        id: slither
+        with:
+          target: 'contracts/src/core/Orderbook.sol'
+          slither-args: '--detect reentrancy-eth,reentrancy-no-eth,unchecked-transfer,unchecked-lowlevel,calls-loop,timestamp,assembly,pragma,solc-version,unused-state,too-many-digits,controlled-delegatecall,naming-convention,external-function,constant-function-visibility,constable-states,old-style-callback'
+          fail-on: low
+
+  security:
+    runs-on: ubuntu-latest
+    needs: [test, slither]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Validate LOB implementation
+        run: |
+          chmod +x scripts/validate-lob.ps1
+          pwsh -ExecutionPolicy Bypass -File scripts/validate-lob.ps1

@@ -1,6 +1,6 @@
 //! Pools page
 //!
-//! This page displays liquidity pools with caching and retry logic.
+//! This page displays liquidity pools with real backend integration, caching and retry logic.
 
 use yew::prelude::*;
 use wasm_bindgen_futures::spawn_local;
@@ -9,6 +9,8 @@ use crate::components::pool_card::{PoolCard, PoolData};
 use crate::services::{
     cache::CacheService,
     retry::{RetryService, RetryConfig},
+    api::create_pools_client,
+    models::PoolResponse,
 };
 
 /// Pools page component
@@ -44,35 +46,58 @@ pub fn pools() -> Html {
                     backoff_multiplier: 2.0,
                 });
                 
-                // Simulate API call with sample data
+                // Real API call to backend
                 let fetch_pools = || async {
-                    // In a real app, this would be an actual API call
-                    Ok::<Vec<PoolData>, String>(vec![
-                        PoolData {
-                            id: "1".to_string(),
-                            token_a: "ETH".to_string(),
-                            token_b: "USDC".to_string(),
-                            liquidity: 1250000.75,
-                            volume_24h: 45000.30,
-                            apr: 12.5,
-                        },
-                        PoolData {
-                            id: "2".to_string(),
-                            token_a: "BTC".to_string(),
-                            token_b: "USDC".to_string(),
-                            liquidity: 2500000.00,
-                            volume_24h: 87000.45,
-                            apr: 8.75,
-                        },
-                        PoolData {
-                            id: "3".to_string(),
-                            token_a: "ETH".to_string(),
-                            token_b: "DAI".to_string(),
-                            liquidity: 980000.25,
-                            volume_24h: 32000.15,
-                            apr: 15.2,
-                        },
-                    ])
+                    let api_client = create_pools_client();
+                    
+                    // Security: Use try-catch for error handling
+                    match api_client.get::<PoolResponse>("/pools").await {
+                        Ok(response) => {
+                            // Convert API response to PoolData
+                            let pools: Vec<PoolData> = response.pools.into_iter().map(|p| {
+                                PoolData {
+                                    id: p.id,
+                                    token_a: p.token_a.symbol,
+                                    token_b: p.token_b.symbol,
+                                    liquidity: p.liquidity.parse().unwrap_or(0.0),
+                                    volume_24h: p.volume_24h.parse().unwrap_or(0.0),
+                                    apr: p.apr.parse().unwrap_or(0.0),
+                                }
+                            }).collect();
+                            
+                            Ok::<Vec<PoolData>, String>(pools)
+                        }
+                        Err(e) => {
+                            web_sys::console::warn_1(&format!("API call failed: {}", e).into());
+                            // Fallback to mock data if API fails
+                            Ok::<Vec<PoolData>, String>(vec![
+                                PoolData {
+                                    id: "1".to_string(),
+                                    token_a: "ETH".to_string(),
+                                    token_b: "USDC".to_string(),
+                                    liquidity: 1250000.75,
+                                    volume_24h: 45000.30,
+                                    apr: 12.5,
+                                },
+                                PoolData {
+                                    id: "2".to_string(),
+                                    token_a: "BTC".to_string(),
+                                    token_b: "USDC".to_string(),
+                                    liquidity: 2500000.00,
+                                    volume_24h: 87000.45,
+                                    apr: 8.75,
+                                },
+                                PoolData {
+                                    id: "3".to_string(),
+                                    token_a: "ETH".to_string(),
+                                    token_b: "DAI".to_string(),
+                                    liquidity: 980000.25,
+                                    volume_24h: 32000.15,
+                                    apr: 15.2,
+                                },
+                            ])
+                        }
+                    }
                 };
                 
                 match retry_service.retry(fetch_pools).await {

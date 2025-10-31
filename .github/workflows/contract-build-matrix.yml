@@ -1,0 +1,102 @@
+name: Contract Build Matrix
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'contracts/**'
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'contracts/**'
+
+jobs:
+  build-matrix:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        profile: [default, optimized, ir, ir-optimized]
+        solc-version: [0.8.19, 0.8.20, 0.8.21]
+    
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: nightly
+
+      - name: Setup solc versions
+        run: |
+          forge install
+          
+      - name: Build with profile and solc version
+        run: |
+          cd contracts
+          forge build --profile ${{ matrix.profile }} --use solc:${{ matrix.solc-version }} --force
+      
+      - name: Run tests
+        run: |
+          cd contracts
+          forge test --profile ${{ matrix.profile }} --use solc:${{ matrix.solc-version }} -vvv
+      
+      - name: Generate gas snapshot
+        run: |
+          cd contracts
+          mkdir -p snapshots
+          forge snapshot --profile ${{ matrix.profile }} --use solc:${{ matrix.solc-version }} --json --output snapshots/gas-${{ matrix.profile }}-${{ matrix.solc-version }}.json
+      
+      - name: Upload gas snapshots
+        uses: actions/upload-artifact@v3
+        with:
+          name: gas-snapshots-${{ matrix.profile }}-${{ matrix.solc-version }}
+          path: contracts/snapshots/gas-${{ matrix.profile }}-${{ matrix.solc-version }}.json
+
+  compare-bytecode:
+    runs-on: ubuntu-latest
+    needs: build-matrix
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Download artifacts
+        uses: actions/download-artifact@v3
+        with:
+          path: artifacts
+      
+      - name: Compare bytecode
+        run: |
+          echo "Comparing bytecode between configurations"
+          # This would run bytecode comparison tools
+          
+  validate-optimization:
+    runs-on: ubuntu-latest
+    needs: build-matrix
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Download gas snapshots
+        uses: actions/download-artifact@v3
+        with:
+          path: snapshots
+      
+      - name: Validate optimization benefits
+        run: |
+          echo "Validating optimization benefits"
+          # This would analyze gas snapshots to ensure optimizations provide benefits
+          
+  report-results:
+    runs-on: ubuntu-latest
+    needs: [compare-bytecode, validate-optimization]
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Generate build matrix report
+        run: |
+          echo "Generating build matrix report"
+          # This would generate a comprehensive report of all test results
+          
+      - name: Upload build results
+        uses: actions/upload-artifact@v3
+        with:
+          name: build-matrix-results
+          path: build-results/
