@@ -1,352 +1,215 @@
 # IAM RBAC Map
 
-This document defines the Role-Based Access Control (RBAC) mappings for the DECENTRALIZED-APP project.
-
 ## Overview
-
-The IAM RBAC map establishes the relationship between user roles, permissions, and resources within the system. This ensures that users have appropriate access based on their job functions while adhering to the principle of least privilege.
+This document defines the Identity and Access Management (IAM) Role-Based Access Control (RBAC) structure for the decentralized application. It establishes clear roles, responsibilities, and permissions to ensure proper security governance.
 
 ## Role Definitions
 
 ### Administrative Roles
 
 #### System Administrator
-- **Description**: Full system administration privileges
-- **Scope**: All systems and applications
-- **Permissions**:
-  - System configuration and management
-  - User account management
-  - Security policy management
-  - System monitoring and maintenance
-  - Backup and recovery operations
-- **Members**: 
-  - alice.admin@company.com
-  - bob.admin@company.com
+**Description**: Responsible for overall system administration, infrastructure management, and operational oversight.
+**Scope**: Full access to all system components, configuration management, and operational controls.
+**Permissions**: 
+- System configuration and deployment
+- User and role management
+- Infrastructure provisioning and maintenance
+- Monitoring and alerting configuration
+- Backup and disaster recovery operations
 
 #### Security Administrator
-- **Description**: Security-focused administrative privileges
-- **Scope**: Security systems and tools
-- **Permissions**:
-  - Security policy management
-  - Access control management
-  - Security monitoring and alerting
-  - Incident response coordination
-  - Vulnerability management
-- **Members**: 
-  - carol.security@company.com
-  - david.security@company.com
+**Description**: Responsible for security policy implementation, access control, and security monitoring.
+**Scope**: Security controls, access management, and compliance oversight.
+**Permissions**:
+- Security policy configuration
+- Access control management
+- Security monitoring and incident response
+- Audit log management
+- Vulnerability assessment coordination
 
 #### Network Administrator
-- **Description**: Network infrastructure administration
-- **Scope**: Network systems and devices
-- **Permissions**:
-  - Network configuration management
-  - Firewall rule management
-  - Network monitoring and troubleshooting
-  - DNS and DHCP management
-  - Network security controls
-- **Members**: 
-  - eve.network@company.com
-  - frank.network@company.com
+**Description**: Responsible for network infrastructure, connectivity, and network security.
+**Scope**: Network configuration, security, and performance optimization.
+**Permissions**:
+- Network configuration and management
+- Firewall and security group management
+- Load balancer configuration
+- Network monitoring and optimization
+- DNS and routing management
 
 ### Development Roles
 
 #### Lead Developer
-- **Description**: Senior development team member with extended privileges
-- **Scope**: Development environments and code repositories
-- **Permissions**:
-  - Code repository management
-  - Branch protection rule configuration
-  - CI/CD pipeline management
-  - Development environment administration
-  - Code review approvals
-- **Members**: 
-  - grace.lead@company.com
-  - henry.lead@company.com
+**Description**: Senior developer responsible for code architecture, review, and development team leadership.
+**Scope**: Full development lifecycle, code quality, and technical direction.
+**Permissions**:
+- Code repository management
+- Architecture design and review
+- Development environment configuration
+- Code deployment and release management
+- Technical mentoring and guidance
 
 #### Developer
-- **Description**: Standard development team member
-- **Scope**: Development environments and assigned projects
-- **Permissions**:
-  - Code commit and push access
-  - Pull request creation and review
-  - Development environment access
-  - Testing environment access
-  - Debugging tool access
-- **Members**: 
-  - irene.dev@company.com
-  - jack.dev@company.com
-  - karen.dev@company.com
-  - liam.dev@company.com
+**Description**: Developer responsible for feature implementation, testing, and code maintenance.
+**Scope**: Application development, testing, and bug fixes.
+**Permissions**:
+- Code development and testing
+- Feature branch creation and management
+- Unit test development
+- Code review participation
+- Development environment access
 
 #### DevOps Engineer
-- **Description**: Development operations specialist
-- **Scope**: CI/CD systems and deployment environments
-- **Permissions**:
-  - CI/CD pipeline configuration
-  - Deployment environment management
-  - Infrastructure as code management
-  - Monitoring system configuration
-  - Log management
-- **Members**: 
-  - mia.devops@company.com
-  - noah.devops@company.com
+**Description**: Engineer responsible for CI/CD pipelines, deployment automation, and operational tooling.
+**Scope**: Deployment processes, infrastructure as code, and operational automation.
+**Permissions**:
+- CI/CD pipeline management
+- Infrastructure as code deployment
+- Container image management
+- Monitoring and logging configuration
+- Performance optimization
 
 ### Operations Roles
 
 #### Operations Manager
-- **Description**: Operations team lead
-- **Scope**: Production and staging environments
-- **Permissions**:
-  - Production environment access
-  - System performance monitoring
-  - Capacity planning
-  - Incident management
-  - Change approval authority
-- **Members**: 
-  - olivia.ops@company.com
+**Description**: Manager responsible for operational oversight, incident management, and service delivery.
+**Scope**: Operational processes, service quality, and incident response coordination.
+**Permissions**:
+- Operational dashboard access
+- Incident management and escalation
+- Service level monitoring
+- Operational reporting
+- Team coordination and communication
 
 #### Site Reliability Engineer
-- **Description**: SRE responsible for system reliability
-- **Scope**: Production systems and infrastructure
-- **Permissions**:
-  - Production system monitoring
-  - Automated remediation execution
-  - Performance optimization
-  - System scaling operations
-  - Root cause analysis
-- **Members**: 
-  - peter.sre@company.com
-  - quinn.sre@company.com
+**Description**: Engineer responsible for system reliability, performance, and availability.
+**Scope**: System reliability, performance optimization, and incident response.
+**Permissions**:
+- System monitoring and alerting
+- Performance optimization
+- Incident response and troubleshooting
+- Capacity planning
+- Automation development
 
 #### Support Engineer
-- **Description**: Technical support specialist
-- **Scope**: Customer support systems and tools
-- **Permissions**:
-  - Customer account information access
-  - Support ticket management
-  - Diagnostic tool access
-  - Limited production system access
-  - Customer communication tools
-- **Members**: 
-  - rachel.support@company.com
-  - sam.support@company.com
+**Description**: Engineer responsible for user support, issue resolution, and customer service.
+**Scope**: User support, issue tracking, and customer service delivery.
+**Permissions**:
+- User support ticket management
+- Issue investigation and resolution
+- Customer communication
+- Knowledge base management
+- Support metrics reporting
 
 ### Business Roles
 
 #### Product Manager
-- **Description**: Product strategy and management
-- **Scope**: Product analytics and planning tools
-- **Permissions**:
-  - Product analytics access
-  - Roadmap planning tools
-  - Customer feedback systems
-  - Market research databases
-  - Competitive analysis tools
-- **Members**: 
-  - tom.product@company.com
-  - uma.product@company.com
+**Description**: Manager responsible for product strategy, feature prioritization, and market alignment.
+**Scope**: Product development, market analysis, and stakeholder communication.
+**Permissions**:
+- Product roadmap access
+- Feature prioritization
+- Market analysis tools
+- Stakeholder communication platforms
+- Product metrics and analytics
 
 #### Business Analyst
-- **Description**: Business intelligence and analysis
-- **Scope**: Business data and analytics systems
-- **Permissions**:
-  - Business intelligence tools
-  - Data warehouse access
-  - Reporting system access
-  - Dashboard creation and management
-  - Data visualization tools
-- **Members**: 
-  - victor.analyst@company.com
-  - wendy.analyst@company.com
+**Description**: Analyst responsible for business requirements, data analysis, and process improvement.
+**Scope**: Business analysis, data insights, and process optimization.
+**Permissions**:
+- Business intelligence tools
+- Data analysis platforms
+- Process documentation
+- Reporting and dashboard access
+- Stakeholder collaboration tools
 
 ### Specialized Roles
 
 #### Auditor
-- **Description**: Internal or external auditor
-- **Scope**: Audit systems and compliance tools
-- **Permissions**:
-  - Audit log access
-  - Compliance reporting tools
-  - System configuration review
-  - Security policy review
-  - Limited read-only access to production systems
-- **Members**: 
-  - External audit firm representatives
-  - Internal audit team
+**Description**: Independent reviewer responsible for compliance verification and audit activities.
+**Scope**: Compliance auditing, policy verification, and regulatory adherence.
+**Permissions**:
+- Audit log access
+- Compliance documentation review
+- Policy verification
+- Audit reporting
+- Non-compliance investigation
 
 #### Compliance Officer
-- **Description**: Regulatory compliance specialist
-- **Scope**: Compliance systems and documentation
-- **Permissions**:
-  - Compliance monitoring tools
-  - Regulatory reporting systems
-  - Policy management systems
-  - Compliance audit tools
-  - Risk assessment tools
-- **Members**: 
-  - xavier.compliance@company.com
+**Description**: Officer responsible for regulatory compliance, policy enforcement, and compliance program management.
+**Scope**: Regulatory compliance, policy development, and compliance program oversight.
+**Permissions**:
+- Compliance policy management
+- Regulatory reporting
+- Compliance monitoring
+- Policy enforcement
+- Training program management
 
 ## Permission Mappings
 
 ### System Access Permissions
 
-| Role | Production | Staging | Development | Testing | Admin |
-|------|------------|---------|-------------|---------|-------|
-| System Administrator | Full | Full | Full | Full | Full |
-| Security Administrator | Read/Write | Read/Write | Read/Write | Read/Write | Full |
-| Network Administrator | Read/Write | Read/Write | Read/Write | Read | Full |
-| Lead Developer | Read | Full | Full | Full | Limited |
-| Developer | Read | Read | Full | Full | None |
-| DevOps Engineer | Read/Write | Full | Full | Full | Limited |
-| Operations Manager | Full | Full | Read | Read | Limited |
-| Site Reliability Engineer | Full | Full | Read | Read | Limited |
-| Support Engineer | Limited | Limited | None | None | None |
-| Product Manager | Read | Read | None | None | None |
-| Business Analyst | Read | Read | None | None | None |
-| Auditor | Read Only | Read Only | Read Only | Read Only | Read Only |
-| Compliance Officer | Read Only | Read Only | Read Only | Read Only | Read Only |
+| Role | Production Access | Staging Access | Development Access | Admin Console | Audit Logs |
+|------|------------------|----------------|-------------------|---------------|------------|
+| System Administrator | Full | Full | Full | Full | Read |
+| Security Administrator | Limited | Limited | None | Full | Full |
+| Network Administrator | Full | Full | Full | Full | Read |
+| Lead Developer | Limited | Full | Full | Limited | Read |
+| Developer | None | Full | Full | None | Read |
+| DevOps Engineer | Full | Full | Full | Full | Read |
+| Operations Manager | Full | Full | Limited | Full | Read |
+| Site Reliability Engineer | Full | Full | Full | Full | Read |
+| Support Engineer | Limited | Limited | None | Limited | Read |
+| Product Manager | None | Limited | None | Limited | None |
+| Business Analyst | None | None | None | None | Read (Limited) |
+| Auditor | None | None | None | Read Only | Full |
+| Compliance Officer | Read Only | Read Only | Read Only | Read Only | Full |
 
 ### Resource Permissions
 
-#### Code Repository Access
-- **System Administrator**: Full access to all repositories
-- **Security Administrator**: Read access to all repositories, write to security policy repos
-- **Lead Developer**: Full access to assigned project repositories
-- **Developer**: Read/write access to assigned project repositories
-- **DevOps Engineer**: Read/write access to CI/CD and infrastructure repositories
-- **Others**: Read-only access to public repositories only
-
-#### Database Access
-- **System Administrator**: Full access to all databases
-- **Security Administrator**: Read access to all databases, write to security audit tables
-- **Lead Developer**: Read/write access to development and staging databases
-- **Developer**: Read/write access to development databases, read-only to staging
-- **DevOps Engineer**: Read/write access to all non-production databases
-- **Support Engineer**: Limited read-only access to production databases for support purposes
-- **Business Analyst**: Read-only access to analytics and reporting databases
-- **Others**: No database access
-
-#### Infrastructure Access
-- **System Administrator**: Full access to all infrastructure
-- **Security Administrator**: Read access to all infrastructure, write to security components
-- **Network Administrator**: Full access to network infrastructure
-- **DevOps Engineer**: Read/write access to cloud and container infrastructure
-- **Site Reliability Engineer**: Read/write access to production infrastructure
-- **Operations Manager**: Read/write access to production infrastructure
-- **Others**: No infrastructure access
+| Role | Database Access | File System Access | Network Access | API Access | Configuration Access |
+|------|-----------------|-------------------|----------------|------------|---------------------|
+| System Administrator | Full | Full | Full | Full | Full |
+| Security Administrator | Read | Read | Read | Read | Full |
+| Network Administrator | Read | Full | Full | Read | Full |
+| Lead Developer | Read/Write | Read/Write | Limited | Full | Limited |
+| Developer | Read/Write | Read/Write | Limited | Full | None |
+| DevOps Engineer | Full | Full | Full | Full | Full |
+| Operations Manager | Read | Read | Limited | Read | Limited |
+| Site Reliability Engineer | Full | Full | Full | Full | Full |
+| Support Engineer | Read | Read | Limited | Read | None |
+| Product Manager | Read (Limited) | Read (Limited) | None | Read (Limited) | None |
+| Business Analyst | Read (Limited) | Read (Limited) | None | Read (Limited) | None |
+| Auditor | Read Only | Read Only | Read Only | Read Only | Read Only |
+| Compliance Officer | Read Only | Read Only | Read Only | Read Only | Read Only |
 
 ## Access Control Policies
 
-### Authentication Requirements
-- **All Roles**: Multi-factor authentication required
-- **Administrative Roles**: Hardware security keys required
-- **Specialized Roles**: Certificate-based authentication where applicable
+### Policy Enforcement
 
-### Session Management
-- **Default Session Timeout**: 8 hours
-- **Administrative Roles**: 2-hour timeout with re-authentication
-- **Specialized Roles**: 4-hour timeout
+#### Automated Controls
+- Role-based access control enforced at the application level
+- Just-in-time access provisioning for privileged roles
+- Automated access review and certification processes
+- Integration with centralized identity provider
+- Multi-factor authentication for all users
 
-### Access Review Schedule
-- **Administrative Roles**: Monthly review
-- **Standard Roles**: Quarterly review
-- **Specialized Roles**: Semi-annual review
+#### Manual Controls
+- Periodic access reviews by managers
+- Manual approval for role changes
+- Exception management for policy deviations
+- Regular security awareness training
+- Annual compliance certification
 
-### Provisioning Process
-1. Role request submission
-2. Manager approval
-3. Security team review
-4. System access provisioning
-5. Access confirmation notification
+### Exception Management
+Exceptions to access policies must be:
+1. Documented with business justification
+2. Approved by appropriate authority level
+3. Time-bound with automatic expiration
+4. Monitored and reported on regularly
+5. Revoked upon completion or expiration
 
-### Deprovisioning Process
-1. Employment termination or role change notification
-2. Immediate access suspension
-3. Asset collection and verification
-4. System access removal
-5. Audit trail documentation
-
-## Role Hierarchy
-
-```
-System Administrator
-├── Security Administrator
-├── Network Administrator
-├── Lead Developer
-│   └── Developer
-├── DevOps Engineer
-├── Operations Manager
-│   └── Site Reliability Engineer
-├── Support Engineer
-├── Product Manager
-├── Business Analyst
-├── Auditor
-└── Compliance Officer
-```
-
-## Role Assignment Matrix
-
-| User | Primary Role | Secondary Roles | Assignment Date | Review Date |
-|------|--------------|-----------------|-----------------|-------------|
-| alice.admin@company.com | System Administrator | Security Administrator | 2025-01-15 | 2025-11-15 |
-| bob.admin@company.com | System Administrator | Network Administrator | 2025-02-20 | 2025-12-20 |
-| carol.security@company.com | Security Administrator | None | 2025-03-10 | 2025-12-10 |
-| david.security@company.com | Security Administrator | Auditor | 2025-04-05 | 2026-01-05 |
-| eve.network@company.com | Network Administrator | None | 2025-05-12 | 2026-02-12 |
-| frank.network@company.com | Network Administrator | DevOps Engineer | 2025-06-18 | 2026-03-18 |
-| grace.lead@company.com | Lead Developer | None | 2025-07-22 | 2026-04-22 |
-| henry.lead@company.com | Lead Developer | Product Manager | 2025-08-30 | 2026-05-30 |
-| irene.dev@company.com | Developer | None | 2025-09-15 | 2026-06-15 |
-| jack.dev@company.com | Developer | Business Analyst | 2025-10-01 | 2026-07-01 |
-
-## Policy Enforcement
-
-### Automated Controls
-- Identity and access management system
-- Role-based access control enforcement
-- Regular access review workflows
-- Automated deprovisioning integration
-
-### Manual Controls
-- Manager approval for role assignments
-- Security team validation of access requests
-- Periodic access certification processes
-- Exception management for special cases
-
-## Compliance Mapping
-
-### Regulatory Requirements
-- **SOX**: Role segregation and access controls
-- **GDPR**: Data access controls and privacy by design
-- **PCI DSS**: Administrative access controls and monitoring
-- **ISO 27001**: Access control policies and procedures
-
-### Audit Requirements
-- Role assignment documentation
-- Access review records
-- Exception management logs
-- User access provisioning/deprovisioning records
-
-## Review and Updates
-
-### Review Schedule
-- **Annual**: Complete RBAC map review
-- **Quarterly**: Role assignment verification
-- **Monthly**: Critical role access reviews
-
-### Update Process
-1. Change request submission
-2. Business justification documentation
-3. Risk assessment completion
-4. Approval workflow execution
-5. System updates implementation
-6. Communication to affected users
-
-## References
-
+## Cross-References
 - [Policy Catalog](POLICY-CATALOG.md)
 - [Exception Management](EXCEPTIONS.md)
-- [Infrastructure Access Policy](../../infra/policies/OPA-Cedar/infrastructure_access.cedar)
-- [Repository Access Policy](../../infra/policies/OPA-Cedar/repository_access.cedar)
-- [Data Access Policy](../../infra/policies/OPA-Cedar/data_access.cedar)
+- [Infrastructure Access Policy](INFRASTRUCTURE-ACCESS-POLICY.md)

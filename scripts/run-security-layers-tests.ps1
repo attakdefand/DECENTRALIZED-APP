@@ -5,7 +5,7 @@
 Write-Host "Running Security Layers Tests..." -ForegroundColor Green
 
 # Set working directory to project root
-Set-Location -Path "d:\DECENTRALIZED-APP"
+Set-Location -Path "D:\DECENTRALIZED-APP"
 
 # Run Rust tests for security layers
 Write-Host "Running Rust security layers tests..." -ForegroundColor Yellow

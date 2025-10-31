@@ -1,224 +1,183 @@
 # MPC/HSM Policy
 
-This document defines the policies and procedures for using Multi-Party Computation (MPC) and Hardware Security Modules (HSMs) for cryptographic key management.
-
 ## Overview
-
-This policy establishes requirements for the use of MPC and HSM technologies to protect high-value cryptographic keys and perform sensitive cryptographic operations within the DECENTRALIZED-APP infrastructure.
+This document establishes the policy framework for Multi-Party Computation (MPC) and Hardware Security Module (HSM) technologies used in the decentralized application infrastructure. These technologies provide enhanced security for cryptographic key management and sensitive operations.
 
 ## Scope
-
-This policy applies to all systems and applications that require protection of high-value cryptographic keys, including:
-- Private keys for blockchain transactions
-- Encryption keys for sensitive data
-- Authentication keys for critical systems
-- Code signing keys for software releases
+This policy applies to all systems, applications, and processes that utilize MPC or HSM technologies for cryptographic operations, key management, or security-sensitive functions within the organization.
 
 ## Policy Statements
 
-### 1. Technology Selection
+### Technology Selection
+1. **HSM Usage**: HSMs shall be used for storing and managing high-value cryptographic keys, including root CA keys, database encryption keys, and application signing keys.
+2. **MPC Implementation**: MPC shall be implemented for distributed key generation, threshold signatures, and multi-signature wallet operations.
+3. **Technology Evaluation**: New MPC/HSM solutions must undergo security evaluation and approval before deployment.
 
-#### HSM Usage
-- **Requirement**: All high-value cryptographic keys MUST be stored in HSMs
-- **Rationale**: HSMs provide hardware-level protection against key extraction
-- **Exceptions**: Only approved by the Security Officer for specific use cases
+### Key Management
+1. **Key Generation**: All cryptographic keys used for critical operations must be generated within HSMs or through MPC protocols.
+2. **Key Storage**: Private keys must never be stored in plain text outside of HSMs or MPC environments.
+3. **Key Lifecycle**: Keys must follow defined lifecycle management including generation, activation, usage, expiration, and destruction.
+4. **Backup and Recovery**: Key backup procedures must ensure redundancy while maintaining security.
 
-#### MPC Usage
-- **Requirement**: Multi-signature operations SHOULD use MPC where feasible
-- **Rationale**: MPC provides distributed trust and eliminates single points of failure
-- **Implementation**: Use threshold signatures for key operations
+### Access Control
+1. **Authentication**: All access to HSMs and MPC systems must be authenticated through multi-factor authentication.
+2. **Authorization**: Role-based access control must be implemented with principle of least privilege.
+3. **Audit**: All access and operations must be logged and monitored for security review.
+4. **Physical Security**: HSMs must be physically secured in approved data center facilities.
 
-### 2. Key Management
+### Operations Security
+1. **Operational Procedures**: Standard operating procedures must be established for all MPC/HSM operations.
+2. **Change Management**: All changes to MPC/HSM configurations must follow change management processes.
+3. **Incident Response**: Security incidents involving MPC/HSM systems must be reported and handled according to incident response procedures.
+4. **Disaster Recovery**: Recovery procedures must be established and regularly tested.
 
-#### Key Generation
-- **HSM Keys**: All keys MUST be generated within the HSM
-- **MPC Keys**: Key shares MUST be generated using secure MPC protocols
-- **Export**: Private keys MUST never be exported in plaintext form
+### Monitoring and Auditing
+1. **Logging**: All operations performed on MPC/HSM systems must be logged with timestamps and user identification.
+2. **Monitoring**: Continuous monitoring must be implemented to detect unauthorized access or anomalous behavior.
+3. **Audit Trails**: Audit trails must be maintained for compliance and forensic purposes.
+4. **Regular Reviews**: Security logs and audit trails must be reviewed regularly by security personnel.
 
-#### Key Storage
-- **HSM Storage**: All private keys MUST be stored in HSM secure memory
-- **MPC Storage**: Key shares MUST be distributed across multiple locations
-- **Backup**: All keys MUST have secure backup procedures
-
-#### Key Usage
-- **Cryptographic Operations**: All operations MUST be performed within the HSM/MPC environment
-- **Access Control**: Key usage MUST be logged and monitored
-- **Rate Limiting**: Key usage MAY be rate-limited to prevent abuse
-
-### 3. Access Control
-
-#### Authentication
-- **HSM Access**: Access to HSMs MUST require multi-factor authentication
-- **MPC Access**: Access to MPC nodes MUST require strong authentication
-- **Role-Based Access**: Access MUST be granted based on job function
-
-#### Authorization
-- **Least Privilege**: Users MUST have minimum required privileges
-- **Segregation of Duties**: No single user SHOULD have complete control
-- **Approval Workflows**: Critical operations MUST require approval
-
-#### Session Management
-- **Timeout**: Sessions MUST timeout after periods of inactivity
-- **Audit**: All access MUST be logged for audit purposes
-- **Monitoring**: Suspicious access patterns MUST be detected and alerted
-
-### 4. Operations Security
-
-#### Physical Security
-- **HSM Location**: HSMs MUST be located in physically secure environments
-- **Access Control**: Physical access MUST be restricted and logged
-- **Environmental Controls**: Appropriate environmental controls MUST be maintained
-
-#### Network Security
-- **Network Isolation**: HSM networks SHOULD be isolated from general networks
-- **Encryption**: All communications MUST be encrypted
-- **Firewall Rules**: Access MUST be restricted through firewall rules
-
-#### Software Security
-- **Patch Management**: HSM software MUST be kept up to date
-- **Configuration Management**: HSM configurations MUST be documented and controlled
-- **Vulnerability Management**: Regular vulnerability assessments MUST be performed
-
-### 5. Monitoring and Auditing
-
-#### Activity Logging
-- **Comprehensive Logging**: All key operations MUST be logged
-- **Log Protection**: Logs MUST be protected from tampering
-- **Retention**: Logs MUST be retained for compliance purposes
-
-#### Alerting
-- **Real-time Alerts**: Critical operations MUST generate real-time alerts
-- **Anomaly Detection**: Unusual patterns MUST be detected and reported
-- **Incident Response**: Security events MUST trigger incident response procedures
-
-#### Regular Audits
-- **Internal Audits**: Regular internal audits MUST be conducted
-- **External Audits**: Periodic external audits MUST be performed
-- **Compliance Verification**: Compliance with this policy MUST be verified
-
-### 6. Incident Response
-
-#### Compromise Detection
-- **Monitoring**: Continuous monitoring for signs of compromise
-- **Indicators**: Defined indicators of key compromise
-- **Reporting**: Clear procedures for reporting suspected compromises
-
-#### Response Procedures
-- **Immediate Isolation**: Compromised systems MUST be isolated immediately
-- **Impact Assessment**: Scope of compromise MUST be determined
-- **Key Revocation**: Compromised keys MUST be revoked
-- **Key Regeneration**: New keys MUST be generated following this policy
-
-#### Recovery
-- **Backup Restoration**: Secure backups MUST be available for recovery
-- **System Rebuilding**: Compromised systems MUST be rebuilt from trusted sources
-- **Validation**: Systems MUST be validated before returning to service
+### Incident Response
+1. **Detection**: Security events involving MPC/HSM systems must be detected through monitoring systems.
+2. **Response**: Incidents must be responded to according to established incident response procedures.
+3. **Investigation**: Security incidents must be thoroughly investigated to determine root cause and impact.
+4. **Reporting**: Incidents must be reported to appropriate stakeholders and regulatory bodies as required.
 
 ## Implementation Requirements
 
 ### HSM Implementation
-
-#### Hardware Selection
-- **FIPS 140-2 Level 3**: HSMs MUST meet FIPS 140-2 Level 3 certification
-- **Tamper Resistance**: HSMs MUST provide physical tamper resistance
-- **Key Backup**: HSMs MUST support secure key backup and recovery
-
-#### Configuration
-- **Default Settings**: Default configurations MUST be reviewed and hardened
-- **Administrative Access**: Administrative access MUST be strictly controlled
-- **Operational Procedures**: Standard operating procedures MUST be documented
-
-#### Integration
-- **API Usage**: HSM APIs MUST be used securely
-- **Application Integration**: Applications MUST integrate with HSMs properly
-- **Performance Considerations**: Performance impacts MUST be managed
+1. **Hardware Selection**: HSMs must meet FIPS 140-2 Level 3 or higher certification requirements.
+2. **Network Security**: HSM network connections must be secured through encrypted channels.
+3. **Key Partitioning**: Keys must be partitioned by application or environment to limit blast radius.
+4. **Performance Monitoring**: HSM performance must be monitored to ensure adequate capacity.
 
 ### MPC Implementation
+1. **Protocol Security**: MPC protocols must be cryptographically sound and peer-reviewed.
+2. **Node Distribution**: MPC nodes must be distributed across geographically separate locations.
+3. **Communication Security**: All inter-node communication must be encrypted and authenticated.
+4. **Threshold Management**: Threshold parameters must be set according to security requirements.
 
-#### Protocol Selection
-- **Secure Protocols**: Only cryptographically secure MPC protocols MUST be used
-- **Implementation Review**: MPC implementations MUST be reviewed by security experts
-- **Library Selection**: Only well-vetted MPC libraries SHOULD be used
-
-#### Node Management
-- **Node Distribution**: MPC nodes MUST be distributed across different locations
-- **Node Security**: Each MPC node MUST be secured according to this policy
-- **Communication Security**: Inter-node communications MUST be secured
-
-#### Key Share Management
-- **Share Distribution**: Key shares MUST be distributed securely
-- **Share Recovery**: Procedures for share recovery MUST be established
-- **Share Revocation**: Compromised shares MUST be revocable
+### Integration Requirements
+1. **API Security**: APIs used to interact with MPC/HSM systems must be secured with authentication and encryption.
+2. **Application Integration**: Applications must integrate with MPC/HSM systems through secure interfaces.
+3. **Key Usage Policies**: Applications must follow key usage policies defined in this document.
+4. **Error Handling**: Proper error handling must be implemented to prevent information leakage.
 
 ## Compliance Requirements
 
 ### Regulatory Compliance
-- **SOX**: Compliance with financial reporting requirements
-- **PCI DSS**: Compliance with payment card industry standards
-- **GDPR**: Compliance with data protection regulations
-- **HIPAA**: Compliance with healthcare information privacy rules
+1. **Data Protection**: MPC/HSM implementations must comply with applicable data protection regulations.
+2. **Financial Services**: Financial services using MPC/HSM must comply with relevant financial regulations.
+3. **Audit Requirements**: Systems must be able to provide audit trails for regulatory examinations.
+4. **Reporting**: Regular compliance reports must be generated and provided to relevant authorities.
 
 ### Industry Standards
-- **NIST**: Adherence to NIST cryptographic standards
-- **ISO 27001**: Compliance with information security management standards
-- **OWASP**: Following OWASP cryptographic best practices
-
-### Internal Standards
-- **Security Policies**: Alignment with organizational security policies
-- **Risk Management**: Integration with enterprise risk management
-- **Audit Requirements**: Meeting internal audit requirements
+1. **NIST Guidelines**: Implementations must follow NIST cryptographic standards and guidelines.
+2. **ISO Standards**: Security management must comply with ISO 27001 requirements.
+3. **PCI DSS**: Payment card industry systems must comply with PCI DSS requirements.
+4. **Best Practices**: Industry best practices must be followed for secure implementation.
 
 ## Roles and Responsibilities
 
-### Security Officer
-- **Policy Oversight**: Overall responsibility for this policy
-- **Compliance Monitoring**: Ensuring compliance with this policy
-- **Incident Management**: Managing security incidents related to HSM/MPC
+### Security Team
+1. **Policy Development**: Develop and maintain MPC/HSM security policies.
+2. **Implementation Oversight**: Oversee implementation of MPC/HSM technologies.
+3. **Security Monitoring**: Monitor MPC/HSM systems for security events.
+4. **Incident Response**: Respond to security incidents involving MPC/HSM systems.
 
-### System Administrators
-- **HSM Management**: Day-to-day management of HSM systems
-- **MPC Node Management**: Management of MPC nodes
-- **Access Control**: Implementation of access control measures
+### Operations Team
+1. **System Administration**: Administer MPC/HSM systems according to established procedures.
+2. **Maintenance**: Perform regular maintenance on MPC/HSM systems.
+3. **Monitoring**: Monitor system performance and availability.
+4. **Troubleshooting**: Troubleshoot issues with MPC/HSM systems.
 
-### Application Developers
-- **Secure Integration**: Integrating applications with HSM/MPC securely
-- **Key Usage**: Using cryptographic keys according to this policy
-- **Error Handling**: Properly handling cryptographic errors
+### Development Team
+1. **Application Integration**: Integrate applications with MPC/HSM systems securely.
+2. **Code Review**: Review code for security vulnerabilities related to MPC/HSM usage.
+3. **Testing**: Test applications for proper MPC/HSM integration.
+4. **Documentation**: Document MPC/HSM usage in applications.
 
-### Auditors
-- **Policy Review**: Regular review of this policy
-- **Compliance Assessment**: Assessing compliance with this policy
-- **Recommendations**: Providing recommendations for improvement
+### Compliance Team
+1. **Compliance Monitoring**: Monitor compliance with MPC/HSM policies and regulations.
+2. **Audit Support**: Support internal and external audits of MPC/HSM systems.
+3. **Reporting**: Generate compliance reports for management and regulators.
+4. **Training**: Provide compliance training related to MPC/HSM technologies.
 
 ## Training and Awareness
 
-### Required Training
-- **HSM Operations**: Training on HSM operation and management
-- **MPC Concepts**: Understanding of MPC principles and operation
-- **Security Best Practices**: General cryptographic security best practices
+### Initial Training
+1. **Policy Training**: All personnel with access to MPC/HSM systems must receive initial policy training.
+2. **Technical Training**: Technical staff must receive training on MPC/HSM technologies and procedures.
+3. **Security Awareness**: General security awareness training must include MPC/HSM security topics.
 
-### Awareness Programs
-- **Regular Updates**: Keeping staff informed of policy changes
-- **Security News**: Sharing relevant security information
-- **Lessons Learned**: Communicating lessons from incidents
+### Ongoing Training
+1. **Refresher Training**: Annual refresher training must be provided to all relevant personnel.
+2. **Technology Updates**: Training must be updated when new MPC/HSM technologies are implemented.
+3. **Incident Learning**: Training must be updated based on lessons learned from security incidents.
+
+### Specialized Training
+1. **Administrator Training**: HSM/MPC administrators must receive specialized training.
+2. **Developer Training**: Developers must receive training on secure integration practices.
+3. **Auditor Training**: Auditors must receive training on MPC/HSM audit procedures.
 
 ## Review and Updates
 
-### Review Schedule
-- **Annual Review**: This policy MUST be reviewed annually
-- **Trigger Events**: Review MUST occur after security incidents
-- **Regulatory Changes**: Review MUST occur when regulations change
+### Regular Review
+1. **Annual Review**: This policy must be reviewed annually for continued relevance and effectiveness.
+2. **Technology Review**: Policy must be updated when new MPC/HSM technologies are adopted.
+3. **Regulatory Review**: Policy must be updated to reflect changes in regulatory requirements.
+4. **Incident Review**: Policy must be updated based on lessons learned from security incidents.
 
 ### Update Process
-- **Change Request**: Formal process for proposing changes
-- **Stakeholder Review**: Review by relevant stakeholders
-- **Approval**: Approval by designated authority
-- **Communication**: Communication of changes to affected parties
+1. **Change Request**: Proposed changes must be submitted through the change management process.
+2. **Stakeholder Review**: Changes must be reviewed by relevant stakeholders.
+3. **Approval**: Changes must be approved by the security steering committee.
+4. **Communication**: Approved changes must be communicated to all affected personnel.
+
+### Version Control
+1. **Version Tracking**: All policy versions must be tracked with version numbers and dates.
+2. **Change Log**: A change log must document all policy modifications.
+3. **Effective Dates**: Each policy version must have a defined effective date.
+4. **Retirement**: Obsolete policy versions must be properly archived.
+
+## Exceptions
+
+### Exception Process
+1. **Request**: Exceptions to this policy must be formally requested with business justification.
+2. **Review**: Exceptions must be reviewed by the security team.
+3. **Approval**: Exceptions must be approved by the security steering committee.
+4. **Documentation**: All exceptions must be documented with expiration dates.
+
+### Exception Monitoring
+1. **Tracking**: All exceptions must be tracked in the exception management system.
+2. **Review**: Exceptions must be reviewed periodically for continued validity.
+3. **Expiration**: Exceptions must automatically expire on their defined expiration date.
+4. **Reporting**: Exception reports must be provided to management regularly.
+
+## Enforcement
+
+### Compliance Monitoring
+1. **Automated Checks**: Automated tools must be used to monitor compliance with this policy.
+2. **Manual Audits**: Regular manual audits must be conducted to verify compliance.
+3. **Violation Detection**: Violations must be detected and reported through monitoring systems.
+4. **Remediation**: Violations must be remediated according to established procedures.
+
+### Disciplinary Actions
+1. **First Violation**: First violations will result in security training and written warning.
+2. **Repeat Violations**: Repeat violations will result in restricted access and formal disciplinary action.
+3. **Serious Violations**: Serious violations may result in immediate termination of access and employment.
+4. **Legal Action**: Violations that result in security incidents may result in legal action.
 
 ## References
 
+### Internal Documents
 - [Key Rotation Runbook](../runbooks/key-rotation.md)
+- [IAM RBAC Map](IAM-RBAC-MAP.md)
 - [Multisig Addresses](multisig-addresses.md)
-- [Policy Registry](../../infra/policies/policy-registry.md)
-- [NIST Cryptographic Standards](https://csrc.nist.gov/publications/detail/fips/140/2/final)
-- [FIPS 140-2 Validation](https://csrc.nist.gov/projects/cryptographic-module-validation-program)
+- [Policy Catalog](POLICY-CATALOG.md)
+
+### External Standards
+- NIST Special Publication 800-57: Recommendation for Key Management
+- FIPS 140-2: Security Requirements for Cryptographic Modules
+- ISO/IEC 27001: Information Security Management
+- PCI DSS: Payment Card Industry Data Security Standard
