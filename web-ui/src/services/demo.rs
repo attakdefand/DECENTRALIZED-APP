@@ -57,10 +57,10 @@ pub fn demo_authentication() {
 
 /// Demonstrate caching service
 pub fn demo_caching() {
-    let cache = CacheService::new();
+    let mut cache = CacheService::new();
     
     // Store data in cache
-    let data = vec!["item1", "item2", "item3"];
+    let data = vec!["item1".to_string(), "item2".to_string(), "item3".to_string()];
     match cache.set_memory("demo_key", data, 5000.0) { // 5 second TTL
         Ok(_) => {
             web_sys::console::log_1(&"Data cached successfully".into());
@@ -71,7 +71,7 @@ pub fn demo_caching() {
     }
     
     // Retrieve data from cache
-    let retrieved: Option<Vec<&str>> = cache.get_memory("demo_key");
+    let retrieved: Option<Vec<String>> = cache.get_memory("demo_key");
     match retrieved {
         Some(data) => {
             web_sys::console::log_1(&format!("Retrieved from cache: {:?}", data).into());
@@ -84,7 +84,7 @@ pub fn demo_caching() {
 
 /// Demonstrate retry service
 pub fn demo_retry() {
-    let retry = RetryService::with_config(RetryConfig {
+    let _retry = RetryService::with_config(RetryConfig {
         max_attempts: 3,
         base_delay: 100.0,
         max_delay: 1000.0,
