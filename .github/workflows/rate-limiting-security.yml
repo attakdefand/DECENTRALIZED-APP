@@ -1,0 +1,41 @@
+name: Rate Limiting Security Tests
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'crates/core/src/rate_limiting.rs'
+      - 'tests/rate_limiting_simulation.rs'
+      - '.github/workflows/rate-limiting-security.yml'
+  pull_request:
+    paths:
+      - 'crates/core/src/rate_limiting.rs'
+      - 'tests/rate_limiting_simulation.rs'
+      - '.github/workflows/rate-limiting-security.yml'
+
+jobs:
+  rate-limiting-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Install Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          override: true
+
+      - name: Run Rust rate limiting tests
+        run: |
+          cargo test -p core rate_limiting
+
+      - name: Run rate limiting simulation tests
+        run: |
+          cargo test rate_limiting_simulation
+
+      - name: Run rate limiting security simulation tests
+        run: |
+          chmod +x scripts/run-rate-limiting-tests.sh
+          ./scripts/run-rate-limiting-tests.sh

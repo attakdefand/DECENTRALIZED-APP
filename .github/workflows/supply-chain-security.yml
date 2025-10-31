@@ -1,0 +1,76 @@
+# Supply Chain Security Tests
+name: Supply Chain Security Tests
+
+on:
+  push:
+    branches: [ main, develop ]
+    paths:
+      - 'crates/core/src/supply_chain.rs'
+      - 'crates/core/tests/supply_chain_integration.rs'
+      - 'tests/supply_chain_simulation.rs'
+      - '.github/workflows/supply-chain-security.yml'
+  pull_request:
+    branches: [ main, develop ]
+    paths:
+      - 'crates/core/src/supply_chain.rs'
+      - 'crates/core/tests/supply_chain_integration.rs'
+      - 'tests/supply_chain_simulation.rs'
+      - '.github/workflows/supply-chain-security.yml'
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Install Rust
+      uses: actions-rs/toolchain@v1
+      with:
+        profile: minimal
+        toolchain: stable
+        override: true
+
+    - name: Cache cargo registry
+      uses: actions/cache@v3
+      with:
+        path: |
+          ~/.cargo/registry
+          ~/.cargo/git
+        key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
+
+    - name: Cache cargo index
+      uses: actions/cache@v3
+      with:
+        path: |
+          ~/.cargo/bin/
+          ~/.cargo/.crates.toml
+          ~/.cargo/.crates2.json
+          ~/.cargo/env
+        key: ${{ runner.os }}-cargo-index-${{ hashFiles('**/Cargo.lock') }}
+
+    - name: Cache build artifacts
+      uses: actions/cache@v3
+      with:
+        path: |
+          target/
+        key: ${{ runner.os }}-cargo-build-target-${{ hashFiles('**/Cargo.lock') }}
+
+    - name: Run unit tests
+      run: |
+        cd crates/core
+        cargo test supply_chain
+
+    - name: Run integration tests
+      run: |
+        cd crates/core
+        cargo test -p core --test supply_chain_integration
+
+    - name: Run simulation tests
+      run: |
+        cd crates/core
+        cargo run --bin supply_chain_simulation
+
+    - name: Run documentation tests
+      run: |
+        cd crates/core
+        cargo test --doc supply_chain

@@ -1,0 +1,49 @@
+name: Account Abstraction Security Tests
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'contracts/src/core/SessionKeyManager.sol'
+      - 'contracts/src/core/SimpleEntryPoint.sol'
+      - 'contracts/test/core/AATests.sol'
+      - 'crates/core/src/aa_security.rs'
+      - '.github/workflows/aa-security.yml'
+  pull_request:
+    paths:
+      - 'contracts/src/core/SessionKeyManager.sol'
+      - 'contracts/src/core/SimpleEntryPoint.sol'
+      - 'contracts/test/core/AATests.sol'
+      - 'crates/core/src/aa_security.rs'
+      - '.github/workflows/aa-security.yml'
+
+jobs:
+  aa-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Install Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          override: true
+
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
+
+      - name: Run Rust AA tests
+        run: |
+          cargo test -p core aa_security
+
+      - name: Run Solidity AA tests
+        run: |
+          cd contracts
+          forge test --match-contract AATests -vvv
+
+      - name: Run AA security simulation tests
+        run: |
+          chmod +x scripts/run-aa-tests.sh
+          ./scripts/run-aa-tests.sh

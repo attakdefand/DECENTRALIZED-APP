@@ -1,22 +1,22 @@
 //! Services module
 //!
-//! This module contains services for interacting with the backend API.
+//! This module exports all the service modules.
 
 pub mod api;
-pub mod pools;
-pub mod orders;
-pub mod markets;
+pub mod auth;
+pub mod cache;
+pub mod retry;
+pub mod throttle;
+pub mod demo;
+pub mod config;
+pub mod models;
+pub mod performance;
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use wasm_bindgen_test::*;
-
-    wasm_bindgen_test_configure!(run_in_browser);
-
-    #[wasm_bindgen_test]
-    fn test_services_module_structure() {
-        // This is a simple test to ensure the module structure is correct
-        assert!(true);
-    }
-}
+// Re-export the main types for convenience
+pub use api::{ApiClient, create_client};
+pub use auth::AuthService;
+pub use cache::CacheService;
+pub use retry::RetryService;
+pub use throttle::ThrottleService;
+pub use demo::run_all_demos;
+pub use performance::{MemoCache, Debouncer, PerformanceTracker, VirtualList};

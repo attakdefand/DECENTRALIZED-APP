@@ -1,0 +1,11 @@
+# Domain Deny List
+# List of domains blocked from external communication
+
+# Known Malicious Domains
+malware-site.com
+phishing-site.net
+command-control.org
+
+# Suspicious Domains
+suspicious-domain.xyz
+untrusted-service.io

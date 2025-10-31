@@ -13,14 +13,16 @@ anyhow = { workspace = true }
 thiserror = { workspace = true }
 tracing = { workspace = true }
 tracing-subscriber = { workspace = true }
+chrono = "0.4"
 
 # Web framework
-axum = "0.7"
+axum = { version = "0.7", features = ["ws", "macros"] }
 tower = "0.5"
 tower-http = { version = "0.5", features = ["cors", "trace"] }
+futures = "0.3"
 
 # Database
-sqlx = { workspace = true }
+sqlx = { workspace = true, features = ["postgres", "runtime-tokio-native-tls", "migrate"] }
 
 # Metrics
 prometheus-client = "0.22"

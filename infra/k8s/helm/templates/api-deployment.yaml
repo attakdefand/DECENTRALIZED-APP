@@ -1,0 +1,68 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "decentralized-app.fullname" . }}-api
+  labels:
+    {{- include "decentralized-app.labels" . | nindent 4 }}
+    component: api
+spec:
+  replicas: {{ .Values.apiService.replicaCount | default 1 }}
+  selector:
+    matchLabels:
+      {{- include "decentralized-app.selectorLabels" . | nindent 6 }}
+      component: api
+  template:
+    metadata:
+      {{- with .Values.apiService.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      labels:
+        {{- include "decentralized-app.selectorLabels" . | nindent 8 }}
+        component: api
+    spec:
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      serviceAccountName: {{ include "decentralized-app.serviceAccountName" . }}
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+        - name: {{ .Chart.Name }}-api
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          image: "{{ .Values.apiService.image.repository }}:{{ .Values.apiService.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.apiService.image.pullPolicy | default "IfNotPresent" }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.apiService.service.port }}
+              protocol: TCP
+          env:
+            {{- toYaml .Values.apiService.env | nindent 12 }}
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: http
+          resources:
+            {{- toYaml .Values.apiService.resources | nindent 12 }}
+          volumeMounts:
+            {{- toYaml .Values.apiService.volumeMounts | nindent 12 }}
+      volumes:
+        {{- toYaml .Values.apiService.volumes | nindent 8 }}
+      {{- with .Values.apiService.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.apiService.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.apiService.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

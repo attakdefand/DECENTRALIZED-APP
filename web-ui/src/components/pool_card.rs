@@ -3,9 +3,10 @@
 //! This component displays information about a liquidity pool.
 
 use yew::prelude::*;
+use serde::{Serialize, Deserialize};
 
 /// Pool data structure
-#[derive(Properties, PartialEq, Clone)]
+#[derive(Properties, PartialEq, Clone, Serialize, Deserialize, Debug)]
 pub struct PoolData {
     pub id: String,
     pub token_a: String,

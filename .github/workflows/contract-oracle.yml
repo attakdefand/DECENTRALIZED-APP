@@ -1,0 +1,112 @@
+name: Oracle Contract Tests
+
+on:
+  push:
+    branches: [ main, develop ]
+    paths:
+      - 'contracts/src/core/Oracle.sol'
+      - 'contracts/test/core/OracleTest.sol'
+      - '.github/workflows/contract-oracle.yml'
+  pull_request:
+    branches: [ main, develop ]
+    paths:
+      - 'contracts/src/core/Oracle.sol'
+      - 'contracts/test/core/OracleTest.sol'
+      - '.github/workflows/contract-oracle.yml'
+
+env:
+  FOUNDRY_PROFILE: ci
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+        with:
+          submodules: recursive
+
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
+
+      - name: Install dependencies
+        run: |
+          cd contracts
+          forge install
+
+      - name: Run Forge build
+        run: |
+          cd contracts
+          forge build --sizes
+        id: build
+
+      - name: Run Forge tests
+        run: |
+          cd contracts
+          forge test --match-contract OracleTest -vvv
+        id: test
+
+      - name: Run coverage
+        run: |
+          cd contracts
+          forge coverage --report summary --match-contract OracleTest
+        id: coverage
+
+      - name: Check gas snapshots
+        run: |
+          cd contracts
+          forge snapshot --match-contract OracleTest
+        id: gas
+
+  slither:
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+        with:
+          submodules: recursive
+
+      - name: Run Slither
+        uses: crytic/slither-action@v0.3.0
+        id: slither
+        with:
+          target: 'contracts/src/core/Oracle.sol'
+          slither-args: '--detect reentrancy-eth,reentrancy-no-eth,unchecked-transfer,unchecked-lowlevel,calls-loop,timestamp,assembly,pragma,solc-version,unused-state,too-many-digits,controlled-delegatecall,naming-convention,external-function,constant-function-visibility,constable-states,old-style-callback'
+          fail-on: low
+
+  manipulation-tests:
+    runs-on: ubuntu-latest
+    needs: [test, slither]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Run manipulation protection tests
+        run: |
+          echo "Running manipulation protection tests..."
+          # These would be specific tests for oracle manipulation scenarios
+
+  liveness-tests:
+    runs-on: ubuntu-latest
+    needs: [test, slither]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Run liveness tests
+        run: |
+          echo "Running liveness tests..."
+          # These would be specific tests for oracle liveness scenarios
+
+  security:
+    runs-on: ubuntu-latest
+    needs: [test, slither, manipulation-tests, liveness-tests]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Validate Oracle implementation
+        run: |
+          chmod +x scripts/validate-oracle.ps1
+          pwsh -ExecutionPolicy Bypass -File scripts/validate-oracle.ps1

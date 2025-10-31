@@ -1,0 +1,125 @@
+name: Economic Simulations
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'crates/core/src/risk.rs'
+      - 'tests/economic_simulation.rs'
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'crates/core/src/risk.rs'
+      - 'tests/economic_simulation.rs'
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  economic-sims:
+    name: Economic Simulation Tests
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Install Rust
+      uses: actions-rs/toolchain@v1
+      with:
+        toolchain: stable
+        override: true
+    
+    - name: Cache cargo registry
+      uses: actions/cache@v3
+      with:
+        path: |
+          ~/.cargo/registry
+          ~/.cargo/git
+        key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
+    
+    - name: Cache cargo build
+      uses: actions/cache@v3
+      with:
+        path: target/
+        key: ${{ runner.os }}-cargo-build-target-${{ hashFiles('**/Cargo.lock') }}
+    
+    - name: Build workspace
+      run: cargo build --workspace
+    
+    - name: Run economic simulation tests
+      run: |
+        cargo test economic_simulation -- --nocapture
+    
+    - name: Run risk parameter validation
+      run: |
+        cargo test test_risk_parameter_validation
+    
+    - name: Run liquidation scenario tests
+      run: |
+        cargo test test_liquidation_scenarios
+    
+    - name: Run performance tests
+      run: |
+        cargo test test_risk_calculation_performance --release
+
+  adversarial-testing:
+    name: Adversarial Economic Testing
+    runs-on: ubuntu-latest
+    needs: economic-sims
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Install Rust
+      uses: actions-rs/toolchain@v1
+      with:
+        toolchain: stable
+        override: true
+    
+    - name: Cache cargo registry
+      uses: actions/cache@v3
+      with:
+        path: |
+          ~/.cargo/registry
+          ~/.cargo/git
+        key: ${{ runner.os }}-cargo-adversarial-${{ hashFiles('**/Cargo.lock') }}
+    
+    - name: Run adversarial scenarios
+      run: |
+        # Run stress tests with extreme parameters
+        cargo test test_black_swan_scenario -- --nocapture
+        cargo test test_flash_crash_scenario -- --nocapture
+        
+        # Run edge case tests
+        cargo test test_insurance_fund_calculations -- --nocapture
+        cargo test test_emergency_procedures -- --nocapture
+
+  risk-monitoring:
+    name: Risk Monitoring Validation
+    runs-on: ubuntu-latest
+    needs: economic-sims
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Install Rust
+      uses: actions-rs/toolchain@v1
+      with:
+        toolchain: stable
+        override: true
+    
+    - name: Cache cargo registry
+      uses: actions/cache@v3
+      with:
+        path: |
+          ~/.cargo/registry
+          ~/.cargo/git
+        key: ${{ runner.os }}-cargo-monitoring-${{ hashFiles('**/Cargo.lock') }}
+    
+    - name: Run risk monitoring tests
+      run: |
+        cargo test test_risk_monitoring -- --nocapture
+        cargo test test_complete_risk_workflow -- --nocapture
+        
+        # Test alerting system
+        cargo test integration_tests -- --ignored
