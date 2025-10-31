@@ -10,6 +10,7 @@ pub mod throttle;
 pub mod demo;
 pub mod config;
 pub mod models;
+pub mod performance;
 
 // Re-export the main types for convenience
 pub use api::{ApiClient, create_client};
@@ -18,3 +19,4 @@ pub use cache::CacheService;
 pub use retry::RetryService;
 pub use throttle::ThrottleService;
 pub use demo::run_all_demos;
+pub use performance::{MemoCache, Debouncer, PerformanceTracker, VirtualList};

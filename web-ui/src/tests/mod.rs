@@ -21,3 +21,6 @@ mod accessibility_tests;
 
 #[cfg(test)]
 mod liquidity_security_tests;
+
+#[cfg(test)]
+mod performance_tests;

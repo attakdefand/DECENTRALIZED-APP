@@ -16,6 +16,7 @@ use crate::services::{
     models::{MarketResponse, MarketInfo},
     cache::CacheService,
     retry::{RetryService, RetryConfig},
+    performance::PerformanceTracker,
 };
 
 /// Market price update from WebSocket
