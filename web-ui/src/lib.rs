@@ -16,6 +16,8 @@ mod state;
 #[cfg(test)]
 mod tests;
 
+pub mod benchmarks;
+
 use router::{switch, Route};
 use services::run_all_demos;
 use state::AppState;

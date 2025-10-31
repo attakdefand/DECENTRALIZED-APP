@@ -13,6 +13,7 @@ anyhow = { workspace = true }
 thiserror = { workspace = true }
 tracing = { workspace = true }
 tracing-subscriber = { workspace = true }
+chrono = "0.4"
 
 # Web framework
 axum = "0.7"

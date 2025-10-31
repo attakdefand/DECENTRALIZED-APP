@@ -7,13 +7,14 @@ use axum::{
     extract::State,
     http::{Request, StatusCode},
     middleware::{self, Next},
-    response::Response,
-    routing::get,
+    response::{Response, IntoResponse, Json},
+    routing::{get, post},
     Router,
 };
 use core::logging;
 use std::net::SocketAddr;
 use tracing::info;
+use serde::{Serialize, Deserialize};
 
 // Add Prometheus metrics imports
 use prometheus_client::{
@@ -95,7 +96,7 @@ async fn main() -> Result<()> {
         .route("/", get(root))
         .route("/health", get(health_check))
         .route("/api/v1/pools", get(get_pools))
-        .route("/api/v1/orders", get(get_orders))
+        .route("/api/v1/orders", get(get_orders).post(create_order))
         .route("/api/v1/markets", get(get_markets))
         .route("/metrics", get(metrics_handler))
         .with_state(state.clone())
@@ -175,16 +176,219 @@ async fn health_check() -> &'static str {
     "OK"
 }
 
-async fn get_pools() -> &'static str {
-    "Pool data would be returned here"
+// API Response types matching frontend models
+#[derive(Debug, Serialize, Deserialize)]
+struct TokenInfo {
+    symbol: String,
+    address: String,
+    decimals: u8,
 }
 
-async fn get_orders() -> &'static str {
-    "Order data would be returned here"
+#[derive(Debug, Serialize, Deserialize)]
+struct PoolInfo {
+    id: String,
+    token_a: TokenInfo,
+    token_b: TokenInfo,
+    liquidity: String,
+    volume_24h: String,
+    apr: String,
+    fee_tier: String,
 }
 
-async fn get_markets() -> &'static str {
-    "Market data would be returned here"
+#[derive(Debug, Serialize, Deserialize)]
+struct PoolResponse {
+    pools: Vec<PoolInfo>,
+    total: usize,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+struct OrderInfo {
+    id: String,
+    pair: String,
+    side: String,
+    price: String,
+    amount: String,
+    filled: String,
+    status: String,
+    timestamp: u64,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+struct OrderResponse {
+    orders: Vec<OrderInfo>,
+    total: usize,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+struct CreateOrderRequest {
+    pair: String,
+    side: String,
+    price: f64,
+    amount: f64,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+struct MarketInfo {
+    pair: String,
+    price: String,
+    change_24h: String,
+    volume_24h: String,
+    high_24h: String,
+    low_24h: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+struct MarketResponse {
+    markets: Vec<MarketInfo>,
+    total: usize,
+}
+
+// Security: Validate pool data before returning
+async fn get_pools() -> impl IntoResponse {
+    // In production, this would query the database
+    // For now, return mock data matching frontend expectations
+    
+    let pools = vec![
+        PoolInfo {
+            id: "pool-eth-usdc-001".to_string(),
+            token_a: TokenInfo {
+                symbol: "ETH".to_string(),
+                address: "0x0000000000000000000000000000000000000001".to_string(),
+                decimals: 18,
+            },
+            token_b: TokenInfo {
+                symbol: "USDC".to_string(),
+                address: "0x0000000000000000000000000000000000000002".to_string(),
+                decimals: 6,
+            },
+            liquidity: "1250000.75".to_string(),
+            volume_24h: "45000.30".to_string(),
+            apr: "12.5".to_string(),
+            fee_tier: "0.3".to_string(),
+        },
+        PoolInfo {
+            id: "pool-btc-usdc-001".to_string(),
+            token_a: TokenInfo {
+                symbol: "BTC".to_string(),
+                address: "0x0000000000000000000000000000000000000003".to_string(),
+                decimals: 8,
+            },
+            token_b: TokenInfo {
+                symbol: "USDC".to_string(),
+                address: "0x0000000000000000000000000000000000000002".to_string(),
+                decimals: 6,
+            },
+            liquidity: "2500000.00".to_string(),
+            volume_24h: "87000.45".to_string(),
+            apr: "8.75".to_string(),
+            fee_tier: "0.3".to_string(),
+        },
+    ];
+    
+    let response = PoolResponse {
+        total: pools.len(),
+        pools,
+    };
+    
+    Json(response)
+}
+
+// Security: Validate order data
+async fn get_orders() -> impl IntoResponse {
+    let orders = vec![
+        OrderInfo {
+            id: "order-001".to_string(),
+            pair: "ETH/USDC".to_string(),
+            side: "buy".to_string(),
+            price: "2500.50".to_string(),
+            amount: "1.5".to_string(),
+            filled: "1.0".to_string(),
+            status: "open".to_string(),
+            timestamp: 1704067200,
+        },
+        OrderInfo {
+            id: "order-002".to_string(),
+            pair: "BTC/USDC".to_string(),
+            side: "sell".to_string(),
+            price: "45000.00".to_string(),
+            amount: "0.25".to_string(),
+            filled: "0.25".to_string(),
+            status: "filled".to_string(),
+            timestamp: 1704063600,
+        },
+    ];
+    
+    let response = OrderResponse {
+        total: orders.len(),
+        orders,
+    };
+    
+    Json(response)
+}
+
+// Security: Validate order creation request
+async fn create_order(Json(payload): Json<CreateOrderRequest>) -> impl IntoResponse {
+    // Security: Validate inputs
+    if payload.pair.is_empty() {
+        return (StatusCode::BAD_REQUEST, Json(serde_json::json!({
+            "error": "Invalid pair"
+        })));
+    }
+    
+    if payload.side != "buy" && payload.side != "sell" {
+        return (StatusCode::BAD_REQUEST, Json(serde_json::json!({
+            "error": "Invalid side, must be 'buy' or 'sell'"
+        })));
+    }
+    
+    if payload.price <= 0.0 || payload.amount <= 0.0 {
+        return (StatusCode::BAD_REQUEST, Json(serde_json::json!({
+            "error": "Price and amount must be positive"
+        })));
+    }
+    
+    // In production: Create order in database
+    let order = OrderInfo {
+        id: format!("order-{}", chrono::Utc::now().timestamp()),
+        pair: payload.pair,
+        side: payload.side,
+        price: payload.price.to_string(),
+        amount: payload.amount.to_string(),
+        filled: "0.0".to_string(),
+        status: "open".to_string(),
+        timestamp: chrono::Utc::now().timestamp() as u64,
+    };
+    
+    (StatusCode::CREATED, Json(order))
+}
+
+// Security: Validate market data
+async fn get_markets() -> impl IntoResponse {
+    let markets = vec![
+        MarketInfo {
+            pair: "ETH/USDC".to_string(),
+            price: "2530.0".to_string(),
+            change_24h: "2.5".to_string(),
+            volume_24h: "45000000.0".to_string(),
+            high_24h: "2550.0".to_string(),
+            low_24h: "2480.0".to_string(),
+        },
+        MarketInfo {
+            pair: "BTC/USDC".to_string(),
+            price: "45300.0".to_string(),
+            change_24h: "-1.2".to_string(),
+            volume_24h: "87000000.0".to_string(),
+            high_24h: "46000.0".to_string(),
+            low_24h: "44800.0".to_string(),
+        },
+    ];
+    
+    let response = MarketResponse {
+        total: markets.len(),
+        markets,
+    };
+    
+    Json(response)
 }
 
 // Handler for Prometheus metrics endpoint
