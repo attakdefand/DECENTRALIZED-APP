@@ -1,17 +1,49 @@
 //! Home page
 //!
-//! This is the main landing page of the application.
+//! This is the main landing page of the application with authentication.
 
 use yew::prelude::*;
+use crate::components::login::Login;
+use crate::state::{AppStateContext, AuthState};
 
 /// Home page component
 #[function_component(Home)]
 pub fn home() -> Html {
+    let app_state = use_context::<AppStateContext>();
+    
+    let on_login_success = {
+        Callback::from(move |_| {
+            web_sys::console::log_1(&"Login successful".into());
+        })
+    };
+    
+    // If no app state context, show error
+    let Some(app_state) = app_state else {
+        return html! {
+            <div class="flex items-center justify-center min-h-screen">
+                <div class="text-red-600">{"Application state not available"}</div>
+            </div>
+        };
+    };
+    
+    // Show login if not authenticated
+    if matches!(app_state.auth, AuthState::Unauthenticated | AuthState::Authenticating) {
+        return html! {
+            <Login on_login_success={on_login_success} />
+        };
+    }
+    
+    // Show authenticated content
+    let username = if let AuthState::Authenticated(ref token) = app_state.auth {
+        token.username.clone()
+    } else {
+        "User".to_string()
+    };
     html! {
         <div>
             <div class="bg-white overflow-hidden shadow rounded-lg">
                 <div class="px-4 py-5 sm:p-6">
-                    <h2 class="text-2xl font-bold text-gray-900">{"Welcome to the Decentralized Exchange"}</h2>
+                    <h2 class="text-2xl font-bold text-gray-900">{format!("Welcome back, {}!", username)}</h2>
                     <p class="mt-2 text-gray-600">
                         {"Trade tokens, provide liquidity, and earn rewards in a fully decentralized exchange."}
                     </p>

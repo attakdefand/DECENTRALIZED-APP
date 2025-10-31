@@ -6,6 +6,8 @@ pub mod navigation;
 pub mod pool_card;
 pub mod order_table;
 pub mod market_chart;
+pub mod login;
+pub mod order_form;
 
 #[cfg(test)]
 mod tests {

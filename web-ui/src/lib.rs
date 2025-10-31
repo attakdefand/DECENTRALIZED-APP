@@ -11,9 +11,14 @@ mod components;
 mod pages;
 mod services;
 mod router;
+mod state;
+
+#[cfg(test)]
+mod tests;
 
 use router::{switch, Route};
 use services::run_all_demos;
+use state::AppState;
 
 /// Initialize the web application
 #[wasm_bindgen(start)]
@@ -29,8 +34,22 @@ pub fn run_app() {
 pub fn main() -> Html {
     html! {
         <BrowserRouter>
-            <MainLayout />
+            <StateProvider>
+                <MainLayout />
+            </StateProvider>
         </BrowserRouter>
+    }
+}
+
+/// State provider component
+#[function_component(StateProvider)]
+pub fn state_provider(props: &yew::html::ChildrenProps) -> Html {
+    let app_state = use_reducer(AppState::default);
+    
+    html! {
+        <ContextProvider<state::AppStateContext> context={app_state}>
+            {props.children.clone()}
+        </ContextProvider<state::AppStateContext>>
     }
 }
 
@@ -55,19 +74,5 @@ pub fn main_layout() -> Html {
                 </div>
             </footer>
         </div>
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use wasm_bindgen_test::*;
-
-    wasm_bindgen_test_configure!(run_in_browser);
-
-    #[wasm_bindgen_test]
-    fn test_main_component() {
-        // This is a simple test to ensure the component can be created
-        assert!(true);
     }
 }

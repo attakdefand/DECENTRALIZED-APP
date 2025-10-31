@@ -10,7 +10,7 @@ use sha2::Sha256;
 use wasm_bindgen::JsValue;
 
 /// Authentication token structure
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 pub struct AuthToken {
     pub user_id: String,
     pub username: String,
