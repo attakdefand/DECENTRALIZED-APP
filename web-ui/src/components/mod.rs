@@ -8,6 +8,8 @@ pub mod order_table;
 pub mod market_chart;
 pub mod login;
 pub mod order_form;
+pub mod liquidity_form;
+pub mod toast;
 
 #[cfg(test)]
 mod tests {

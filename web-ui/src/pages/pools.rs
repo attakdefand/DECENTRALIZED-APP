@@ -6,6 +6,7 @@ use yew::prelude::*;
 use wasm_bindgen_futures::spawn_local;
 
 use crate::components::pool_card::{PoolCard, PoolData};
+use crate::components::liquidity_form::{LiquidityForm, LiquidityFormData};
 use crate::services::{
     cache::CacheService,
     retry::{RetryService, RetryConfig},
@@ -19,6 +20,7 @@ pub fn pools() -> Html {
     let pools = use_state(|| Vec::<PoolData>::new());
     let loading = use_state(|| true);
     let error = use_state(|| Option::<String>::None);
+    let show_liquidity_form = use_state(|| false);
     
     // Load pools with caching and retry logic
     {
@@ -118,15 +120,55 @@ pub fn pools() -> Html {
             || ()
         });
     }
+    
+    // Handle liquidity form submission
+    let on_liquidity_submit = {
+        let show_liquidity_form = show_liquidity_form.clone();
+        
+        Callback::from(move |liquidity_data: LiquidityFormData| {
+            web_sys::console::log_1(&format!("Liquidity submitted: {:?}", liquidity_data).into());
+            
+            // In production, this would:
+            // 1. Submit to backend API
+            // 2. Show toast notification on success/error
+            // 3. Refresh pools list
+            
+            // Hide form after submission
+            show_liquidity_form.set(false);
+        })
+    };
+    
+    let toggle_liquidity_form = {
+        let show_liquidity_form = show_liquidity_form.clone();
+        
+        Callback::from(move |_| {
+            show_liquidity_form.set(!*show_liquidity_form);
+        })
+    };
 
     html! {
         <div>
             <div class="flex justify-between items-center">
                 <h2 class="text-2xl font-bold text-gray-900">{"Liquidity Pools"}</h2>
-                <button class="bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2 px-4 rounded-md">
-                    {"Create Pool"}
+                <button
+                    onclick={toggle_liquidity_form}
+                    class="bg-indigo-600 hover:bg-indigo-700 text-white font-medium py-2 px-4 rounded-md"
+                    aria-label="Toggle liquidity form"
+                >
+                    if *show_liquidity_form {
+                        {"Hide Form"}
+                    } else {
+                        {"Add Liquidity"}
+                    }
                 </button>
             </div>
+            
+            // Show liquidity form when toggled
+            if *show_liquidity_form {
+                <div class="mt-6">
+                    <LiquidityForm on_submit={on_liquidity_submit} />
+                </div>
+            }
             
             // Show loading state
             if *loading {

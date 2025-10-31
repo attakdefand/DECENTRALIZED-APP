@@ -15,3 +15,9 @@ mod component_tests;
 
 #[cfg(test)]
 mod backend_tests;
+
+#[cfg(test)]
+mod accessibility_tests;
+
+#[cfg(test)]
+mod liquidity_security_tests;
