@@ -15,6 +15,12 @@ use core::logging;
 use std::net::SocketAddr;
 use tracing::info;
 use serde::{Serialize, Deserialize};
+use std::env;
+
+mod websocket;
+mod database;
+
+use websocket::{WsState, ws_handler, broadcast_market_update, broadcast_order_update, broadcast_pool_update};
 
 // Add Prometheus metrics imports
 use prometheus_client::{
@@ -39,6 +45,8 @@ struct Metrics {
 struct AppState {
     metrics: Metrics,
     registry: Arc<Mutex<Registry>>,
+    ws_state: WsState,
+    db_pool: Option<database::DbPool>,
 }
 
 #[tokio::main]
@@ -89,12 +97,42 @@ async fn main() -> Result<()> {
     let state = AppState {
         metrics: metrics.clone(),
         registry: Arc::new(Mutex::new(registry)),
+        ws_state: WsState::new(),
+        db_pool: None, // Will be set below if DATABASE_URL is provided
+    };
+    
+    // Initialize database if DATABASE_URL is set
+    let state = if let Ok(db_url) = env::var("DATABASE_URL") {
+        info!("Connecting to database...");
+        match database::init_pool(&db_url).await {
+            Ok(pool) => {
+                info!("Database connected successfully");
+                
+                // Run migrations
+                if let Err(e) = database::run_migrations(&pool).await {
+                    tracing::warn!("Migration error (may be expected): {}", e);
+                }
+                
+                AppState {
+                    db_pool: Some(pool),
+                    ..state
+                }
+            }
+            Err(e) => {
+                tracing::warn!("Database connection failed: {}. Running without database.", e);
+                state
+            }
+        }
+    } else {
+        info!("DATABASE_URL not set. Running without database.");
+        state
     };
     
     // Build our application with routes
     let app = Router::new()
         .route("/", get(root))
         .route("/health", get(health_check))
+        .route("/ws", get(ws_handler))
         .route("/api/v1/pools", get(get_pools))
         .route("/api/v1/orders", get(get_orders).post(create_order))
         .route("/api/v1/markets", get(get_markets))
@@ -244,10 +282,41 @@ struct MarketResponse {
 }
 
 // Security: Validate pool data before returning
-async fn get_pools() -> impl IntoResponse {
-    // In production, this would query the database
-    // For now, return mock data matching frontend expectations
+async fn get_pools(State(state): State<AppState>) -> impl IntoResponse {
+    // Try to get from database first
+    if let Some(ref pool) = state.db_pool {
+        match database::get_pools(pool).await {
+            Ok(pools) => {
+                let response = PoolResponse {
+                    total: pools.len(),
+                    pools: pools.into_iter().map(|p| PoolInfo {
+                        id: p.id,
+                        token_a: TokenInfo {
+                            symbol: p.token_a_symbol,
+                            address: p.token_a_address,
+                            decimals: 18,
+                        },
+                        token_b: TokenInfo {
+                            symbol: p.token_b_symbol,
+                            address: p.token_b_address,
+                            decimals: 6,
+                        },
+                        liquidity: p.liquidity,
+                        volume_24h: p.volume_24h,
+                        apr: p.apr,
+                        fee_tier: p.fee_tier,
+                    }).collect(),
+                };
+                return Json(response);
+            }
+            Err(e) => {
+                tracing::error!("Database error: {}", e);
+                // Fall through to mock data
+            }
+        }
+    }
     
+    // Fallback to mock data if database not available
     let pools = vec![
         PoolInfo {
             id: "pool-eth-usdc-001".to_string(),
@@ -327,7 +396,7 @@ async fn get_orders() -> impl IntoResponse {
 }
 
 // Security: Validate order creation request
-async fn create_order(Json(payload): Json<CreateOrderRequest>) -> impl IntoResponse {
+async fn create_order(State(state): State<AppState>, Json(payload): Json<CreateOrderRequest>) -> impl IntoResponse {
     // Security: Validate inputs
     if payload.pair.is_empty() {
         return (StatusCode::BAD_REQUEST, Json(serde_json::json!({
@@ -347,9 +416,55 @@ async fn create_order(Json(payload): Json<CreateOrderRequest>) -> impl IntoRespo
         })));
     }
     
-    // In production: Create order in database
+    let order_id = format!("order-{}", chrono::Utc::now().timestamp());
+    let user_id = "user-anonymous".to_string(); // In production: get from JWT
+    
+    // Try to save to database
+    if let Some(ref pool) = state.db_pool {
+        match database::create_order(
+            pool,
+            &order_id,
+            &user_id,
+            &payload.pair,
+            &payload.side,
+            &payload.price.to_string(),
+            &payload.amount.to_string(),
+        ).await {
+            Ok(db_order) => {
+                let order = OrderInfo {
+                    id: db_order.id.clone(),
+                    pair: db_order.pair,
+                    side: db_order.side,
+                    price: db_order.price,
+                    amount: db_order.amount,
+                    filled: db_order.filled,
+                    status: db_order.status,
+                    timestamp: db_order.created_at.timestamp() as u64,
+                };
+                
+                // Broadcast WebSocket update
+                tokio::spawn({
+                    let ws_state = state.ws_state.clone();
+                    let order_id = db_order.id.clone();
+                    let status = db_order.status.clone();
+                    let filled = db_order.filled.clone();
+                    async move {
+                        broadcast_order_update(&ws_state, order_id, status, filled).await;
+                    }
+                });
+                
+                return (StatusCode::CREATED, Json(order));
+            }
+            Err(e) => {
+                tracing::error!("Failed to create order in database: {}", e);
+                // Fall through to in-memory order
+            }
+        }
+    }
+    
+    // Fallback: Create order in-memory (for demo without database)
     let order = OrderInfo {
-        id: format!("order-{}", chrono::Utc::now().timestamp()),
+        id: order_id,
         pair: payload.pair,
         side: payload.side,
         price: payload.price.to_string(),

@@ -18,6 +18,8 @@ pub mod models;
 pub mod rate_limit_middleware;
 pub mod auth_middleware;
 pub mod allowlist_middleware;
+pub mod websocket;
+pub mod database;
 
 use prometheus_client::{
     metrics::{counter::Counter, family::Family, histogram::Histogram},
