@@ -40,3 +40,5 @@ docs/
 
 # WASM pack files
 pkg/
+
+# not push rules.md to github
