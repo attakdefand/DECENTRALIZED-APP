@@ -174,20 +174,20 @@ fn test_complete_security_workflow() {
     // Store API credentials
     secret_manager.store_secret(
         "github-api-token", 
-        "ghp_secret_token_for_github_api"
+        "test_github_token_12345"
     ).unwrap();
     
     secret_manager.store_secret(
         "database-password", 
-        "super_secret_database_password"
+        "test_db_password_12345"
     ).unwrap();
     
     // Retrieve secrets
     let github_token = secret_manager.retrieve_secret("github-api-token").unwrap();
     let db_password = secret_manager.retrieve_secret("database-password").unwrap();
     
-    assert_eq!(github_token, "ghp_secret_token_for_github_api");
-    assert_eq!(db_password, "super_secret_database_password");
+    assert_eq!(github_token, "test_github_token_12345");
+    assert_eq!(db_password, "test_db_password_12345");
     println!("✓ Secrets securely stored and retrieved");
     
     // Step 3: Demonstrate security layer integration

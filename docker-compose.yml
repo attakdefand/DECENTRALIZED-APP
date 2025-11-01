@@ -1,0 +1,89 @@
+version: '3.8'
+
+services:
+  # Local blockchain node for development
+  local-node:
+    image: hardhat-node
+    ports:
+      - "8545:8545"
+    environment:
+      - HARDHAT_NETWORK=development
+
+  # PostgreSQL database for indexing and storage
+  database:
+    image: postgres:15
+    environment:
+      POSTGRES_DB: dex_os
+      POSTGRES_USER: dex_user
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  # Redis for caching
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+
+  # IPFS node for decentralized storage
+  ipfs:
+    image: ipfs/kubo
+    ports:
+      - "4001:4001"
+      - "8080:8080"
+      - "5001:5001"
+
+  # Prometheus for metrics collection
+  prometheus:
+    image: prom/prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./infra/prometheus.yml:/etc/prometheus/prometheus.yml
+
+  # Grafana for visualization
+  grafana:
+    image: grafana/grafana-enterprise
+    ports:
+      - "3000:3000"
+    depends_on:
+      - prometheus
+
+  # API service
+  api:
+    build: 
+      context: .
+      dockerfile: services/api/Dockerfile
+    ports:
+      - "3001:3001"
+    depends_on:
+      - database
+      - redis
+    environment:
+      - DATABASE_URL=postgresql://dex_user:${POSTGRES_PASSWORD}@database:5432/dex_os
+      - REDIS_URL=redis://redis:6379
+
+  # Indexer service
+  indexer:
+    build:
+      context: .
+      dockerfile: services/indexer-zk/Dockerfile
+    depends_on:
+      - local-node
+      - database
+    environment:
+      - ETHEREUM_RPC_URL=http://local-node:8545
+      - DATABASE_URL=postgresql://dex_user:${POSTGRES_PASSWORD}@database:5432/dex_os
+
+  # P2P node
+  p2p-node:
+    build:
+      context: .
+      dockerfile: services/p2p/Dockerfile
+    ports:
+      - "4002:4002"
+
+volumes:
+  postgres_data:
