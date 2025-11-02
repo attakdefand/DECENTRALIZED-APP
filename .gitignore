@@ -26,6 +26,7 @@ docs/
 .env.development.local
 .env.test.local
 .env.production.local
+CREDENTIALS-AND-CONFIGURATION.md
 
 # Logs
 *.log
@@ -41,4 +42,24 @@ docs/
 # WASM pack files
 pkg/
 
-# not push rules.md to github
+# Sensitive configuration files
+config/
+credentials/
+secrets/
+private/
+*.key
+*.pem
+*.crt
+*.cert
+*.der
+*.p12
+*.pfx
+id_rsa
+id_ed25519
+private-key.asc
+
+# Build and deployment artifacts
+dist/
+build/
+.DS_Store
+Thumbs.db

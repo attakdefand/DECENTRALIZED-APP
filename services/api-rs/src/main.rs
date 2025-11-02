@@ -23,7 +23,6 @@ mod models;
 mod contract;
 mod contract_middleware;
 mod malformed_field_middleware;
-mod rate_limit_middleware;
 mod auth_middleware;
 mod allowlist_middleware;
 
@@ -38,7 +37,6 @@ use models::market::MarketResponse;
 
 use contract_middleware::contract_validation_middleware;
 use malformed_field_middleware::malformed_field_rejection_middleware;
-use rate_limit_middleware::rate_limit_middleware;
 use auth_middleware::auth_middleware;
 use allowlist_middleware::allowlist_middleware;
 
@@ -70,8 +68,6 @@ async fn main() -> Result<()> {
         .layer(from_fn_with_state(state.clone(), allowlist_middleware))
         // Add authentication middleware (Auth at Edge)
         .layer(from_fn_with_state(state.clone(), auth_middleware))
-        // Add rate limiting middleware
-        .layer(from_fn_with_state(state.clone(), rate_limit_middleware))
         // Add contract validation middleware
         .layer(from_fn_with_state(state.clone(), contract_validation_middleware))
         // Add malformed field rejection middleware

@@ -15,7 +15,6 @@ pub mod contract;
 pub mod contract_middleware;
 pub mod malformed_field_middleware;
 pub mod models;
-pub mod rate_limit_middleware;
 pub mod auth_middleware;
 pub mod allowlist_middleware;
 
@@ -26,8 +25,6 @@ use prometheus_client::{
 use std::sync::Arc;
 use tokio::sync::Mutex;
 
-use rate_limit_middleware::{RateLimitState, RateLimitConfig};
-
 /// Application state shared across handlers
 #[derive(Clone)]
 pub struct AppState {
@@ -35,8 +32,6 @@ pub struct AppState {
     pub metrics: Metrics,
     /// Prometheus registry
     pub registry: Arc<Mutex<Registry>>,
-    /// Rate limiting state
-    pub rate_limit_state: RateLimitState,
 }
 
 /// Metrics collection
@@ -72,6 +67,8 @@ impl AppState {
         let request_errors: Family<Vec<(String, String)>, Counter> =
             Family::new_with_constructor(Counter::default);
         let total_requests = Counter::default();
+        let gateway_rejections = Counter::default();
+        let app_rejections = Counter::default();
 
         registry.register(
             "http_request_duration_seconds",
@@ -91,32 +88,29 @@ impl AppState {
             total_requests.clone(),
         );
 
-        let metrics = Metrics {
-            request_durations,
-            request_errors,
-            total_requests,
-            gateway_rejections: Counter::default(),
-            app_rejections: Counter::default(),
-        };
-
         registry.register(
             "gateway_rejections_total",
             "Total number of requests rejected at gateway level",
-            metrics.gateway_rejections.clone(),
+            gateway_rejections.clone(),
         );
 
         registry.register(
             "app_rejections_total",
             "Total number of requests rejected at application level",
-            metrics.app_rejections.clone(),
+            app_rejections.clone(),
         );
 
-        let rate_limit_state = RateLimitState::new(RateLimitConfig::default());
+        let metrics = Metrics {
+            request_durations,
+            request_errors,
+            total_requests,
+            gateway_rejections,
+            app_rejections,
+        };
 
         Self {
-            metrics: metrics.clone(),
+            metrics,
             registry: Arc::new(Mutex::new(registry)),
-            rate_limit_state,
         }
     }
 }
