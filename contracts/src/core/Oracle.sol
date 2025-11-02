@@ -26,12 +26,14 @@ contract Oracle {
     event FeedStatusUpdated(address indexed publisher, bool isValid);
     event EmergencyShutdown(bool isShutdown);
     event FallbackActivated(address indexed fallbackOracle);
+    event ConnectorAllowlistUpdated(address indexed connector, bool isAllowed);
 
     // State variables
     mapping(address => mapping(address => PriceFeed[])) public priceFeeds; // token => publisher => feeds
     mapping(address => bool) public isValidPublisher;
     mapping(address => uint256) public lastValidPrice; // token => price
     mapping(address => TWAPDataPoint[]) public twapHistory; // token => TWAP history
+    mapping(address => bool) public connectorAllowlist; // connector => isAllowed
     address[] public publishers;
     address public owner;
     bool public isEmergencyShutdown;
@@ -40,6 +42,7 @@ contract Oracle {
     uint256 public constant TWAP_WINDOW = 30 minutes;
     uint256 public stalenessThreshold;
     uint256 public outlierThreshold; // Percentage deviation threshold (scaled by 1e18)
+    uint256 public enhancedDeviationThreshold; // Enhanced deviation threshold (scaled by 1e18)
 
     modifier onlyOwner() {
         require(msg.sender == owner, "Only owner");
@@ -55,6 +58,7 @@ contract Oracle {
         owner = msg.sender;
         stalenessThreshold = _stalenessThreshold;
         outlierThreshold = _outlierThreshold;
+        enhancedDeviationThreshold = 2 * 1e18; // 2% enhanced deviation threshold
         isEmergencyShutdown = false;
     }
 
@@ -119,12 +123,31 @@ contract Oracle {
     }
 
     /**
+     * @notice Set enhanced deviation threshold
+     * @param _enhancedDeviationThreshold New enhanced deviation threshold (scaled by 1e18)
+     */
+    function setEnhancedDeviationThreshold(uint256 _enhancedDeviationThreshold) external onlyOwner {
+        enhancedDeviationThreshold = _enhancedDeviationThreshold;
+    }
+
+    /**
+     * @notice Add connector to allowlist
+     * @param connector Connector address
+     * @param isAllowed Whether connector is allowed
+     */
+    function updateConnectorAllowlist(address connector, bool isAllowed) external onlyOwner {
+        connectorAllowlist[connector] = isAllowed;
+        emit ConnectorAllowlistUpdated(connector, isAllowed);
+    }
+
+    /**
      * @notice Publish a price feed
      * @param token Token address
      * @param price Price (scaled by 1e18)
      */
     function publishPrice(address token, uint256 price) external notShutdown {
         require(isValidPublisher[msg.sender], "Not a valid publisher");
+        require(connectorAllowlist[msg.sender], "Connector not allowed");
         require(token != address(0), "Invalid token");
         require(price > 0, "Price must be positive");
 
@@ -263,6 +286,7 @@ contract Oracle {
         for (uint256 i = 0; i < publishers.length; i++) {
             address publisher = publishers[i];
             if (!isValidPublisher[publisher]) continue;
+            if (!connectorAllowlist[publisher]) continue; // Check allowlist
             
             PriceFeed[] storage feeds = priceFeeds[token][publisher];
             if (feeds.length == 0) continue;
@@ -283,6 +307,7 @@ contract Oracle {
         for (uint256 i = 0; i < publishers.length; i++) {
             address publisher = publishers[i];
             if (!isValidPublisher[publisher]) continue;
+            if (!connectorAllowlist[publisher]) continue; // Check allowlist
             
             PriceFeed[] storage feeds = priceFeeds[token][publisher];
             if (feeds.length == 0) continue;
@@ -293,17 +318,97 @@ contract Oracle {
             // Check for staleness
             if (block.timestamp - latestFeed.timestamp > stalenessThreshold) continue;
             
-            // Check for outliers
+            // Check for outliers using basic threshold
             if (lastValidPrice[token] > 0) {
                 uint256 deviation = _calculateDeviation(latestFeed.price, lastValidPrice[token]);
                 if (deviation > outlierThreshold) continue;
             }
+            
+            // Check for enhanced deviation using statistical methods
+            if (!_isWithinEnhancedDeviationBounds(token, latestFeed.price)) continue;
             
             prices[index] = latestFeed.price;
             index++;
         }
         
         return prices;
+    }
+
+    /**
+     * @notice Check if price is within enhanced deviation bounds using statistical methods
+     * @param token Token address
+     * @param price Price to check
+     * @return isWithinBounds True if price is within enhanced deviation bounds
+     */
+    function _isWithinEnhancedDeviationBounds(address token, uint256 price) internal view returns (bool isWithinBounds) {
+        // Collect recent prices for statistical analysis
+        uint256[] memory recentPrices = new uint256[](publishers.length);
+        uint256 validPriceCount = 0;
+        
+        for (uint256 i = 0; i < publishers.length; i++) {
+            address publisher = publishers[i];
+            if (!isValidPublisher[publisher]) continue;
+            if (!connectorAllowlist[publisher]) continue; // Check allowlist
+            
+            PriceFeed[] storage feeds = priceFeeds[token][publisher];
+            if (feeds.length == 0) continue;
+            
+            PriceFeed storage latestFeed = feeds[feeds.length - 1];
+            if (!latestFeed.isValid) continue;
+            
+            // Check for staleness
+            if (block.timestamp - latestFeed.timestamp > stalenessThreshold) continue;
+            
+            recentPrices[validPriceCount] = latestFeed.price;
+            validPriceCount++;
+        }
+        
+        // Need at least 3 prices for statistical analysis
+        if (validPriceCount < 3) {
+            return true; // Not enough data, allow the price
+        }
+        
+        // Calculate mean and standard deviation
+        uint256 sum = 0;
+        for (uint256 i = 0; i < validPriceCount; i++) {
+            sum += recentPrices[i];
+        }
+        uint256 mean = sum / validPriceCount;
+        
+        uint256 varianceSum = 0;
+        for (uint256 i = 0; i < validPriceCount; i++) {
+            uint256 diff = recentPrices[i] > mean ? recentPrices[i] - mean : mean - recentPrices[i];
+            varianceSum += diff * diff;
+        }
+        uint256 variance = varianceSum / validPriceCount;
+        
+        // Calculate standard deviation (simplified)
+        uint256 stdDev = _sqrt(variance);
+        
+        // Check if price is within enhanced deviation bounds (mean ± stdDev * threshold)
+        uint256 lowerBound = mean > stdDev ? mean - stdDev : 0;
+        uint256 upperBound = mean + stdDev;
+        
+        // Apply the enhanced deviation threshold multiplier
+        uint256 thresholdAdjustedLower = (lowerBound * (1e18 - enhancedDeviationThreshold)) / 1e18;
+        uint256 thresholdAdjustedUpper = (upperBound * (1e18 + enhancedDeviationThreshold)) / 1e18;
+        
+        return price >= thresholdAdjustedLower && price <= thresholdAdjustedUpper;
+    }
+
+    /**
+     * @notice Calculate square root (simplified implementation)
+     * @param x Number to calculate square root of
+     * @return y Square root of x
+     */
+    function _sqrt(uint256 x) internal pure returns (uint256 y) {
+        if (x == 0) return 0;
+        y = x;
+        uint256 z = (y + x / y) / 2;
+        while (z < y) {
+            y = z;
+            z = (y + x / y) / 2;
+        }
     }
 
     /**
@@ -388,7 +493,7 @@ contract Oracle {
      */
     function getPublisherCount() external view returns (uint256 count) {
         for (uint256 i = 0; i < publishers.length; i++) {
-            if (isValidPublisher[publishers[i]]) {
+            if (isValidPublisher[publishers[i]] && connectorAllowlist[publishers[i]]) {
                 count++;
             }
         }
@@ -405,6 +510,7 @@ contract Oracle {
         for (uint256 i = 0; i < publishers.length; i++) {
             address publisher = publishers[i];
             if (!isValidPublisher[publisher]) continue;
+            if (!connectorAllowlist[publisher]) continue; // Check allowlist
             
             PriceFeed[] storage feeds = priceFeeds[token][publisher];
             if (feeds.length == 0) continue;

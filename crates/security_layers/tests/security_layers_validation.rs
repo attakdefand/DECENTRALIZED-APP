@@ -5,9 +5,10 @@
 
 use security_layers::{
     governance_policy::*,
-    identity_access::*,
-    data_security::*,
+    identity_access::{AuthNManager, AuthZManager, JwtToken, MfaChallenge, PasswordHash, RbacPolicy, SecretManager, SessionManager, TokenLifecycle},
+    data_security,
     types::SecurityLayer,
+    *,
 };
 use std::collections::HashMap;
 
@@ -718,7 +719,7 @@ fn test_layer_5_data_in_transit(layers: &[SecurityLayer]) {
             include_subdomains: true,
             preload: false,
         },
-        mtls_config: MtlsConfig {
+        mtls_config: data_security::MtlsConfig {
             enabled: true, // mTLS service-to-service
             ca_cert: Some("ca.pem".to_string()),
             crl: None,

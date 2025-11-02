@@ -1,0 +1,77 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "decentralized-app.fullname" . }}-service-mesh-config
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "decentralized-app.labels" . | nindent 4 }}
+data:
+  # Service Mesh Configuration
+  serviceMesh.enabled: "true"
+  serviceMesh.mtls.enabled: "true"
+  serviceMesh.mtls.strictMode: "true"
+  serviceMesh.mtls.certRotationInterval: "86400" # 24 hours
+  
+  # Egress whitelist configuration
+  serviceMesh.egressWhitelist: |
+    kubernetes.default.svc.cluster.local
+    kube-dns.kube-system.svc.cluster.local
+    monitoring.prometheus.svc.cluster.local
+    logging.elk.svc.cluster.local
+
+---
+apiVersion: networking.istio.io/v1beta1
+kind: PeerAuthentication
+metadata:
+  name: {{ include "decentralized-app.fullname" . }}-mtls
+  namespace: {{ .Release.Namespace }}
+spec:
+  mtls:
+    mode: STRICT
+
+---
+apiVersion: security.istio.io/v1beta1
+kind: AuthorizationPolicy
+metadata:
+  name: {{ include "decentralized-app.fullname" . }}-authorization
+  namespace: {{ .Release.Namespace }}
+spec:
+  action: ALLOW
+  rules:
+  - {}
+
+---
+apiVersion: networking.istio.io/v1beta1
+kind: DestinationRule
+metadata:
+  name: {{ include "decentralized-app.fullname" . }}-destination-rule
+  namespace: {{ .Release.Namespace }}
+spec:
+  host: "*.{{ .Release.Namespace }}.svc.cluster.local"
+  trafficPolicy:
+    tls:
+      mode: ISTIO_MUTUAL
+
+---
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: {{ include "decentralized-app.fullname" . }}-virtual-service
+  namespace: {{ .Release.Namespace }}
+spec:
+  hosts:
+  - "*.{{ .Release.Namespace }}.svc.cluster.local"
+  http:
+  - route:
+    - destination:
+        host: "*.{{ .Release.Namespace }}.svc.cluster.local"
+
+---
+apiVersion: security.istio.io/v1beta1
+kind: PeerAuthentication
+metadata:
+  name: {{ include "decentralized-app.fullname" . }}-default
+  namespace: {{ .Release.Namespace }}
+spec:
+  mtls:
+    mode: STRICT

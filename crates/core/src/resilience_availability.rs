@@ -1009,7 +1009,7 @@ impl ResilienceAvailabilityManager {
         let mut last_error = None;
 
         // Try each service according to failover policy
-        for (attempt, service) in healthy_services.iter().enumerate() {
+        for (_attempt, service) in healthy_services.iter().enumerate() {
             // Execute with timeout
             let timeout_duration = std::time::Duration::from_millis(self.ha_config.failover_timeout_ms);
             let result = tokio::time::timeout(timeout_duration, operation(service)).await;

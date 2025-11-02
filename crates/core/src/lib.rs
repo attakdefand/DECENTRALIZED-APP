@@ -3,13 +3,17 @@
 //! This crate contains shared components used across different modules of the dApp.
 
 pub mod aa_security;
+pub mod automated_remediation;
 pub mod container_hardening;
 pub mod data_integrity;
 pub mod data_protection;
+pub mod financial_integrity;
+pub mod hash_chain;
 pub mod incident_response;
 pub mod logging;
 pub mod mev_mitigation;
 pub mod observability;
+pub mod policy_enforcement;
 pub mod rate_limiting;
 pub mod resilience_availability;
 pub mod risk;
@@ -21,6 +25,11 @@ pub mod tx_routing;
 pub use aa_security::{
     Paymaster, PaymasterSecurityManager, SessionKey, SessionKeyManager, UserOperation,
 };
+pub use automated_remediation::{
+    ActionStatus, ActionResult, AutomatedRemediationManager, RemediationAction,
+    RemediationActionType, RemediationError, RemediationExecution, RemediationStatus,
+    RemediationTrigger, RemediationTriggerType, RemediationWorkflow,
+};
 pub use container_hardening::{
     AdmissionPolicy, AppArmorProfile, ContainerConfig, ContainerHardeningError,
     ContainerHardeningManager, PolicyViolation, SeccompProfile, SecretBackend, SecretsManagement,
@@ -30,9 +39,21 @@ pub use data_integrity::{
     ContentItem, ContentSafetyPolicy, DataIntegrityError, DataIntegrityManager, HashAnchor,
     PinningService,
 };
+pub use policy_enforcement::{
+    DecisionOutcome, ExecutionStatus, PolicyDecision, PolicyEnforcementError,
+    PolicyEnforcementManager, PolicyEnforcementPipeline, PolicyExecution, PolicyStage,
+    PolicyStageType, StageResult, StageStatus,
+};
 pub use data_protection::{
     DsrErasureManager, DsrRequest, DsrRequestStatus, DsrRequestType, EncryptionError,
     FieldEncryption, PiiClassification, PiiField, PiiMap,
+};
+pub use financial_integrity::{
+    Account, AccountStatus, AccountType, GameTheorySimulator, InvariantTestReport, 
+    LedgerEntry, LedgerManager, NonceManager, ReconciliationReport, RiskLimit, 
+    RiskManager as FinancialRiskManager, Transaction as FinancialTransaction, TransactionStatus, 
+    TransactionType, IdempotencyManager as FinancialIdempotencyManager,
+    EconomicScenario, SimulationResult, ScenarioResult,
 };
 pub use incident_response::{
     Backup, BackupStatus, BackupType, CommunicationChannel, CommunicationPlan, EscalationStep,
@@ -45,7 +66,7 @@ pub use observability::{
     SiemRule, SiemSeverity,
 };
 pub use rate_limiting::{
-    IdempotencyManager, JobError, JobGuard, RateLimiter, Request, TokenBucket, WAFError, WAFRules,
+    IdempotencyManager as RateLimitingIdempotencyManager, JobError, JobGuard, RateLimiter, Request, TokenBucket, WAFError, WAFRules,
 };
 pub use resilience_availability::{
     Bulkhead, CircuitBreakerState as ResilienceCircuitBreakerState, DisasterRecoveryConfig,
@@ -61,8 +82,13 @@ pub use supply_chain::{
     Component, Provenance, Sbom, Signature, SupplyChainError, SupplyChainManager, Vulnerability,
 };
 pub use tx_routing::{
-    DeadlineHandler, Permit, PrivateTxRelay, SubmissionResult, Transaction, TxRoutingError,
+    DeadlineHandler, Permit, PrivateTxRelay, SubmissionResult, Transaction as TxRoutingTransaction, TxRoutingError,
     TxRoutingManager,
+};
+
+// Re-export hash_chain types
+pub use hash_chain::{
+    HashChain, HashChainEntry, HashChainError,
 };
 
 /// Common error types used across the application

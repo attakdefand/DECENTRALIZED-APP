@@ -90,6 +90,34 @@ pub struct DsrRequest {
     pub resolution_notes: Option<String>,
 }
 
+/// Consent record
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ConsentRecord {
+    /// Consent ID
+    pub id: String,
+    /// User identifier
+    pub user_id: String,
+    /// Purpose of consent
+    pub purpose: String,
+    /// Timestamp of consent
+    pub timestamp: u64,
+    /// Whether consent is given
+    pub granted: bool,
+    /// Expiration timestamp (optional)
+    pub expires_at: Option<u64>,
+    /// Version of terms
+    pub terms_version: String,
+}
+
+/// Consent management
+#[derive(Debug)]
+pub struct ConsentManager {
+    /// Stored consent records
+    consents: HashMap<String, ConsentRecord>,
+    /// Audit log
+    audit_log: Vec<String>,
+}
+
 /// Encryption error types
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum EncryptionError {
@@ -340,9 +368,80 @@ impl DsrErasureManager {
         Ok(())
     }
 
+    /// Process a data portability request
+    pub fn process_data_portability(&mut self, request_id: &str) -> Result<String, String> {
+        // Clone the affected fields to avoid borrowing issues
+        let (affected_fields, is_data_portability) = {
+            let request = self.requests.get(request_id).ok_or("Request not found")?;
+            
+            // Verify request type
+            let is_data_portability = matches!(request.request_type, DsrRequestType::DataPortability);
+            (request.affected_fields.clone(), is_data_portability)
+        };
+        
+        if !is_data_portability {
+            return Err("Request is not a data portability request".to_string());
+        }
+
+        // Update status
+        {
+            let request = self
+                .requests
+                .get_mut(request_id)
+                .ok_or("Request not found")?;
+            request.status = DsrRequestStatus::InProgress;
+        }
+
+        // Generate portable data (simulated)
+        let portable_data = self.generate_portable_data(&affected_fields)?;
+        
+        // Update status to completed
+        {
+            let request = self
+                .requests
+                .get_mut(request_id)
+                .ok_or("Request not found")?;
+            request.status = DsrRequestStatus::Completed;
+            request.resolution_notes = Some("Data portability completed successfully".to_string());
+        }
+        
+        self.audit_log
+            .push(format!("Data portability completed for request: {}", request_id));
+
+        Ok(portable_data)
+    }
+
+    /// Generate portable data in JSON format
+    fn generate_portable_data(&self, fields: &HashSet<String>) -> Result<String, String> {
+        // In a real implementation, this would:
+        // 1. Collect all data for the specified fields
+        // 2. Format it in a standard portable format (e.g., JSON)
+        // 3. Return the formatted data
+
+        // For this example, we'll just simulate the process
+        let mut data = serde_json::Map::new();
+        
+        for field in fields {
+            // Verify field exists in PII map
+            if !self.pii_map.has_field(field) {
+                return Err(format!("Field {} not found in PII map", field));
+            }
+            
+            // Add simulated data
+            data.insert(field.clone(), serde_json::Value::String(format!("Data for {}", field)));
+        }
+
+        Ok(serde_json::to_string(&data).map_err(|e| format!("Failed to serialize data: {}", e))?)
+    }
+
     /// Get request status
     pub fn get_request_status(&self, request_id: &str) -> Option<&DsrRequestStatus> {
         self.requests.get(request_id).map(|r| &r.status)
+    }
+
+    /// Get a specific request by ID
+    pub fn get_request(&self, request_id: &str) -> Option<&DsrRequest> {
+        self.requests.get(request_id)
     }
 
     /// Get audit log
@@ -363,6 +462,14 @@ impl DsrErasureManager {
             .collect()
     }
 
+    /// Get requests by type
+    pub fn get_requests_by_type(&self, request_type: DsrRequestType) -> Vec<&DsrRequest> {
+        self.requests
+            .values()
+            .filter(|request| request.request_type == request_type)
+            .collect()
+    }
+
     /// Encrypt a field if it is protected
     pub fn encrypt_field(&self, data: &[u8], field_name: &str) -> Result<Vec<u8>, String> {
         // Check if field should be protected
@@ -374,6 +481,87 @@ impl DsrErasureManager {
             // Return data as-is
             Ok(data.to_vec())
         }
+    }
+}
+
+impl ConsentManager {
+    /// Create a new consent manager
+    pub fn new() -> Self {
+        Self {
+            consents: HashMap::new(),
+            audit_log: Vec::new(),
+        }
+    }
+
+    /// Record user consent
+    pub fn record_consent(&mut self, consent: ConsentRecord) -> Result<(), String> {
+        // Validate consent
+        if self.consents.contains_key(&consent.id) {
+            return Err("Consent ID already exists".to_string());
+        }
+
+        // Log the consent
+        self.audit_log.push(format!(
+            "Consent recorded: {} for user {} at {}",
+            consent.id, consent.user_id, consent.timestamp
+        ));
+
+        // Store the consent
+        self.consents.insert(consent.id.clone(), consent);
+
+        Ok(())
+    }
+
+    /// Check if user has given consent for a purpose
+    pub fn has_consent(&self, user_id: &str, purpose: &str) -> bool {
+        self.consents.values().any(|consent| {
+            consent.user_id == user_id
+                && consent.purpose == purpose
+                && consent.granted
+                && (consent.expires_at.is_none()
+                    || consent.expires_at.unwrap()
+                        > std::time::SystemTime::now()
+                            .duration_since(std::time::UNIX_EPOCH)
+                            .unwrap()
+                            .as_secs())
+        })
+    }
+
+    /// Revoke user consent
+    pub fn revoke_consent(&mut self, consent_id: &str) -> Result<(), String> {
+        if let Some(consent) = self.consents.get_mut(consent_id) {
+            consent.granted = false;
+            self.audit_log.push(format!(
+                "Consent revoked: {} at {}",
+                consent_id,
+                std::time::SystemTime::now()
+                    .duration_since(std::time::UNIX_EPOCH)
+                    .unwrap()
+                    .as_secs()
+            ));
+            Ok(())
+        } else {
+            Err("Consent not found".to_string())
+        }
+    }
+
+    /// Get all consents for a user
+    pub fn get_user_consents(&self, user_id: &str) -> Vec<&ConsentRecord> {
+        self.consents
+            .values()
+            .filter(|consent| consent.user_id == user_id)
+            .collect()
+    }
+
+    /// Get audit log
+    pub fn get_audit_log(&self) -> &[String] {
+        &self.audit_log
+    }
+}
+
+impl Default for ConsentManager {
+    fn default() -> Self {
+        Self::new()
     }
 }
 
@@ -552,6 +740,61 @@ mod tests {
     }
 
     #[test]
+    fn test_data_portability() {
+        let mut pii_map = PiiMap::new();
+
+        // Add fields to the PII map
+        let pii_field1 = PiiField {
+            name: "user_email".to_string(),
+            description: "User email address".to_string(),
+            classification: PiiClassification::Confidential,
+            storage_location: "users table".to_string(),
+            retention_period: 365,
+            legal_basis: "Contract performance".to_string(),
+        };
+        pii_map.add_field(pii_field1);
+
+        let pii_field2 = PiiField {
+            name: "user_name".to_string(),
+            description: "User name".to_string(),
+            classification: PiiClassification::Confidential,
+            storage_location: "users table".to_string(),
+            retention_period: 365,
+            legal_basis: "Contract performance".to_string(),
+        };
+        pii_map.add_field(pii_field2);
+
+        let mut dsr_manager = DsrErasureManager::new(pii_map);
+
+        let mut affected_fields = HashSet::new();
+        affected_fields.insert("user_email".to_string());
+        affected_fields.insert("user_name".to_string());
+
+        let request = DsrRequest {
+            id: "req-004".to_string(),
+            request_type: DsrRequestType::DataPortability,
+            requester_id: "user-999".to_string(),
+            timestamp: 1234567893,
+            status: DsrRequestStatus::Pending,
+            affected_fields,
+            resolution_notes: None,
+        };
+
+        // Submit request
+        assert!(dsr_manager.submit_request(request).is_ok());
+
+        // Process data portability
+        let portable_data = dsr_manager.process_data_portability("req-004").unwrap();
+        assert!(!portable_data.is_empty());
+        assert!(portable_data.contains("user_email"));
+        assert!(portable_data.contains("user_name"));
+
+        // Check status
+        let status = dsr_manager.get_request_status("req-004").unwrap();
+        assert_eq!(status, &DsrRequestStatus::Completed);
+    }
+
+    #[test]
     fn test_audit_logging() {
         let pii_map = PiiMap::new();
         let mut dsr_manager = DsrErasureManager::new(pii_map);
@@ -559,7 +802,7 @@ mod tests {
         let initial_log_size = dsr_manager.get_audit_log().len();
 
         let request = DsrRequest {
-            id: "req-004".to_string(),
+            id: "req-005".to_string(),
             request_type: DsrRequestType::Access,
             requester_id: "user-999".to_string(),
             timestamp: 1234567893,
@@ -582,7 +825,7 @@ mod tests {
 
         // Add requests with different statuses
         let request1 = DsrRequest {
-            id: "req-005".to_string(),
+            id: "req-006".to_string(),
             request_type: DsrRequestType::Access,
             requester_id: "user-111".to_string(),
             timestamp: 1234567894,
@@ -592,7 +835,7 @@ mod tests {
         };
 
         let request2 = DsrRequest {
-            id: "req-006".to_string(),
+            id: "req-007".to_string(),
             request_type: DsrRequestType::Erasure,
             requester_id: "user-222".to_string(),
             timestamp: 1234567895,
@@ -607,10 +850,91 @@ mod tests {
         // Test filtering by status
         let pending_requests = dsr_manager.get_requests_by_status(DsrRequestStatus::Pending);
         assert_eq!(pending_requests.len(), 1);
-        assert_eq!(pending_requests[0].id, "req-005");
+        assert_eq!(pending_requests[0].id, "req-006");
 
         let completed_requests = dsr_manager.get_requests_by_status(DsrRequestStatus::Completed);
         assert_eq!(completed_requests.len(), 1);
-        assert_eq!(completed_requests[0].id, "req-006");
+        assert_eq!(completed_requests[0].id, "req-007");
+    }
+
+    #[test]
+    fn test_consent_manager() {
+        let mut consent_manager = ConsentManager::new();
+
+        let consent = ConsentRecord {
+            id: "consent-001".to_string(),
+            user_id: "user-123".to_string(),
+            purpose: "marketing".to_string(),
+            timestamp: 1234567890,
+            granted: true,
+            expires_at: None,
+            terms_version: "1.0".to_string(),
+        };
+
+        // Test recording consent
+        assert!(consent_manager.record_consent(consent).is_ok());
+        assert!(consent_manager.consents.contains_key("consent-001"));
+
+        // Test checking consent
+        assert!(consent_manager.has_consent("user-123", "marketing"));
+        assert!(!consent_manager.has_consent("user-123", "analytics"));
+        assert!(!consent_manager.has_consent("user-456", "marketing"));
+
+        // Test revoking consent
+        assert!(consent_manager.revoke_consent("consent-001").is_ok());
+        assert!(!consent_manager.has_consent("user-123", "marketing"));
+    }
+
+    #[test]
+    fn test_consent_expiration() {
+        let mut consent_manager = ConsentManager::new();
+
+        let consent = ConsentRecord {
+            id: "consent-002".to_string(),
+            user_id: "user-456".to_string(),
+            purpose: "analytics".to_string(),
+            timestamp: 1234567890,
+            granted: true,
+            expires_at: Some(1234567891), // Expired timestamp
+            terms_version: "1.0".to_string(),
+        };
+
+        consent_manager.record_consent(consent).unwrap();
+
+        // Test that expired consent is not valid
+        assert!(!consent_manager.has_consent("user-456", "analytics"));
+    }
+
+    #[test]
+    fn test_user_consents() {
+        let mut consent_manager = ConsentManager::new();
+
+        // Add multiple consents for the same user
+        let consent1 = ConsentRecord {
+            id: "consent-003".to_string(),
+            user_id: "user-789".to_string(),
+            purpose: "marketing".to_string(),
+            timestamp: 1234567890,
+            granted: true,
+            expires_at: None,
+            terms_version: "1.0".to_string(),
+        };
+
+        let consent2 = ConsentRecord {
+            id: "consent-004".to_string(),
+            user_id: "user-789".to_string(),
+            purpose: "analytics".to_string(),
+            timestamp: 1234567891,
+            granted: true,
+            expires_at: None,
+            terms_version: "1.0".to_string(),
+        };
+
+        consent_manager.record_consent(consent1).unwrap();
+        consent_manager.record_consent(consent2).unwrap();
+
+        // Test retrieving all consents for a user
+        let user_consents = consent_manager.get_user_consents("user-789");
+        assert_eq!(user_consents.len(), 2);
     }
 }

@@ -1,0 +1,56 @@
+# Pre-commit hooks configuration
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v4.4.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-added-large-files
+      - id: check-merge-conflict
+      - id: check-case-conflict
+      - id: detect-private-key
+      - id: check-executables-have-shebangs
+
+  - repo: https://github.com/doublify/pre-commit-rust
+    rev: v1.0
+    hooks:
+      - id: fmt
+      - id: cargo-check
+      - id: clippy
+
+  - repo: https://github.com/zricethezav/gitleaks
+    rev: v8.16.5
+    hooks:
+      - id: gitleaks
+
+  - repo: https://github.com/trufflesecurity/pre-commit
+    rev: v1.0.0
+    hooks:
+      - id: trufflehog
+
+  - repo: local
+    hooks:
+      - id: cargo-audit
+        name: cargo audit
+        description: Check for security vulnerabilities in Rust dependencies
+        entry: cargo audit
+        language: rust
+        pass_filenames: false
+        always_run: true
+
+      - id: cargo-deny
+        name: cargo deny
+        description: Check for banned, duplicated, and unmaintained dependencies
+        entry: cargo deny check
+        language: rust
+        pass_filenames: false
+        always_run: true
+
+      - id: policy-validation
+        name: policy validation
+        description: Validate security policy documents
+        entry: scripts/validate-policies.sh
+        language: script
+        pass_filenames: false
+        always_run: true

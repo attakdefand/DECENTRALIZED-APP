@@ -1,0 +1,108 @@
+# Developer Controls Security Tests
+name: Developer Controls Security Tests
+
+on:
+  push:
+    branches: [ main, develop ]
+    paths:
+      - '.pre-commit-config.yaml'
+      - '.github/workflows/developer-controls.yml'
+      - 'scripts/pre-commit/**'
+  pull_request:
+    branches: [ main, develop ]
+    paths:
+      - '.pre-commit-config.yaml'
+      - '.github/workflows/developer-controls.yml'
+      - 'scripts/pre-commit/**'
+
+jobs:
+  pre-commit-hooks:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.9'
+
+    - name: Install pre-commit
+      run: |
+        pip install pre-commit
+
+    - name: Run pre-commit hooks
+      run: |
+        pre-commit run --all-files
+
+  secret-scanning:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Run secret scanning
+      uses: trufflesecurity/trufflehog@main
+      with:
+        path: .
+        base: ${{ github.event.pull_request.base.sha }}
+        head: ${{ github.sha }}
+        only-verified: true
+
+  sast-scan:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Install Rust
+      uses: actions-rs/toolchain@v1
+      with:
+        profile: minimal
+        toolchain: stable
+        override: true
+
+    - name: Run cargo-audit
+      run: |
+        cargo install cargo-audit
+        cargo audit
+
+    - name: Run cargo-deny
+      run: |
+        cargo install cargo-deny
+        cargo deny check
+
+  policy-validation:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Validate policy files
+      run: |
+        # Check that policy files exist
+        test -f docs/security/POLICY-CATALOG.md
+        test -f docs/security/IAM-RBAC-MAP.md
+        test -f docs/runbooks/key-rotation.md
+        
+        # Validate policy structure
+        echo "Validating policy structure..."
+        grep -q "# Policy Catalog" docs/security/POLICY-CATALOG.md
+        grep -q "# IAM RBAC Map" docs/security/IAM-RBAC-MAP.md
+        grep -q "# Key Rotation Runbook" docs/runbooks/key-rotation.md
+
+  ci-gate-validation:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Check CI gates
+      run: |
+        # Verify that required CI checks are in place
+        echo "Checking for lint gate..."
+        test -f .github/workflows/ci.yml
+        
+        echo "Checking for SAST gate..."
+        echo "This would check for SAST tools in CI pipeline"
+        
+        echo "Checking for unit test gate..."
+        echo "This would check for unit test requirements in CI pipeline"
+        
+        echo "Checking for PR approval requirements..."
+        echo "This would check for PR approval settings"

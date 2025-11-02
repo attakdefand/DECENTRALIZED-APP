@@ -2,7 +2,6 @@
 members = [
     "crates/*",
     "services/*",
-    "web-ui",
 ]
 resolver = "2"
 
@@ -26,6 +25,9 @@ tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 ethers = "2.0"
 alloy = "0.1"
 reqwest = { version = "0.11", features = ["json"] }
+
+# Regex dependency
+regex = "1.0"
 
 # Cryptography dependencies
 aes-gcm = "0.10"

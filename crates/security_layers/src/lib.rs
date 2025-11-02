@@ -1,16 +1,24 @@
-//! Security Layers Implementation
+//! Security Layers crate for DECENTRALIZED-APP
 //!
-//! This crate implements all 9 security layers from the Web3 protection layers matrix.
+//! This crate provides implementations for all security layers defined in the project.
 
+pub mod application_security;
+pub mod data_security;
 pub mod governance_policy;
 pub mod identity_access;
-pub mod application_security;
-pub mod api_gateway;
-pub mod data_security;
+pub mod key_management;
 pub mod network_infra;
-pub mod resilience;
-pub mod observability;
 pub mod supply_chain;
+pub mod client_protection;
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn it_works() {
+        let result = 2 + 2;
+        assert_eq!(result, 4);
+    }
+}
 
 // Re-export key types
 // For now, we're only re-exporting from the modules we've fully implemented
@@ -20,6 +28,11 @@ pub use governance_policy::{
 pub use identity_access::{
     AuthNManager, AuthZManager, JwtToken, MfaChallenge, PasswordHash, RbacPolicy, SecretManager,
     SessionManager, TokenLifecycle,
+};
+pub use key_management::{
+    KmsManager, HsmManager, MpcManager, KmsInterface, HsmInterface, MpcInterface,
+    KeySpec, KeyMetadata, KeyState, HsmConfig, HsmStatus, HsmOperation, 
+    MpcParticipant, ParticipantStatus, DistributedKey,
 };
 pub use data_security::{
     DataClassification, ClassifiedDataAsset, DataInventory, DataClassificationManager,
@@ -33,7 +46,7 @@ pub use network_infra::{
     EdgeFirewallConfig, EdgeFirewallTelemetry, NetworkSegmentationConfig, 
     NetworkSegmentationTelemetry, OsiHardeningConfig, OsiHardeningTelemetry,
     HostHardeningConfig, HostHardeningTelemetry, RuntimeSecretConfig, 
-    RuntimeSecretTelemetry, NetworkInfraManager, SshLockdownConfig
+    RuntimeSecretTelemetry, NetworkInfraManager, SshLockdownConfig,
 };
 
 /// Common error types used across security layers

@@ -7,7 +7,7 @@
 //! - Stop malicious libs
 //! - Unapproved dependency install attempts
 
-use core::supply_chain::{Component, Sbom, SupplyChainManager, Vulnerability};
+use core::supply_chain::{Component, Sbom, SupplyChainManager};
 
 fn main() {
     println!("Running Dependency Trust Validation");
@@ -18,8 +18,8 @@ fn main() {
     // Test 1: Valid dependency trust validation
     println!("\n1. Testing valid dependency trust validation");
     let sbom = manager.generate_sbom("test-app", "1.0.0").unwrap();
-    let is_trusted = manager.validate_dependency_trust(&sbom).unwrap();
-    assert!(is_trusted, "Valid SBOM should pass trust validation");
+    let validation_result = manager.validate_dependency_trust(&sbom);
+    assert!(validation_result.is_ok(), "Valid SBOM should pass trust validation");
     println!("✓ Valid dependency trust validation passed");
     
     // Check statistics

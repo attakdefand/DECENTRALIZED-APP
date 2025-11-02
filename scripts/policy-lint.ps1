@@ -8,6 +8,10 @@ $REQUIRED_DOCS = @(
   "docs/security/POLICY-CATALOG.md"
   "docs/security/EXCEPTIONS.md"
   "docs/security/sign-off-template.md"
+  # Added new required documents
+  "docs/security/COMPLIANCE-LEGAL.md"
+  "docs/security/AUDIT-EVIDENCE.md"
+  "docs/security/METRICS-SLO.md"
 )
 
 foreach ($doc in $REQUIRED_DOCS) {

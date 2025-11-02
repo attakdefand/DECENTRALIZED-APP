@@ -1,0 +1,9 @@
+name: "Custom CodeQL Config"
+
+# Include our custom query packs for different languages
+queries:
+  - uses: security-extended
+  - uses: security-and-quality
+  - uses: ./codeql-custom-queries-rust
+  - uses: ./codeql-custom-queries-js
+  - uses: ./codeql-custom-queries-python

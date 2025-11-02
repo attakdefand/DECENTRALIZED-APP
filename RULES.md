@@ -1,687 +1,3 @@
-# DECENTRALIZED-APP Project Rules and Components
-
-This document outlines the complete features, main types, subtypes, and all components of the DECENTRALIZED-APP project.
-
-## Table of Contents
-1. [Main Types](#main-types)
-2. [Subtypes](#subtypes)
-3. [Core Components](#core-components)
-4. [Service Components](#service-components)
-5. [Smart Contract Components](#smart-contract-components)
-6. [Governance Features](#governance-features)
-7. [Operations Features](#operations-features)
-8. [Resilience Features](#resilience-features)
-9. [Security Layers](#security-layers)
-10. [Web3 Protection Layers](#web3-protection-layers)
-11. [Extended Security Layers](#extended-security-layers)
-12. [Testing Groups Matrix](#testing-groups-matrix)
-13. [Testing Framework](#testing-framework)
-
-## Main Types
-
-### 1. Core Protocol Components
-The foundational elements that define the basic functionality of the decentralized application.
-
-### 2. Service Components
-Independent services that provide specific functionalities and can be deployed separately.
-
-### 3. Smart Contract Components
-Blockchain-based logic implemented as smart contracts for decentralized execution.
-
-### 4. Security Layer Components
-Specialized modules focused on different aspects of security and protection.
-
-### 5. Testing Components
-Comprehensive testing framework covering various aspects of the system.
-
-## Subtypes
-
-### Core Protocol Subtypes
-- Account Abstraction (aa)
-- Automated Market Maker (amm)
-- Bridge Services (bridge)
-- Command Line Interface (cli)
-- Core Functionality (core)
-- Governance Systems (governance)
-- Indexer Services (indexer)
-- Keeper Services (keeper)
-- Legal Compliance (legal)
-- Lending Protocols (lending)
-- Oracle Services (oracle)
-- Order Book Management (orderbook)
-- Testing Framework (testing)
-
-### Service Subtypes
-- Account Abstraction Bundler (aa-bundler)
-- API Service (api-rs)
-- Indexer Service (indexer-rs)
-- IPFS Service (ipfs-rs)
-- Keeper Service (keepers-rs)
-- MEV Monitor (mev-monitor)
-
-### Smart Contract Subtypes
-- Core Protocol Contracts (core)
-- AMM Contracts (amm)
-- Lending Contracts (lending)
-- Governance Contracts (governance)
-
-### Security Layer Subtypes
-- Process Security (Group F)
-- Infrastructure + Application Security (Group B)
-- On-chain Security (Group A)
-- Off-chain Application Security (Group C)
-- Infrastructure Security (Group D)
-- Observability Security (Group E)
-- Orderbook Security (Specialized A)
-- Lending/Perps Security (Specialized A)
-- MEV & Fairness Security (Specialized A)
-
-## Core Components
-
-### 1. Core Crate
-The fundamental building block for all other components:
-- Provides shared utilities and common functionality
-- Contains core data structures and traits
-- Implements basic cryptographic functions
-- Offers error handling and logging infrastructure
-- Includes simulation binaries for various scenarios
-- Provides safe database connectivity with connection pooling
-- Implements database performance optimization techniques
-- Offers debugging utilities and instrumentation
-- Provides comprehensive testing frameworks and standards
-- Implements database connection resilience and failover mechanisms
-- Offers advanced debugging and profiling capabilities
-
-### 2. Account Abstraction (aa)
-- Implementation of smart contract wallet functionality
-- Supports ERC-4337 account abstraction standards
-- Provides bundler services for transaction aggregation
-- Handles user operation validation and execution
-- Error handling for wallet operation failures
-- Standardized error responses for user operations
-- Safe database connectivity with connection pooling
-- Database performance optimization and query tuning
-- Debugging utilities and request tracing
-- Database connection resilience and failover handling
-- Advanced performance monitoring and profiling
-- Comprehensive test coverage for wallet operations
-
-### 3. Automated Market Maker (amm)
-- Core DEX functionality implementation
-- Constant Product Market Maker (CPMM) algorithm
-- Liquidity pool management
-- Swap and pricing mechanisms
-- Error handling for trading operation failures
-- Standardized error responses for market operations
-- Safe database connectivity with connection pooling
-- Database performance optimization and query tuning
-- Debugging utilities and request tracing
-- Database connection resilience and failover handling
-- Advanced performance monitoring and profiling
-- Comprehensive test coverage for trading operations
-
-### 4. Bridge Services (bridge)
-- Cross-chain asset transfer functionality
-- Bridge contract interaction
-- Security validation for cross-chain operations
-- Event monitoring and relaying
-- Error handling for cross-chain transfer failures
-- Standardized error responses for bridge operations
-- Safe database connectivity with connection pooling
-- Database performance optimization and query tuning
-- Debugging utilities and request tracing
-- Database connection resilience and failover handling
-- Advanced performance monitoring and profiling
-- Comprehensive test coverage for cross-chain operations
-
-### 5. Command Line Interface (cli)
-- User-friendly command line tools
-- Service management commands
-- Configuration utilities
-- Diagnostic and troubleshooting tools
-- Error handling for command execution failures
-- Standardized error messages for troubleshooting
-
-### 6. Governance Systems (governance)
-- Decentralized governance mechanisms
-- Proposal creation and voting systems
-- Parameter adjustment functionality
-- Timelock and execution controls
-
-### 7. Indexer Services (indexer)
-- Blockchain event indexing
-- Data transformation and storage
-- Query optimization for frontend services
-- Real-time data synchronization
-- Error handling for indexing failures
-- Standardized error responses for data query operations
-- Safe database connectivity with connection pooling
-- Database performance optimization and query tuning
-- Debugging utilities and request tracing
-- Database connection resilience and failover handling
-- Advanced performance monitoring and profiling
-- Comprehensive test coverage for indexing operations
-
-### 8. Keeper Services (keeper)
-- Automated task execution
-- Liquidation monitoring and processing
-- Arbitrage opportunity detection
-- System maintenance operations
-- Error handling for task execution failures
-- Standardized error responses for maintenance operations
-- Safe database connectivity with connection pooling
-- Database performance optimization and query tuning
-- Debugging utilities and request tracing
-- Database connection resilience and failover handling
-- Advanced performance monitoring and profiling
-- Comprehensive test coverage for keeper operations
-
-### 9. Legal Compliance (legal)
-- Regulatory compliance checking
-- KYC/AML integration points
-- Jurisdiction-based restrictions
-- Reporting and audit trail generation
-- Error handling for compliance check failures
-- Standardized error responses for regulatory operations
-
-### 10. Lending Protocols (lending)
-- Collateralized lending functionality
-- Interest rate calculation models
-- Risk management systems
-- Liquidation mechanisms
-- Error handling for lending operation failures
-- Standardized error responses for risk assessment operations
-
-### 11. Oracle Services (oracle)
-- Price feed aggregation
-- External data integration
-- Data validation and verification
-- Failover and redundancy mechanisms
-- Error handling for data feed failures
-- Standardized error responses for oracle operations
-- Safe database connectivity with connection pooling
-- Database performance optimization and query tuning
-- Debugging utilities and request tracing
-- Database connection resilience and failover handling
-- Advanced performance monitoring and profiling
-- Comprehensive test coverage for oracle operations
-
-### 12. Order Book Management (orderbook)
-- Centralized limit order book functionality
-- Order matching algorithms
-- Trade execution systems
-- Market data broadcasting
-- Error handling for order matching failures
-- Standardized error responses for trading operations
-- Safe database connectivity with connection pooling
-- Database performance optimization and query tuning
-- Debugging utilities and request tracing
-- Database connection resilience and failover handling
-- Advanced performance monitoring and profiling
-- Comprehensive test coverage for order matching operations
-
-## Service Components
-
-### 1. API Service (api-rs)
-- RESTful API endpoints for frontend integration
-- Authentication and authorization systems
-- Request validation and sanitization
-- Rate limiting and abuse prevention
-- Error handling and standardized error responses
-- Structured error reporting with detailed diagnostics
-- Safe database connectivity with connection pooling
-- Database performance optimization and query tuning
-- Debugging utilities and request tracing
-- Database connection resilience and failover handling
-- Advanced performance monitoring and profiling
-- Comprehensive test coverage for all API endpoints
-- Swagger/OpenAPI documentation
-- Metrics collection and monitoring
-
-### 2. Indexer Service (indexer-rs)
-- High-performance blockchain indexing
-- Database storage optimization
-- GraphQL and REST query interfaces
-- Real-time subscription capabilities
-- Error handling for blockchain event processing failures
-- Standardized error responses for query errors
-- Safe database connectivity with connection pooling
-- Database performance optimization and query tuning
-- Debugging utilities and request tracing
-- Database connection resilience and failover handling
-- Advanced performance monitoring and profiling
-- Comprehensive test coverage for indexing operations
-
-### 3. Account Abstraction Bundler (aa-bundler)
-- User operation mempool management
-- Transaction bundling and submission
-- Gas estimation and optimization
-- Reputation scoring for entities
-- Error handling for transaction bundling failures
-- Standardized error responses for user operation rejections
-- Safe database connectivity with connection pooling
-- Database performance optimization and query tuning
-- Debugging utilities and request tracing
-- Database connection resilience and failover handling
-- Advanced performance monitoring and profiling
-- Comprehensive test coverage for bundling operations
-
-### 4. IPFS Service (ipfs-rs)
-- Distributed storage integration
-- Content addressing and retrieval
-- Pinning and replication strategies
-- Gateway and API interfaces
-- Error handling for content retrieval failures
-- Standardized error responses for storage operations
-- Safe database connectivity with connection pooling
-- Database performance optimization and query tuning
-- Debugging utilities and request tracing
-- Database connection resilience and failover handling
-- Advanced performance monitoring and profiling
-- Comprehensive test coverage for storage operations
-
-### 5. Keeper Service (keepers-rs)
-- Automated bot execution framework
-- Profitability calculation and optimization
-- Transaction submission and monitoring
-- Error handling and retry mechanisms
-- Standardized error responses for failed operations
-- Detailed error logging for debugging and monitoring
-- Safe database connectivity with connection pooling
-- Database performance optimization and query tuning
-- Debugging utilities and request tracing
-- Database connection resilience and failover handling
-- Advanced performance monitoring and profiling
-- Comprehensive test coverage for bot operations
-
-### 6. MEV Monitor (mev-monitor)
-- Miner Extractable Value detection
-- Transaction ordering analysis
-- Profitability assessment
-- Alerting and reporting systems
-- Error handling for detection failures
-- Standardized error responses for monitoring issues
-- Safe database connectivity with connection pooling
-- Database performance optimization and query tuning
-- Debugging utilities and request tracing
-- Database connection resilience and failover handling
-- Advanced performance monitoring and profiling
-- Comprehensive test coverage for MEV detection
-
-## Smart Contract Components
-
-### 1. Core Protocol Contracts
-- Main protocol logic implementation
-- Upgradeable contract patterns
-- Access control and permission management
-- Emergency pause and shutdown mechanisms
-- Error handling for contract execution failures
-- Standardized error codes and messages for contract interactions
-
-### 2. AMM Contracts
-- Liquidity pool implementation
-- Token swap functionality
-- Fee collection and distribution
-- Virtual automated market maker algorithms
-- Error handling for swap failures
-- Standardized error responses for liquidity operations
-
-### 3. Lending Contracts
-- Collateral management systems
-- Interest rate calculation
-- Loan origination and repayment
-- Liquidation processes
-- Error handling for loan processing failures
-- Standardized error responses for risk management operations
-
-### 4. Governance Contracts
-- Proposal creation and voting
-- Timelock execution patterns
-- Parameter update mechanisms
-- Delegate and representative systems
-- Error handling for governance operation failures
-- Standardized error responses for proposal processing
-
-## Governance Features
-
-The governance system in DECENTRALIZED-APP provides a comprehensive framework for decentralized decision-making, risk management, and policy enforcement. It encompasses multiple layers of governance mechanisms to ensure secure and transparent protocol operations.
-
-### 1. Core Governance Mechanisms
-
-#### Token-Based Voting
-- **Voting Power**: Proportional to token holdings
-- **Proposal Threshold**: Minimum tokens required to create proposals
-- **Quorum Requirements**: Minimum votes needed for proposal validity
-- **Voting Periods**: Configurable time windows for voting
-- **Delay Mechanisms**: Time delays between proposal creation and voting
-
-#### Quadratic Voting
-- **Vote Cost Function**: Quadratic cost model (votes²)
-- **Token Efficiency**: Optimizes voting power allocation
-- **Preference Intensity**: Allows expression of vote strength
-- **Anti-Sybil Measures**: Reduces manipulation through cost barriers
-
-#### Conviction Voting
-- **Continuous Voting**: Ongoing stake accumulation over time
-- **Conviction Function**: Exponential moving average for stake weighting
-- **Dynamic Thresholds**: Adaptive proposal acceptance criteria
-- **Long-term Alignment**: Encourages sustained commitment to proposals
-
-### 2. Policy & Compliance Management
-
-#### Policy Catalog System
-- **Policy Repository**: Centralized storage of all security policies
-- **Version Control**: Policy versioning and update tracking
-- **Digital Signatures**: Multi-signature approval workflows
-- **Audit Trail**: Immutable record of policy changes
-
-#### Risk Exception Management
-- **Exception Register**: Centralized tracking of risk acceptances
-- **Expiry Tracking**: Automated expiration monitoring
-- **Ownership Model**: Clear assignment of risk responsibility
-- **Approval Workflow**: Structured exception approval process
-
-#### Compliance Auditing
-- **Issue Tracking**: Systematic audit finding management
-- **SLA Management**: Time-bound resolution requirements
-- **Severity Classification**: Risk-based prioritization
-- **Remediation Planning**: Structured fix implementation
-
-### 3. Governance Security Controls
-
-#### Proposal Security
-- **Access Controls**: Role-based proposal creation permissions
-- **Input Validation**: Sanitization of proposal parameters
-- **Execution Safety**: Timelock and multisig execution patterns
-- **State Verification**: Proposal state consistency checks
-
-#### Vote Integrity
-- **Voter Authentication**: Identity verification mechanisms
-- **Vote Recording**: Immutable vote receipt generation
-- **Double Vote Prevention**: Duplicate voting protection
-- **Vote Privacy**: Optional privacy mechanisms for sensitive votes
-
-#### Governance Resilience
-- **Multi-Signature Controls**: Distributed authority requirements
-- **Emergency Procedures**: Rapid response mechanisms
-- **Governance Fail-Safes**: Protocol continuity during governance issues
-- **Upgrade Mechanisms**: Secure governance system evolution
-
-### 4. Governance Monitoring & Analytics
-
-#### Governance Metrics
-- **Participation Rates**: Voter engagement tracking
-- **Proposal Success Rates**: Approval/rejection statistics
-- **Policy Compliance**: Adherence to governance policies
-- **Exception Management**: Risk acceptance metrics
-
-#### Real-time Monitoring
-- **Proposal Status**: Live tracking of proposal progress
-- **Voting Activity**: Real-time vote aggregation
-- **Governance Health**: System performance indicators
-- **Anomaly Detection**: Abnormal governance pattern identification
-
-### 5. Governance Integration Points
-
-#### Smart Contract Integration
-- **Proposal Execution**: On-chain proposal implementation
-- **Parameter Updates**: Dynamic system configuration
-- **Access Control**: Role-based permission management
-- **Emergency Controls**: Protocol pause and shutdown mechanisms
-
-#### Off-chain Systems
-- **Policy Management**: External policy document integration
-- **Audit Systems**: Third-party audit result incorporation
-- **Reporting Tools**: Governance dashboard and analytics
-- **Communication Channels**: Stakeholder notification systems
-
-## Operations Features
-
-The operations features of DECENTRALIZED-APP provide comprehensive operational capabilities to ensure system reliability, observability, and efficient incident response. These features are organized into 11 key operational domains.
-
-### 1. Monitoring & Observability
-
-#### Metrics/Logs/Traces
-- **Main Components**: Prometheus, Grafana, Loki, OTel/Tempo, Dashboards
-- **Features**: Golden signals, service maps, security KPIs, cost KPIs
-- **Metrics**: p95/p99 latency, error rate, saturation, rpc cost/req
-- **Evidence**: Dash JSON, alert rules, SLO doc, screenshot of dashboards
-- **Owner**: SRE
-- **SLA**: P2: ack 30m, restore 4h
-- **CI Step**: ci/observe/validate-dashboards
-- **Promotion Gate**: block if SLOs missing OR dashboards not versioned
-
-#### On-chain Watchers
-- **Main Components**: Withdrawal spike watcher, oracle divergence, nonce failure, reorg detector
-- **Features**: Automated anomaly detection and alerting
-- **Metrics**: reorg_count, oracle_spread_pct, failed_nonce_rate
-- **Evidence**: Alert rules YAML, runbook links, last test timestamp
-- **Owner**: SecOps
-- **SLA**: P1: ack 10m, mitigate 1h
-- **CI Step**: ci/security/validate-onchain-watchers
-- **Promotion Gate**: block if watcher_tests < 100% OR no runbook
-
-### 2. Incident Response
-
-#### Runbooks & Playbooks
-- **Main Components**: Triage matrix, comms templates, roles & paging
-- **Features**: Standardized triage and communications
-- **Metrics**: mttr_hours, time_to_page, playbook_coverage
-- **Evidence**: IR-PLAYBOOKS.md, comms templates, pager schedule
-- **Owner**: SecOps
-- **SLA**: P1: ack 10m, mitigate 1h
-- **CI Step**: ci/security/check-runbooks
-- **Promotion Gate**: block if playbooks missing OR owners unset
-
-#### Alert Routing & Escalation
-- **Main Components**: Severity matrix, routing rules, auto tickets
-- **Features**: Right person paged fast with minimal noise
-- **Metrics**: alert_to_page_latency, false_positive_rate
-- **Evidence**: Alertmanager config, ticketing webhook tests
-- **Owner**: SRE
-- **SLA**: P2: ack 30m, restore 4h
-- **CI Step**: ci/observe/validate-alert-routing
-- **Promotion Gate**: warn if FP rate > 10%, block if no on-call
-
-### 3. Change Management
-
-#### Release Management
-- **Main Components**: SBOM, cosign signatures, feature flags, canary/shadow
-- **Features**: Safe rollouts with traceable artifacts
-- **Metrics**: sbomb_present, signature_verified, canary_pass_rate
-- **Evidence**: SBOM files, sig-verify logs, canary report
-- **Owner**: Platform
-- **SLA**: Change window: 2h
-- **CI Step**: ci/release/verify-signatures
-- **Promotion Gate**: block if signature_verify!=pass OR canary_pass_rate<95%
-
-#### Maintenance Windows
-- **Main Components**: Planned upgrades, user notices, pre/post checks
-- **Features**: Predictable changes and verifications
-- **Metrics**: post_deploy_checks_pass, notice_lead_time
-- **Evidence**: Change ticket, pre/post checklist, status-page note
-- **Owner**: Platform
-- **SLA**: Scheduled
-- **CI Step**: ci/release/check-change-notices
-- **Promotion Gate**: warn if notice<24h; block if post-checks fail
-
-### 4. Runtime Policy / Guardian
-
-#### Limits & Brakes
-- **Main Components**: Per-asset withdraw caps, rate limits, circuit breakers, kill-switch
-- **Features**: Automatic risk reduction at runtime
-- **Metrics**: cap_breaches, rate_limit_hits, breaker_trips
-- **Evidence**: Policy YAML, simulation outputs, game-day logs
-- **Owner**: Risk
-- **SLA**: P1: ack 10m, mitigate 1h
-- **CI Step**: ci/security/policy-lint
-- **Promotion Gate**: block if policy-lint!=pass OR sims missing
-
-### 5. Key & Custody Operations
-
-#### TSS/Multisig Workflows
-- **Main Components**: Quorums, time-locks, rotation, break-glass
-- **Features**: Secure signing operations
-- **Metrics**: rotation_age_days, quorum_health, test_sign_rate
-- **Evidence**: Rotation log, quorum test results, approvals
-- **Owner**: Custody
-- **SLA**: P0: ack 5m, resolve 1h
-- **CI Step**: ci/security/check-key-ops
-- **Promotion Gate**: block if rotation_age>90d OR quorum tests fail
-
-### 6. Node & RPC Operations
-
-#### Client Diversity & Health
-- **Main Components**: Multi-client mix, version pinning, failover, local+managed RPC
-- **Features**: Reduce correlated failures; ensure liveness
-- **Metrics**: client_diversity_index, rpc_failover_success
-- **Evidence**: Client matrix, health checks, failover drill logs
-- **Owner**: SRE
-- **SLA**: P1: ack 10m, mitigate 1h
-- **CI Step**: ci/infra/check-node-diversity
-- **Promotion Gate**: block if diversity_index<0.6 OR failover drill missing
-
-### 7. Evidence & Compliance Operations
-
-#### Evidence Pipeline
-- **Main Components**: Artifacts store: tests, logs, policy snapshots
-- **Features**: Provable control execution
-- **Metrics**: artifact_completeness_pct, retention_ok
-- **Evidence**: Evidence manifest, immutability proof, hashes
-- **Owner**: Compliance
-- **SLA**: P3: ack 1d, resolve 7d
-- **CI Step**: ci/compliance/verify-evidence
-- **Promotion Gate**: block if evidence<95% completeness
-
-### 8. Performance Operations
-
-#### Capacity & Cost Management
-- **Main Components**: Budgets and dashboards
-- **Features**: Stay in SLO and budget
-- **Metrics**: throughput, cpu_mem_headroom, gas_cost_per_tx
-- **Evidence**: Capacity plan doc, load test report
-- **Owner**: SRE
-- **SLA**: P2: ack 30m, restore 4h
-- **CI Step**: ci/perf/check-capacity
-- **Promotion Gate**: warn if headroom<20%
-
-### 9. Support & Communications
-
-#### Status & User Notices
-- **Main Components**: Public status page, RCA posts
-- **Features**: Transparent comms during incidents
-- **Metrics**: time_to_status_update, rca_within_7d
-- **Evidence**: Status page screenshot, RCA doc links
-- **Owner**: Comms
-- **SLA**: P3: ack 4h, resolve 7d
-- **CI Step**: ci/comms/check-status
-- **Promotion Gate**: warn if rca_within_7d=false
-
-## Resilience Features
-
-The resilience features of DECENTRALIZED-APP provide comprehensive mechanisms to ensure system availability, fault tolerance, and graceful degradation during adverse conditions. These features are organized into four key resilience domains.
-
-### 1. High Availability & Failover
-
-#### Service Instance Management
-- **Components**: Service instances with endpoint, zone, and health status tracking
-- **Features**: Multi-AZ deployment, load balancer health checks, replica management
-- **Configuration**: Multi-AZ enabled, health check interval, replicas per service, failover timeout
-- **Metrics**: Uptime percentage, failover event count
-- **Evidence**: Service health logs, failover event tracking
-- **Owner**: SRE
-- **SLA**: P1: ack 10m, mitigate 1h
-
-#### Failover Mechanisms
-- **Components**: Service instance prioritization, health-based routing
-- **Features**: Automatic failover based on service health, priority-based selection
-- **Metrics**: Failover success rate, recovery time
-- **Evidence**: Failover drill logs, recovery time measurements
-- **Owner**: SRE
-- **SLA**: P1: ack 10m, restore 1h
-
-### 2. Traffic Protection
-
-#### Circuit Breakers
-- **Components**: Circuit breaker with state management (Closed, Open, HalfOpen)
-- **Features**: Failure threshold detection, timeout-based recovery, state transition tracking
-- **Configuration**: Failure threshold, timeout duration
-- **Metrics**: Circuit breaker state transitions, failure count
-- **Evidence**: Circuit breaker event logs, state transition telemetry
-- **Owner**: Platform
-- **SLA**: P1: ack 10m, mitigate 1h
-
-#### Bulkheads
-- **Components**: Concurrency limiting with slot management
-- **Features**: Resource isolation, saturation prevention
-- **Configuration**: Maximum concurrent requests
-- **Metrics**: Bulkhead saturation events, concurrent request count
-- **Evidence**: Bulkhead saturation logs, resource utilization reports
-- **Owner**: Platform
-- **SLA**: P2: ack 30m, restore 4h
-
-#### Rate Shaping
-- **Components**: Request rate limiting with burst control
-- **Features**: Maximum RPS enforcement, burst allowance, load shedding
-- **Configuration**: Max RPS, burst size, shed percentage
-- **Metrics**: Current RPS, shed rate
-- **Evidence**: Rate shaping event logs, load shedding telemetry
-- **Owner**: Platform
-- **SLA**: P2: ack 30m, restore 4h
-
-### 3. Graceful Degradation
-
-#### Feature Flags
-- **Components**: Dynamic feature enablement/disablement
-- **Features**: Runtime feature control, usage tracking
-- **Metrics**: Feature flag usage, toggle frequency
-- **Evidence**: Feature flag configuration, usage statistics
-- **Owner**: Product
-- **SLA**: P3: ack 4h, resolve 7d
-
-#### Read-only Mode
-- **Components**: System-wide read-only state management
-- **Features**: Database write prevention, cache fallback
-- **Metrics**: Time spent in read-only mode, activation frequency
-- **Evidence**: Read-only mode activation logs, duration tracking
-- **Owner**: SRE
-- **SLA**: P2: ack 30m, restore 4h
-
-#### Cache Fallback
-- **Components**: TTL-based cache with expiration management
-- **Features**: Data caching with expiration, fallback during outages
-- **Metrics**: Cache hit rate, fallback usage
-- **Evidence**: Cache performance logs, fallback event tracking
-- **Owner**: SRE
-- **SLA**: P2: ack 30m, restore 4h
-
-#### Withdraw Disabled Mode
-- **Components**: Transaction restriction controls
-- **Features**: Withdrawal operation blocking
-- **Metrics**: Time spent in withdraw disabled mode
-- **Evidence**: Mode activation logs, duration tracking
-- **Owner**: Risk
-- **SLA**: P1: ack 10m, mitigate 1h
-
-### 4. Disaster Recovery
-
-#### DR Playbook
-- **Components**: Recovery procedures and runbooks
-- **Features**: Recovery point objective (RPO), recovery time objective (RTO)
-- **Configuration**: RPO seconds, RTO seconds, backup retention days
-- **Metrics**: Recovery success rate, time to recovery
-- **Evidence**: DR test results, recovery time logs
-- **Owner**: SRE
-- **SLA**: P0: ack 5m, resolve 1h
-
-#### Chaos Testing
-- **Components**: Failure injection and system resilience validation
-- **Features**: Automated chaos experiments, failure scenario simulation
-- **Metrics**: System resilience score, failure detection time
-- **Evidence**: Chaos test reports, resilience measurements
-- **Owner**: SRE
-- **SLA**: Scheduled
-
 ## Security Layers
 
 The security architecture of DECENTRALIZED-APP follows a comprehensive 25-layer approach organized into 6 groups (A-F), each with specific responsibilities, artifacts, and validation mechanisms.
@@ -1448,6 +764,10 @@ The extended security architecture provides a comprehensive framework organized 
 - **Subtypes**: Connector allowlists, retry/backoff, oracle deviation checks
 - **Controls / Example Artifacts**: Integration controls, SLA monitoring, oracle validation
 - **Priority**: Medium-High
+- **Enhanced Security Features**:
+  - **Explicit connector allowlists** for trusted data sources: Implemented via [OracleConnector](file:///d%3A/DECENTRALIZED-APP/crates/oracle/src/lib.rs#L79-L86) struct with allowlist configuration and [PriceAggregator](file:///d%3A/DECENTRALIZED-APP/crates/oracle/src/lib.rs#L132-L141) with connector allowlist functionality in the oracle crate, and via `connectorAllowlist` mapping in the Solidity [Oracle.sol](file:///d%3A/DECENTRALIZED-APP/contracts/src/core/Oracle.sol#L24-L24) contract
+  - **Retry/backoff mechanisms** for resilient data fetching: Implemented via [RetryConfig](file:///d%3A/DECENTRALIZED-APP/crates/oracle/src/lib.rs#L89-L95) and [OracleConnector](file:///d%3A/DECENTRALIZED-APP/crates/oracle/src/lib.rs#L97-L117) in the oracle crate with exponential backoff algorithms, and via [RetryConfig](file:///d%3A/DECENTRALIZED-APP/crates/security_layers/src/application_security.rs#L841-L850) in the application security module
+  - **Enhanced deviation checking algorithms** for data validation: Implemented via [DeviationConfig](file:///d%3A/DECENTRALIZED-APP/crates/oracle/src/lib.rs#L144-L150) and enhanced outlier detection in [PriceAggregator](file:///d%3A/DECENTRALIZED-APP/crates/oracle/src/lib.rs#L132-L141) with statistical analysis methods, and via enhanced deviation checking functions in the Solidity [Oracle.sol](file:///d%3A/DECENTRALIZED-APP/contracts/src/core/Oracle.sol#L24-L24) contract
 
 #### Layer: Client & UX Protections
 - **Purpose**: Protect end-users from fraud and UX pitfalls
@@ -1455,6 +775,10 @@ The extended security architecture provides a comprehensive framework organized 
 - **Subtypes**: Tx confirmation UX, MFA enrollment, fraud alerts
 - **Controls / Example Artifacts**: User protection features, MFA systems, fraud detection
 - **Priority**: High
+- **Enhanced Security Features**:
+  - **Transaction confirmation flows** with multi-factor verification: Implemented via [TransactionConfirmation](file:///d%3A/DECENTRALIZED-APP/crates/security_layers/src/client_protection.rs#L14-L23) struct with multi-step verification process and [SecurityCheck](file:///d%3A/DECENTRALIZED-APP/crates/security_layers/src/client_protection.rs#L37-L46) mechanisms in the client protection module
+  - **Phishing resistance** with domain verification and visual security cues: Implemented via [PhishingResistance](file:///d%3A/DECENTRALIZED-APP/crates/security_layers/src/client_protection.rs#L103-L116) struct with domain verification algorithms and [VisualSecurityCues](file:///d%3A/DECENTRALIZED-APP/crates/security_layers/src/client_protection.rs#L119-L128) configuration for UI security indicators
+  - **Fraud alert systems** with real-time detection and notifications: Implemented via [FraudAlertSystem](file:///d%3A/DECENTRALIZED-APP/crates/security_layers/src/client_protection.rs#L203-L210) with real-time detection algorithms for suspicious transactions, rapid transactions, and failed login attempts, with multi-channel notification support
 
 ### Category 7: Automation & Continuous Defense
 
@@ -1464,6 +788,7 @@ The extended security architecture provides a comprehensive framework organized 
 - **Subtypes**: Automated remediations, policy enforcement pipelines
 - **Controls / Example Artifacts**: Automated workflows, policy enforcement systems
 - **Priority**: Medium
+- **Implementation Status**: Fully implemented with [AutomatedRemediationManager](file:///d%3A/DECENTRALIZED-APP/crates/core/src/automated_remediation.rs#L282-L302) and [PolicyEnforcementManager](file:///d%3A/DECENTRALIZED-APP/crates/core/src/policy_enforcement.rs#L287-L309) in the core crate, with comprehensive testing in [automation_defense_tests.rs](file:///d%3A/DECENTRALIZED-APP/crates/core/tests/automation_defense_tests.rs)
 
 ### Category 8: Error Handling & Response
 
@@ -1529,7 +854,10 @@ The testing framework for DECENTRALIZED-APP is organized into 6 distinct testing
    - Staleness Detection
    - Outlier Rejection
    - Quorum Validation
-
+   - **Enhanced Security Testing**:
+     - Connector allowlist validation: Testing implemented via [PriceAggregator::is_connector_allowed](file:///d%3A/DECENTRALIZED-APP/crates/oracle/src/lib.rs#L172-L174) function in the oracle crate and `connectorAllowlist` mapping validation in the Solidity [Oracle.sol](file:///d%3A/DECENTRALIZED-APP/contracts/src/core/Oracle.sol#L24-L24) contract
+     - Retry/backoff mechanism testing: Testing implemented via [OracleConnector::execute_with_retry](file:///d%3A/DECENTRALIZED-APP/crates/oracle/src/lib.rs#L107-L130) function in the oracle crate and [execute_with_retry](file:///d%3A/DECENTRALIZED-APP/crates/security_layers/src/application_security.rs#L900-L927) function in the application security module
+     - Deviation checking algorithm validation: Testing implemented via [PriceAggregator::detect_outliers_enhanced](file:///d%3A/DECENTRALIZED-APP/crates/oracle/src/lib.rs#L248-L283) function in the oracle crate and [_isWithinEnhancedDeviationBounds](file:///d%3A/DECENTRALIZED-APP/contracts/src/core/Oracle.sol#L261-L326) function in the Solidity [Oracle.sol](file:///d%3A/DECENTRALIZED-APP/contracts/src/core/Oracle.sol#L24-L24) contract
 7. **MEV & Fairness Testing**
    - MEV Detection
    - Sandwich Attack Prevention
@@ -1694,6 +1022,59 @@ The testing framework for DECENTRALIZED-APP is organized into 6 distinct testing
    - Database failover and recovery testing
    - Database connection resilience testing
 
+7. **Automation & Defense**
+   - Automated remediation workflow validation
+   - Policy enforcement pipeline testing
+   - Integration between automation systems
+   - Remediation action effectiveness testing
+   - Policy decision accuracy validation
+
+**Tools & Technologies**:
+- SIEM validation tools
+- Log analysis frameworks
+- Incident response simulators
+
+**Domains**:
+1. **Telemetry**
+   - Logging completeness
+   - Metric collection
+   - Tracing coverage
+
+2. **Security Detection**
+   - SIEM rule validation
+   - Anomaly detection
+   - Intrusion detection
+
+3. **Forensics & Evidence**
+   - Audit log integrity
+   - Immutable logging
+   - Evidence collection
+
+4. **Incident Response**
+   - Runbook validation
+   - Pager integration
+   - Response procedures
+
+5. **Error Handling**
+   - Standardized error response validation
+   - Error logging completeness
+   - Error classification accuracy
+   - Client error handling guidance verification
+   - Error handling test coverage validation
+   - Error scenario simulation and validation
+   - Graceful degradation testing under error conditions
+
+6. **Database Connectivity & Performance**
+   - Safe database connection validation
+   - Connection pooling efficiency testing
+   - Query performance benchmarking
+   - Database security testing (injection prevention, access controls)
+   - Debugging utility validation
+   - Database monitoring and observability testing
+   - Database performance stress testing
+   - Database failover and recovery testing
+   - Database connection resilience testing
+
 **Tools & Technologies**:
 - SIEM validation tools
 - Log analysis frameworks
@@ -1733,6 +1114,7 @@ All testing groups are integrated into the CI/CD pipeline with specific gate req
    - Gas consumption must stay within defined thresholds
    - Database connectivity and security tests must pass
    - Error handling validation must pass
+   - Automated remediation and policy enforcement tests must pass
 
 2. **Daily Execution**:
    - Full test suite execution
@@ -1741,6 +1123,8 @@ All testing groups are integrated into the CI/CD pipeline with specific gate req
    - Database connectivity and performance tests
    - Debugging utility validation
    - Error handling scenario testing
+   - Automated remediation workflow validation
+   - Policy enforcement pipeline testing
 
 3. **Weekly Execution**:
    - Property and invariant testing
@@ -1764,6 +1148,7 @@ All testing groups are integrated into the CI/CD pipeline with specific gate req
    - Specify acceptance criteria
    - Define database connectivity and performance requirements
    - Specify error handling and debugging validation criteria
+   - Define automation and policy enforcement requirements
 
 2. **Test Design**
    - Create test plan
@@ -1771,6 +1156,7 @@ All testing groups are integrated into the CI/CD pipeline with specific gate req
    - Implement test contracts
    - Design database connectivity and performance tests
    - Create error handling and debugging validation tests
+   - Design automated remediation and policy enforcement tests
 
 3. **Test Implementation**
    - Write test code
@@ -1778,6 +1164,7 @@ All testing groups are integrated into the CI/CD pipeline with specific gate req
    - Review with team
    - Implement database connectivity and performance tests
    - Develop error handling and debugging validation tests
+   - Implement automated remediation and policy enforcement tests
 
 4. **Test Execution**
    - Run tests locally
@@ -1785,6 +1172,7 @@ All testing groups are integrated into the CI/CD pipeline with specific gate req
    - Analyze results
    - Validate database connectivity and performance
    - Verify error handling and debugging effectiveness
+   - Execute automated remediation and policy enforcement tests
 
 5. **Test Maintenance**
    - Update for protocol changes
@@ -1792,6 +1180,7 @@ All testing groups are integrated into the CI/CD pipeline with specific gate req
    - Refactor as needed
    - Update database connectivity and performance tests
    - Maintain error handling and debugging validation tests
+   - Update automated remediation and policy enforcement tests
 
 ## Testing Framework
 
@@ -1892,5 +1281,13 @@ All testing groups are integrated into the CI/CD pipeline with specific gate req
 - Debugging utility effectiveness measurement
 - Test automation and CI/CD integration standards
 - Test documentation and evidence collection requirements
+
+### 13. Automation & Defense Testing
+- Automated remediation workflow validation
+- Policy enforcement pipeline testing
+- Integration testing between automation systems
+- Remediation action effectiveness validation
+- Policy decision accuracy testing
+- Continuous defense mechanism validation
 
 This comprehensive structure defines the complete ecosystem of the DECENTRALIZED-APP project, with clearly delineated components, their relationships, and their responsibilities.

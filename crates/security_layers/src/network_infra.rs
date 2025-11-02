@@ -38,70 +38,68 @@ pub struct EdgeFirewallTelemetry {
     pub edge_drop_rate: u64,
     /// Volume of DDoS traffic absorbed
     pub ddos_absorbed_volume: u64,
-    /// Number of blocked requests by geo
+    /// Number of geo-blocked requests
     pub geo_blocked_requests: u64,
-    /// Number of blocked requests by IP
+    /// Number of IP-blocked requests
     pub ip_blocked_requests: u64,
-    /// Number of rate limited requests
+    /// Number of rate-limited requests
     pub rate_limited_requests: u64,
 }
 
-/// Configuration for network segmentation
+/// Configuration for Network Segmentation
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct NetworkSegmentationConfig {
     /// Enable zero trust network architecture
     pub zero_trust_enabled: bool,
-    /// Service-to-service allowlist rules
+    /// Service communication allowlist (service -> allowed services)
     pub service_allowlist: HashMap<String, Vec<String>>,
-    /// Namespace isolation rules
+    /// Enable namespace isolation
     pub namespace_isolation: bool,
-    /// VPC peering restrictions
+    /// Enable VPC peering restrictions
     pub vpc_peering_restrictions: bool,
 }
 
-/// Telemetry data for network segmentation
+/// Telemetry data for Network Segmentation
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct NetworkSegmentationTelemetry {
-    /// Number of denied east-west traffic attempts
+    /// Number of denied east-west communication attempts
     pub denied_east_west_attempts: u64,
-    /// Number of successful service-to-service communications
+    /// Number of successful service communications
     pub successful_service_communications: u64,
-    /// Number of segmentation policy violations
+    /// Number of policy violations
     pub policy_violations: u64,
 }
 
-/// Configuration for OSI hardening
+/// Configuration for OSI Hardening
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct OsiHardeningConfig {
-    /// List of allowed ports
-    pub allowed_ports: Vec<u16>,
-    /// List of blocked ports
-    pub blocked_ports: Vec<u16>,
-    /// Enable TLS 1.2+ only
+    /// Minimum TLS version required
     pub tls_min_version: String,
     /// Disable legacy TLS ciphers
     pub disable_legacy_ciphers: bool,
+    /// Open port allowlist
+    pub port_allowlist: Vec<u16>,
     /// DNS security rules
     pub dns_security_rules: Vec<String>,
 }
 
-/// Telemetry data for OSI hardening
+/// Telemetry data for OSI Hardening
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct OsiHardeningTelemetry {
-    /// Open ports compared to baseline
-    pub open_port_diff: HashMap<u16, bool>, // true = open, false = closed
-    /// Number of blocked connection attempts
-    pub blocked_connection_attempts: u64,
-    /// Number of DNS security violations
+    /// Open port differences from baseline
+    pub open_port_diff: Vec<u16>,
+    /// Number of protocol violations
+    pub protocol_violations: u64,
+    /// DNS security violations
     pub dns_violations: u64,
 }
 
-/// Configuration for host hardening
+/// Configuration for Host Hardening
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct HostHardeningConfig {
     /// Enable read-only root filesystem
     pub readonly_root_fs: bool,
-    /// Minimal base image usage
+    /// Use minimal base images
     pub minimal_base_image: bool,
     /// Kernel hardening parameters
     pub kernel_hardening: HashMap<String, String>,
@@ -118,35 +116,35 @@ pub struct SshLockdownConfig {
     pub key_based_auth_only: bool,
     /// Allowed SSH users
     pub allowed_users: Vec<String>,
-    /// SSH port (default 22)
+    /// SSH port
     pub ssh_port: u16,
 }
 
-/// Telemetry data for host hardening
+/// Telemetry data for Host Hardening
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct HostHardeningTelemetry {
     /// Drift reports from baseline
     pub drift_reports: Vec<String>,
     /// CIS benchmark scores
     pub cis_scores: HashMap<String, f64>,
-    /// Number of security violations
+    /// Security violations
     pub security_violations: u64,
 }
 
-/// Configuration for runtime secret mounting
+/// Configuration for Runtime Secrets
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RuntimeSecretConfig {
     /// Enable tmpfs for secrets
     pub tmpfs_enabled: bool,
-    /// Environment variable injection
+    /// Enable environment variable injection
     pub env_var_injection: bool,
     /// Secret rotation interval (seconds)
     pub rotation_interval: u64,
-    /// Secret encryption at rest
+    /// Enable encryption at rest for secrets
     pub encryption_at_rest: bool,
 }
 
-/// Telemetry data for runtime secrets
+/// Telemetry data for Runtime Secrets
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RuntimeSecretTelemetry {
     /// Number of secrets injected at runtime
@@ -155,6 +153,58 @@ pub struct RuntimeSecretTelemetry {
     pub secrets_in_images: u64,
     /// Secret rotation events
     pub rotation_events: u64,
+}
+
+/// Configuration for Service Mesh
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ServiceMeshConfig {
+    /// Enable service mesh
+    pub enabled: bool,
+    /// mTLS configuration
+    pub mtls_config: MtlsConfig,
+    /// Egress whitelist configuration
+    pub egress_whitelist: Vec<String>,
+    /// Network policy configuration
+    pub network_policies: Vec<NetworkPolicy>,
+}
+
+/// mTLS configuration
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MtlsConfig {
+    /// Enable mTLS
+    pub enabled: bool,
+    /// Certificate authority for mTLS
+    pub ca_cert: String,
+    /// Certificate rotation interval (seconds)
+    pub cert_rotation_interval: u64,
+    /// Mutual authentication strictness
+    pub strict_mode: bool,
+}
+
+/// Network policy configuration
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct NetworkPolicy {
+    /// Policy name
+    pub name: String,
+    /// Source services
+    pub sources: Vec<String>,
+    /// Destination services
+    pub destinations: Vec<String>,
+    /// Allowed ports
+    pub ports: Vec<u16>,
+    /// Protocol (TCP, UDP, etc.)
+    pub protocol: String,
+}
+
+/// Telemetry data for Service Mesh
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ServiceMeshTelemetry {
+    /// Number of mTLS connections
+    pub mtls_connections: u64,
+    /// Number of policy violations
+    pub policy_violations: u64,
+    /// Number of blocked egress attempts
+    pub blocked_egress_attempts: u64,
 }
 
 /// Main Network Infrastructure Security Manager
@@ -183,6 +233,11 @@ pub struct NetworkInfraManager {
     runtime_secret_config: RuntimeSecretConfig,
     /// Runtime secret telemetry data
     runtime_secret_telemetry: RuntimeSecretTelemetry,
+    
+    /// Service mesh configuration
+    service_mesh_config: ServiceMeshConfig,
+    /// Service mesh telemetry data
+    service_mesh_telemetry: ServiceMeshTelemetry,
 }
 
 impl NetworkInfraManager {
@@ -217,29 +272,31 @@ impl NetworkInfraManager {
                 policy_violations: 0,
             },
             osi_hardening_config: OsiHardeningConfig {
-                allowed_ports: vec![22, 80, 443, 3000, 3001], // SSH, HTTP, HTTPS, API ports
-                blocked_ports: vec![],
                 tls_min_version: "1.2".to_string(),
                 disable_legacy_ciphers: true,
-                dns_security_rules: vec!["block-private-dns-resolve".to_string()],
+                port_allowlist: vec![22, 80, 443, 8080, 8545],
+                dns_security_rules: vec!["strict-validation".to_string()],
             },
             osi_hardening_telemetry: OsiHardeningTelemetry {
-                open_port_diff: HashMap::new(),
-                blocked_connection_attempts: 0,
+                open_port_diff: vec![],
+                protocol_violations: 0,
                 dns_violations: 0,
             },
             host_hardening_config: HostHardeningConfig {
                 readonly_root_fs: true,
                 minimal_base_image: true,
-                kernel_hardening: HashMap::from([
-                    ("kernel.modules_disabled".to_string(), "1".to_string()),
-                    ("kernel.randomize_va_space".to_string(), "2".to_string()),
-                ]),
+                kernel_hardening: {
+                    let mut map = HashMap::new();
+                    map.insert("kernel.modules_disabled".to_string(), "1".to_string());
+                    map.insert("kernel.randomize_va_space".to_string(), "2".to_string());
+                    map.insert("net.ipv4.conf.all.rp_filter".to_string(), "1".to_string());
+                    map
+                },
                 ssh_lockdown: SshLockdownConfig {
                     disable_password_auth: true,
                     key_based_auth_only: true,
-                    allowed_users: vec!["admin".to_string(), "service".to_string()],
-                    ssh_port: 22,
+                    allowed_users: vec!["admin".to_string(), "deploy".to_string()],
+                    ssh_port: 2222,
                 },
             },
             host_hardening_telemetry: HostHardeningTelemetry {
@@ -250,13 +307,32 @@ impl NetworkInfraManager {
             runtime_secret_config: RuntimeSecretConfig {
                 tmpfs_enabled: true,
                 env_var_injection: true,
-                rotation_interval: 3600, // 1 hour
+                rotation_interval: 7200, // 2 hours
                 encryption_at_rest: true,
             },
             runtime_secret_telemetry: RuntimeSecretTelemetry {
                 secrets_injected: 0,
                 secrets_in_images: 0,
                 rotation_events: 0,
+            },
+            service_mesh_config: ServiceMeshConfig {
+                enabled: true,
+                mtls_config: MtlsConfig {
+                    enabled: true,
+                    ca_cert: "default-ca-cert".to_string(),
+                    cert_rotation_interval: 86400, // 24 hours
+                    strict_mode: true,
+                },
+                egress_whitelist: vec![
+                    "kubernetes.default.svc.cluster.local".to_string(),
+                    "kube-dns.kube-system.svc.cluster.local".to_string(),
+                ],
+                network_policies: vec![],
+            },
+            service_mesh_telemetry: ServiceMeshTelemetry {
+                mtls_connections: 0,
+                policy_violations: 0,
+                blocked_egress_attempts: 0,
             },
         }
     }
@@ -374,22 +450,53 @@ impl NetworkInfraManager {
     pub fn get_runtime_secret_telemetry(&self) -> &RuntimeSecretTelemetry {
         &self.runtime_secret_telemetry
     }
-
-    /// Validate all network infrastructure configurations
+    
+    /// Get service mesh configuration
+    pub fn get_service_mesh_config(&self) -> &ServiceMeshConfig {
+        &self.service_mesh_config
+    }
+    
+    /// Update service mesh configuration
+    pub fn update_service_mesh_config(&mut self, config: ServiceMeshConfig) -> Result<(), String> {
+        // Validate configuration
+        if config.mtls_config.enabled && config.mtls_config.ca_cert.is_empty() {
+            return Err("CA certificate is required when mTLS is enabled".to_string());
+        }
+        
+        if config.mtls_config.cert_rotation_interval < 3600 {
+            return Err("Certificate rotation interval must be at least 1 hour".to_string());
+        }
+        
+        self.service_mesh_config = config;
+        Ok(())
+    }
+    
+    /// Log service mesh telemetry
+    pub fn log_service_mesh_telemetry(&mut self, telemetry: ServiceMeshTelemetry) {
+        self.service_mesh_telemetry = telemetry;
+    }
+    
+    /// Get service mesh telemetry
+    pub fn get_service_mesh_telemetry(&self) -> &ServiceMeshTelemetry {
+        &self.service_mesh_telemetry
+    }
+    
+    /// Validate all configurations
     pub fn validate_all_configs(&self) -> Result<(), String> {
         // Validate edge firewall config
         if self.edge_firewall_config.rate_limit_rps > 10000 {
-            return Err("Edge firewall rate limit too high".to_string());
-        }
-        
-        // Validate host hardening config
-        if self.host_hardening_config.ssh_lockdown.ssh_port == 0 {
-            return Err("Invalid SSH port".to_string());
+            return Err("Rate limit RPS must be <= 10000".to_string());
         }
         
         // Validate runtime secret config
-        if self.runtime_secret_config.rotation_interval < 60 {
-            return Err("Secret rotation interval too short".to_string());
+        if self.runtime_secret_config.rotation_interval < 300 {
+            return Err("Secret rotation interval must be at least 5 minutes".to_string());
+        }
+        
+        // Validate service mesh config
+        if self.service_mesh_config.mtls_config.enabled && 
+           self.service_mesh_config.mtls_config.cert_rotation_interval < 3600 {
+            return Err("Certificate rotation interval must be at least 1 hour".to_string());
         }
         
         Ok(())

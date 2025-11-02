@@ -1018,7 +1018,7 @@ impl ObservabilityManager {
 
     /// Gets mean time to recover (MTTR) statistics
     pub fn get_mttr_stats(&self) -> (u64, f64) {
-        let total_incidents = self.incident_stats.total_incidents.load(Ordering::Relaxed);
+        let _total_incidents = self.incident_stats.total_incidents.load(Ordering::Relaxed);
         let resolved_incidents = self.incident_stats.resolved_incidents.load(Ordering::Relaxed);
         let total_resolution_time = self.incident_stats.total_resolution_time.load(Ordering::Relaxed);
         

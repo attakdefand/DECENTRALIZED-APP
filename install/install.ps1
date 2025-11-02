@@ -30,10 +30,31 @@ if (-not $cargo) {
     exit 1
 }
 
+# Check Rust version and install nightly if needed
+$rustVersion = rustc --version
+Write-Host "Current Rust version: $rustVersion" -ForegroundColor $GREEN
+
+# Check if edition2024 is supported
+if ($rustVersion -like "*1.80*") {
+    Write-Host "Updating to nightly Rust to support edition2024..." -ForegroundColor $YELLOW
+    rustup install nightly
+    rustup default nightly
+    Write-Host "Rust updated to nightly version" -ForegroundColor $GREEN
+}
+
 Write-Host "Building Decentralized Exchange CLI..." -ForegroundColor $GREEN
 
 # Build the CLI
-cargo build --release --bin dex-cli
+$cargoResult = cargo build --release --bin dex-cli 2>&1
+if ($LASTEXITCODE -ne 0) {
+    Write-Host "Build failed. Trying with nightly toolchain explicitly..." -ForegroundColor $YELLOW
+    $cargoResult = cargo +nightly build --release --bin dex-cli 2>&1
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host "Build failed with nightly toolchain as well:" -ForegroundColor $RED
+        Write-Host $cargoResult -ForegroundColor $RED
+        exit 1
+    }
+}
 
 # Install the binary
 Write-Host "Installing binary..." -ForegroundColor $GREEN

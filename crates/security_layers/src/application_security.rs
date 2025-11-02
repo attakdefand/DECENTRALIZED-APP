@@ -8,7 +8,9 @@
 //! 3,Application Security,Output Protection,Encoding/Escaping,"HTML encode, JSON encode, header encode","Stop stored/reflective XSS","CSP violation reports, browser security reports"
 
 use std::collections::HashMap;
+use std::time::{Duration, SystemTime};
 use regex::Regex;
+use rand::Rng;
 
 /// Input validation and sanitization for application security
 pub struct InputProtection {
@@ -775,7 +777,7 @@ impl DependencySafety {
         SBOM {
             project_name: project_name.to_string(),
             components: self.sbom.values().cloned().collect(),
-            generated_at: std::time::SystemTime::now(),
+            generated_at: SystemTime::now(),
         }
     }
     
@@ -812,7 +814,7 @@ impl DependencySafety {
     /// Get unresolved vulnerability age statistics
     pub fn get_unresolved_vuln_age(&self, findings: &[VulnerabilityFinding]) -> Vec<u64> {
         let mut ages = Vec::new();
-        let now = std::time::SystemTime::now();
+        let now = SystemTime::now();
         
         for finding in findings {
             if let Ok(age) = now.duration_since(finding.vulnerability.published_date) {
@@ -837,6 +839,138 @@ impl DependencySafety {
 impl Default for DependencySafety {
     fn default() -> Self {
         Self::new()
+    }
+}
+
+/// Retry configuration for operations with exponential backoff
+#[derive(Debug, Clone)]
+pub struct RetryConfig {
+    /// Maximum number of retry attempts
+    pub max_attempts: u32,
+    /// Initial backoff duration in milliseconds
+    pub initial_backoff_ms: u64,
+    /// Maximum backoff duration in milliseconds
+    pub max_backoff_ms: u64,
+    /// Backoff multiplier
+    pub backoff_multiplier: f64,
+}
+
+impl RetryConfig {
+    /// Create a new retry configuration
+    pub fn new(max_attempts: u32, initial_backoff_ms: u64, max_backoff_ms: u64, backoff_multiplier: f64) -> Self {
+        Self {
+            max_attempts,
+            initial_backoff_ms,
+            max_backoff_ms,
+            backoff_multiplier,
+        }
+    }
+}
+
+/// Result of a retry operation
+#[derive(Debug)]
+pub enum RetryResult<T> {
+    /// Operation succeeded
+    Success(T),
+    /// Operation failed after all retries
+    Failed(String),
+}
+
+/// Execute an operation with retry and exponential backoff
+pub fn execute_with_retry<T, F>(
+    mut operation: F,
+    retry_config: &RetryConfig,
+) -> RetryResult<T>
+where
+    F: FnMut() -> Result<T, String>,
+{
+    let mut attempts = 0;
+    let mut backoff_ms = retry_config.initial_backoff_ms;
+    
+    loop {
+        match operation() {
+            Ok(result) => return RetryResult::Success(result),
+            Err(error) => {
+                attempts += 1;
+                
+                if attempts >= retry_config.max_attempts {
+                    return RetryResult::Failed(error);
+                }
+                
+                // Sleep for the backoff duration
+                std::thread::sleep(Duration::from_millis(backoff_ms));
+                
+                // Calculate next backoff duration
+                backoff_ms = (backoff_ms as f64 * retry_config.backoff_multiplier) as u64;
+                backoff_ms = backoff_ms.min(retry_config.max_backoff_ms);
+            }
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_retry_mechanism() {
+        let retry_config = RetryConfig::new(3, 100, 1000, 2.0);
+        
+        // Test successful operation on first try
+        let result = execute_with_retry(
+            || Ok::<String, String>("success".to_string()),
+            &retry_config,
+        );
+        
+        match result {
+            RetryResult::Success(value) => assert_eq!(value, "success"),
+            RetryResult::Failed(_) => panic!("Expected success"),
+        }
+        
+        // Test operation that fails twice then succeeds
+        let mut attempts = 0;
+        let result = execute_with_retry(
+            || {
+                attempts += 1;
+                if attempts < 3 {
+                    Err("temporary failure".to_string())
+                } else {
+                    Ok("success after retries".to_string())
+                }
+            },
+            &retry_config,
+        );
+        
+        match result {
+            RetryResult::Success(value) => assert_eq!(value, "success after retries"),
+            RetryResult::Failed(_) => panic!("Expected success after retries"),
+        }
+        
+        // Test operation that always fails
+        let result = execute_with_retry(
+            || Err::<String, String>("permanent failure".to_string()),
+            &retry_config,
+        );
+        
+        match result {
+            RetryResult::Success(_) => panic!("Expected failure"),
+            RetryResult::Failed(error) => assert_eq!(error, "permanent failure"),
+        }
+    }
+    
+    #[test]
+    fn test_exponential_backoff() {
+        let retry_config = RetryConfig::new(5, 100, 1000, 2.0);
+        
+        // Test that backoff increases exponentially but is capped
+        let mut backoff_ms = retry_config.initial_backoff_ms;
+        let expected_backoffs = vec![100, 200, 400, 800, 1000]; // Last one is capped
+        
+        for expected in expected_backoffs {
+            assert_eq!(backoff_ms, expected);
+            backoff_ms = (backoff_ms as f64 * retry_config.backoff_multiplier) as u64;
+            backoff_ms = backoff_ms.min(retry_config.max_backoff_ms);
+        }
     }
 }
 
@@ -907,6 +1041,61 @@ pub struct Issue {
     pub file: String,
     /// Line number where the issue was found
     pub line: u32,
+}
+
+/// Vulnerability finding
+#[derive(Clone, Debug)]
+pub struct VulnerabilityFinding {
+    /// The dependency with the vulnerability
+    pub dependency: Dependency,
+    /// The vulnerability information
+    pub vulnerability: Vulnerability,
+    /// Severity of the finding
+    pub severity: Severity,
+}
+
+/// License finding
+#[derive(Clone, Debug)]
+pub struct LicenseFinding {
+    /// The dependency with the license issue
+    pub dependency: Dependency,
+    /// The license ID
+    pub license_id: String,
+    /// The license policy
+    pub policy: LicensePolicy,
+    /// Whether the license is a violation
+    pub violation: bool,
+}
+
+/// Scan result
+#[derive(Clone, Debug)]
+pub struct ScanResult {
+    /// List of vulnerabilities found
+    pub vulnerabilities: Vec<VulnerabilityFinding>,
+    /// List of license issues found
+    pub licenses: Vec<LicenseFinding>,
+    /// List of static analysis issues found
+    pub issues: Vec<Issue>,
+}
+
+/// Software Bill of Materials (SBOM)
+#[derive(Clone, Debug)]
+pub struct SBOM {
+    /// Project name
+    pub project_name: String,
+    /// List of components
+    pub components: Vec<Component>,
+    /// Timestamp of SBOM generation
+    pub generated_at: SystemTime,
+}
+
+/// Severity level of an issue or vulnerability
+#[derive(Clone, Debug, PartialEq)]
+pub enum Severity {
+    Critical,
+    High,
+    Medium,
+    Low,
 }
 
 /// Vulnerability finding

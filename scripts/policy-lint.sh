@@ -12,6 +12,12 @@ REQUIRED_DOCS=(
   "docs/security/POLICY-CATALOG.md"
   "docs/security/EXCEPTIONS.md"
   "docs/security/sign-off-template.md"
+  # Added new required documents
+  "docs/security/COMPLIANCE-LEGAL.md"
+  "docs/security/AUDIT-EVIDENCE.md"
+  "docs/security/METRICS-SLO.md"
+  # Added Identity, Access & Crypto Foundations documentation
+  "docs/IDENTITY-ACCESS-CRYPTO.md"
 )
 
 for doc in "${REQUIRED_DOCS[@]}"; do
@@ -116,7 +122,38 @@ if [ ! -f "infra/policies/policy-provenance.md" ]; then
 fi
 echo "[PASS] infra/policies/policy-provenance.md exists"
 
-# Check that all layers in the security matrix have corresponding documents
+# Check Identity, Access & Crypto Foundations implementation
+echo "Checking Identity, Access & Crypto Foundations implementation..."
+
+# Check that key management module exists
+if [ ! -f "crates/security_layers/src/key_management.rs" ]; then
+  echo "ERROR: Required key management module missing: crates/security_layers/src/key_management.rs"
+  exit 1
+fi
+echo "[PASS] crates/security_layers/src/key_management.rs exists"
+
+# Check that identity access module has been enhanced
+if [ ! -f "crates/security_layers/src/identity_access.rs" ]; then
+  echo "ERROR: Required identity access module missing: crates/security_layers/src/identity_access.rs"
+  exit 1
+fi
+echo "[PASS] crates/security_layers/src/identity_access.rs exists"
+
+# Check that data protection module has been enhanced
+if [ ! -f "crates/core/src/data_protection.rs" ]; then
+  echo "ERROR: Required data protection module missing: crates/core/src/data_protection.rs"
+  exit 1
+fi
+echo "[PASS] crates/core/src/data_protection.rs exists"
+
+# Check that security layers lib exports key management types
+if ! grep -q "key_management" "crates/security_layers/src/lib.rs"; then
+  echo "ERROR: key_management module not exported in crates/security_layers/src/lib.rs"
+  exit 1
+fi
+echo "[PASS] key_management module properly exported"
+
+# Check all layers in the security matrix have corresponding documents
 echo "Checking security layer documentation..."
 
 # This would be expanded to check for all required documents per layer

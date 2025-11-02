@@ -49,7 +49,11 @@ We welcome ideas for new features or improvements to existing functionality. Ple
 
 ## Development Setup
 
-1. Install Rust toolchain (latest stable)
+1. Install Rust nightly toolchain (required for edition2024 support)
+   ```bash
+   rustup install nightly
+   rustup default nightly
+   ```
 2. Install Node.js (for development tools)
 3. Install Docker (for containerized services)
 4. Clone the repository

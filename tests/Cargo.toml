@@ -1,0 +1,22 @@
+[package]
+name = "dex-os-tests"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+# Workspace dependencies
+serde = { workspace = true }
+serde_json = { workspace = true }
+anyhow = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }
+tokio = { workspace = true }
+
+# Testing dependencies
+proptest = "1.0"
+cypress = "0.1"
+
+# Local dependencies
+// Removed dependencies on crates that were deleted

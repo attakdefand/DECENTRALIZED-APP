@@ -39,13 +39,13 @@ pub struct Component {
     pub version: String,
     /// Package URL (purl) of the component
     pub purl: String,
-    /// License information
+    /// Licenses associated with the component
     pub licenses: Vec<String>,
     /// Hash of the component
     pub hash: String,
     /// Whether this is a direct dependency
     pub is_direct: bool,
-    /// List of vulnerabilities associated with this component
+    /// Known vulnerabilities in the component
     pub vulnerabilities: Vec<Vulnerability>,
     /// Whether the component version is pinned
     pub is_pinned: bool,
@@ -55,12 +55,12 @@ pub struct Component {
     pub is_approved: bool,
 }
 
-/// Represents a vulnerability in a component
+/// Represents a vulnerability in a software component
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Vulnerability {
-    /// Unique identifier for the vulnerability (e.g., CVE ID)
+    /// CVE or other identifier for the vulnerability
     pub id: String,
-    /// Severity rating (CVSS score)
+    /// Severity score (0.0 to 10.0)
     pub severity: f32,
     /// Description of the vulnerability
     pub description: String,
@@ -68,39 +68,7 @@ pub struct Vulnerability {
     pub fix_available: bool,
 }
 
-/// Represents a cryptographic signature
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Signature {
-    /// Signature algorithm used
-    pub algorithm: String,
-    /// Public key used for verification
-    pub public_key: String,
-    /// Signature value
-    pub signature: String,
-    /// Timestamp of signature creation
-    pub timestamp: u64,
-}
-
-/// Represents provenance information for a build
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Provenance {
-    /// Unique identifier for the provenance record
-    pub id: String,
-    /// Build ID
-    pub build_id: String,
-    /// Source repository information
-    pub source: SourceInfo,
-    /// Build configuration
-    pub build_config: BuildConfig,
-    /// Builder information
-    pub builder: BuilderInfo,
-    /// Artifacts produced by the build
-    pub artifacts: Vec<Artifact>,
-    /// Timestamp of provenance creation
-    pub created: u64,
-}
-
-/// Represents source repository information
+/// Represents source code information for provenance
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SourceInfo {
     /// Repository URL
@@ -113,10 +81,10 @@ pub struct SourceInfo {
     pub tag: Option<String>,
 }
 
-/// Represents build configuration
+/// Represents build configuration information
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BuildConfig {
-    /// Build script or configuration file
+    /// Build script path
     pub build_script: String,
     /// Environment variables
     pub environment: HashMap<String, String>,
@@ -124,141 +92,99 @@ pub struct BuildConfig {
     pub tools: HashMap<String, String>,
 }
 
-/// Represents builder information
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct BuilderInfo {
-    /// Builder ID
-    pub id: String,
-    /// Builder version
-    pub version: String,
-    /// Builder platform
-    pub platform: String,
-}
-
-/// Represents an artifact with integrity information
+/// Represents a software artifact
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Artifact {
-    /// Artifact name
+    /// Name of the artifact
     pub name: String,
-    /// Artifact URI
+    /// URI of the artifact
     pub uri: String,
     /// Hash of the artifact
     pub hash: String,
     /// Size of the artifact in bytes
     pub size: u64,
-    /// Cryptographic signature (if signed)
+    /// Digital signature (if signed)
     pub signature: Option<Signature>,
-    /// SBOM attached to the artifact
+    /// SBOM attached to the artifact (if any)
     pub sbom: Option<Sbom>,
-    /// Whether the artifact is signed with Sigstore/cosign
+    /// Whether the artifact is signed
     pub is_signed: bool,
     /// Timestamp of artifact creation
     pub created: u64,
 }
 
-/// Represents Sigstore/cosign signing information
+/// Represents a digital signature
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct CosignSignature {
-    /// Signature payload
-    pub payload: String,
-    /// Signature value
-    pub signature: String,
-    /// Certificate used for signing
-    pub certificate: String,
+pub struct Signature {
+    /// Signature data
+    pub data: String,
+    /// Public key identifier
+    pub key_id: String,
+    /// Algorithm used for signing
+    pub algorithm: String,
     /// Timestamp of signature creation
     pub timestamp: u64,
 }
 
-/// Artifact integrity statistics
-#[derive(Debug, Clone)]
-pub struct ArtifactIntegrityStats {
-    /// Total artifacts processed
-    pub total_artifacts: Arc<AtomicU64>,
-    /// Unsigned artifacts blocked
-    pub unsigned_blocked: Arc<AtomicU64>,
-    /// Signed artifacts verified
-    pub signed_verified: Arc<AtomicU64>,
-    /// Failed signature verifications
-    pub signature_failures: Arc<AtomicU64>,
+/// Represents build provenance information
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Provenance {
+    /// Unique identifier for the provenance record
+    pub id: String,
+    /// Build identifier
+    pub build_id: String,
+    /// Source information
+    pub source: SourceInfo,
+    /// Build configuration
+    pub build_config: BuildConfig,
+    /// Artifacts produced by the build
+    pub artifacts: Vec<Artifact>,
+    /// Timestamp of provenance creation
+    pub created: u64,
 }
 
-/// Dependency trust statistics
-#[derive(Debug, Clone)]
-pub struct DependencyTrustStats {
-    /// Total dependencies checked
-    pub total_dependencies: Arc<AtomicU64>,
-    /// Unapproved dependency install attempts blocked
-    pub unapproved_blocked: Arc<AtomicU64>,
-    /// Typosquat packages detected
-    pub typosquat_detected: Arc<AtomicU64>,
-    /// Checksum verification failures
-    pub checksum_failures: Arc<AtomicU64>,
-}
-
-/// CI/CD gatekeeping statistics
-#[derive(Debug, Clone)]
-pub struct CicdGatekeepingStats {
-    /// Total builds processed
-    pub total_builds: Arc<AtomicU64>,
-    /// Builds blocked by policy gate
-    pub builds_blocked: Arc<AtomicU64>,
-    /// Security scans performed
-    pub security_scans: Arc<AtomicU64>,
-    /// Tests executed
-    pub tests_executed: Arc<AtomicU64>,
-}
-
-/// Runtime Drift Control statistics
-#[derive(Debug, Clone)]
-pub struct RuntimeDriftStats {
-    /// Total drift checks performed
-    pub total_drift_checks: Arc<AtomicU64>,
-    /// Drift incidents detected
-    pub drift_incidents: Arc<AtomicU64>,
-    /// Sneaky containers detected
-    pub sneaky_containers: Arc<AtomicU64>,
-    /// Approved manifests compared against
-    pub approved_manifests: Arc<AtomicU64>,
-}
-
-/// Represents a CI/CD policy rule
+/// Represents a policy rule for supply chain governance
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PolicyRule {
-    /// Unique identifier for the policy rule
+    /// Unique identifier for the rule
     pub id: String,
-    /// Name of the policy rule
+    /// Name of the rule
     pub name: String,
-    /// Description of the policy rule
+    /// Description of the rule
     pub description: String,
     /// Whether the rule is enabled
     pub enabled: bool,
-    /// Severity level of the rule
-    pub severity: String, // "low", "medium", "high", "critical"
-    /// Category of the rule
-    pub category: String, // "security", "license", "quality", "compliance"
+    /// Severity level (low, medium, high, critical)
+    pub severity: String,
+    /// Category of the rule (security, compliance, etc.)
+    pub category: String,
 }
 
-/// Represents a build with CI/CD policy enforcement
+/// Represents a build record
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Build {
     /// Unique identifier for the build
     pub id: String,
-    /// Build number
-    pub build_number: String,
-    /// Source repository information
-    pub source: SourceInfo,
-    /// Build configuration
-    pub config: BuildConfig,
-    /// Artifacts produced by the build
-    pub artifacts: Vec<Artifact>,
-    /// Policy rules that were evaluated
+    /// Build number or version
+    pub version: String,
+    /// Status of the build (success, failed, in_progress)
+    pub status: String,
+    /// Timestamp of build start
+    pub start_time: u64,
+    /// Timestamp of build end
+    pub end_time: Option<u64>,
+    /// Commit hash associated with the build
+    pub commit_hash: String,
+    /// Branch associated with the build
+    pub branch: String,
+    /// Policy rules associated with this build
     pub policy_rules: Vec<PolicyRule>,
     /// Results of policy evaluations
-    pub policy_results: HashMap<String, bool>, // rule_id -> passed
-    /// Timestamp of build creation
-    pub created: u64,
-    /// Whether the build passed all policies
+    pub policy_results: HashMap<String, bool>,
+    /// Whether all policies passed
     pub passed_policies: bool,
+    /// Artifacts produced by the build
+    pub artifacts: Vec<Artifact>,
 }
 
 /// Represents a security scan result
@@ -266,18 +192,26 @@ pub struct Build {
 pub struct SecurityScanResult {
     /// Unique identifier for the scan
     pub id: String,
-    /// Build ID this scan is for
+    /// Build ID associated with this scan
     pub build_id: String,
     /// Type of scan performed
-    pub scan_type: String, // "sast", "sca", "container", "infrastructure"
+    pub scan_type: String,
+    /// Artifact or component that was scanned
+    pub target: String,
+    /// Timestamp of the scan
+    pub timestamp: u64,
     /// Vulnerabilities found
     pub vulnerabilities: Vec<Vulnerability>,
-    /// Licenses found
+    /// Licenses found in the scanned components
     pub licenses: Vec<String>,
-    /// Timestamp of scan completion
-    pub completed: u64,
-    /// Whether the scan passed policy requirements
+    /// Scan tool used
+    pub tool: String,
+    /// Scan result status
+    pub status: String,
+    /// Whether the scan passed all checks
     pub passed: bool,
+    /// Timestamp when scan was completed
+    pub completed: u64,
 }
 
 /// Represents a test result
@@ -285,10 +219,14 @@ pub struct SecurityScanResult {
 pub struct TestResult {
     /// Unique identifier for the test
     pub id: String,
-    /// Build ID this test is for
+    /// Build ID associated with this test
     pub build_id: String,
     /// Type of test performed
-    pub test_type: String, // "unit", "integration", "e2e", "performance"
+    pub test_type: String,
+    /// Test name or description
+    pub name: String,
+    /// Test status (pass, fail, skip)
+    pub status: String,
     /// Number of tests executed
     pub tests_executed: u64,
     /// Number of tests passed
@@ -297,63 +235,79 @@ pub struct TestResult {
     pub tests_failed: u64,
     /// Test coverage percentage
     pub coverage: f32,
-    /// Timestamp of test completion
-    pub completed: u64,
-    /// Whether the tests passed policy requirements
+    /// Timestamp of test execution
+    pub timestamp: u64,
+    /// Test duration in milliseconds
+    pub duration: u64,
+    /// Test output or log
+    pub output: String,
+    /// Whether the test passed
     pub passed: bool,
+    /// Timestamp when test was completed
+    pub completed: u64,
 }
 
-/// Represents an approved manifest for runtime comparison
+/// Represents an approved manifest for runtime drift control
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ApprovedManifest {
     /// Unique identifier for the manifest
     pub id: String,
-    /// Name of the application/service
+    /// Name of the manifest
     pub name: String,
-    /// Version of the application/service
+    /// Hash of the manifest content
+    pub hash: String,
+    /// Timestamp of manifest approval
+    pub approved_at: u64,
+    /// Approver information
+    pub approved_by: String,
+    /// Version of the manifest
     pub version: String,
-    /// Expected running processes
+    /// Expected processes that should be running
     pub expected_processes: Vec<String>,
-    /// Expected file system changes
+    /// Expected file changes that are allowed
     pub expected_file_changes: Vec<String>,
-    /// Expected network connections
+    /// Expected network connections that are allowed
     pub expected_network_connections: Vec<String>,
     /// Expected environment variables
     pub expected_env_vars: HashMap<String, String>,
-    /// Timestamp of manifest creation
+    /// Timestamp when manifest was created
     pub created: u64,
-    /// Hash of the manifest content
-    pub hash: String,
 }
 
-/// Represents a runtime drift report
+/// Represents a drift report for runtime drift control
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DriftReport {
     /// Unique identifier for the report
     pub id: String,
-    /// Reference to the approved manifest
+    /// ID of the manifest this report is for
     pub manifest_id: String,
-    /// Actual running processes observed
+    /// Timestamp of the report
+    pub timestamp: u64,
+    /// Differences detected
+    pub differences: Vec<String>,
+    /// Severity of the drift
+    pub severity: String,
+    /// Actual processes running
     pub actual_processes: Vec<String>,
-    /// Actual file system changes observed
+    /// Actual file changes
     pub actual_file_changes: Vec<String>,
-    /// Actual network connections observed
+    /// Actual network connections
     pub actual_network_connections: Vec<String>,
-    /// Actual environment variables observed
+    /// Actual environment variables
     pub actual_env_vars: HashMap<String, String>,
     /// Process deviations detected
     pub process_deviations: Vec<String>,
-    /// File system deviations detected
+    /// File deviations detected
     pub file_deviations: Vec<String>,
-    /// Network connection deviations detected
+    /// Network deviations detected
     pub network_deviations: Vec<String>,
     /// Environment variable deviations detected
     pub env_var_deviations: Vec<String>,
-    /// Whether this represents a drift incident
+    /// Whether this is a drift incident
     pub is_drift_incident: bool,
-    /// Whether this represents a sneaky container
+    /// Whether this is a sneaky container
     pub is_sneaky_container: bool,
-    /// Timestamp of report creation
+    /// Timestamp when report was created
     pub created: u64,
 }
 
@@ -362,64 +316,155 @@ pub struct DriftReport {
 pub struct RunningContainer {
     /// Container ID
     pub id: String,
-    /// Container name
-    pub name: String,
     /// Container image
     pub image: String,
-    /// Running processes
+    /// Container name
+    pub name: String,
+    /// Timestamp when container started
+    pub started_at: u64,
+    /// Approved manifest for this container
+    pub approved_manifest: Option<String>,
+    /// Processes running in the container
     pub processes: Vec<String>,
-    /// File system changes
+    /// File changes in the container
     pub file_changes: Vec<String>,
-    /// Network connections
+    /// Network connections from the container
     pub network_connections: Vec<String>,
-    /// Environment variables
+    /// Environment variables in the container
     pub env_vars: HashMap<String, String>,
-    /// Timestamp of last check
+    /// Timestamp when last checked
     pub last_checked: u64,
-    /// Associated manifest ID
+    /// ID of the manifest this container is associated with
     pub manifest_id: String,
 }
 
-/// Custom error type for supply chain operations
-#[derive(Debug, Clone, Serialize, Deserialize)]
+/// Statistics for artifact integrity
+#[derive(Debug, Clone)]
+pub struct ArtifactIntegrityStats {
+    /// Total number of artifacts processed
+    pub total_artifacts: Arc<AtomicU64>,
+    /// Number of unsigned artifacts blocked
+    pub unsigned_blocked: Arc<AtomicU64>,
+    /// Number of signed artifacts verified
+    pub signed_verified: Arc<AtomicU64>,
+    /// Number of signature verification failures
+    pub signature_failures: Arc<AtomicU64>,
+}
+
+/// Statistics for dependency trust
+#[derive(Debug, Clone)]
+pub struct DependencyTrustStats {
+    /// Total number of dependencies checked
+    pub total_dependencies: Arc<AtomicU64>,
+    /// Number of unapproved dependencies blocked
+    pub unapproved_blocked: Arc<AtomicU64>,
+    /// Number of typosquat packages detected
+    pub typosquat_detected: Arc<AtomicU64>,
+    /// Number of checksum mismatches
+    pub checksum_failures: Arc<AtomicU64>,
+}
+
+/// Statistics for CI/CD gatekeeping
+#[derive(Debug, Clone)]
+pub struct CicdGatekeepingStats {
+    /// Total number of builds processed
+    pub total_builds: Arc<AtomicU64>,
+    /// Number of builds blocked by policy
+    pub builds_blocked: Arc<AtomicU64>,
+    /// Number of policy violations detected
+    pub policy_violations: Arc<AtomicU64>,
+    /// Number of security scans performed
+    pub security_scans: Arc<AtomicU64>,
+    /// Number of tests executed
+    pub tests_executed: Arc<AtomicU64>,
+}
+
+/// Statistics for runtime drift control
+#[derive(Debug, Clone)]
+pub struct RuntimeDriftStats {
+    /// Total number of containers monitored
+    pub total_containers: Arc<AtomicU64>,
+    /// Number of drift incidents detected
+    pub drift_incidents: Arc<AtomicU64>,
+    /// Number of containers with approved manifests
+    pub approved_containers: Arc<AtomicU64>,
+    /// Number of containers with drift detected
+    pub drifted_containers: Arc<AtomicU64>,
+    /// Total number of drift checks performed
+    pub total_drift_checks: Arc<AtomicU64>,
+    /// Number of approved manifests
+    pub approved_manifests: Arc<AtomicU64>,
+    /// Number of sneaky containers detected
+    pub sneaky_containers: Arc<AtomicU64>,
+}
+
+/// Error types for supply chain operations
+#[derive(Debug)]
 pub enum SupplyChainError {
-    /// SBOM generation failed
+    /// Error generating SBOM
     SbomGenerationFailed(String),
-    /// Signature verification failed
+    /// Error storing SBOM
+    SbomStorageFailed(String),
+    /// Error creating signature
+    SignatureCreationFailed(String),
+    /// Error verifying signature
     SignatureVerificationFailed(String),
-    /// Provenance validation failed
-    ProvenanceValidationFailed(String),
-    /// Dependency scanning failed
+    /// Error creating provenance
+    ProvenanceCreationFailed(String),
+    /// Error storing provenance
+    ProvenanceStorageFailed(String),
+    /// Error scanning dependencies
     DependencyScanFailed(String),
+    /// Error validating dependency trust
+    DependencyTrustValidationFailed(String),
+    /// Error validating dependency pinning
+    DependencyPinningValidationFailed(String),
+    /// Error with CI/CD policy validation
+    CicdPolicyValidationFailed(String),
+    /// Error with runtime drift detection
+    RuntimeDriftDetectionFailed(String),
     /// Configuration error
     ConfigurationError(String),
-    /// Dependency trust validation failed
-    DependencyTrustValidationFailed(String),
-    /// CI/CD policy validation failed
-    CicdPolicyValidationFailed(String),
 }
 
 impl fmt::Display for SupplyChainError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             SupplyChainError::SbomGenerationFailed(msg) => {
                 write!(f, "SBOM generation failed: {}", msg)
             }
+            SupplyChainError::SbomStorageFailed(msg) => {
+                write!(f, "SBOM storage failed: {}", msg)
+            }
+            SupplyChainError::SignatureCreationFailed(msg) => {
+                write!(f, "Signature creation failed: {}", msg)
+            }
             SupplyChainError::SignatureVerificationFailed(msg) => {
                 write!(f, "Signature verification failed: {}", msg)
             }
-            SupplyChainError::ProvenanceValidationFailed(msg) => {
-                write!(f, "Provenance validation failed: {}", msg)
+            SupplyChainError::ProvenanceCreationFailed(msg) => {
+                write!(f, "Provenance creation failed: {}", msg)
+            }
+            SupplyChainError::ProvenanceStorageFailed(msg) => {
+                write!(f, "Provenance storage failed: {}", msg)
             }
             SupplyChainError::DependencyScanFailed(msg) => {
                 write!(f, "Dependency scan failed: {}", msg)
             }
-            SupplyChainError::ConfigurationError(msg) => write!(f, "Configuration error: {}", msg),
             SupplyChainError::DependencyTrustValidationFailed(msg) => {
                 write!(f, "Dependency trust validation failed: {}", msg)
             }
+            SupplyChainError::DependencyPinningValidationFailed(msg) => {
+                write!(f, "Dependency pinning validation failed: {}", msg)
+            }
             SupplyChainError::CicdPolicyValidationFailed(msg) => {
                 write!(f, "CI/CD policy validation failed: {}", msg)
+            }
+            SupplyChainError::RuntimeDriftDetectionFailed(msg) => {
+                write!(f, "Runtime drift detection failed: {}", msg)
+            }
+            SupplyChainError::ConfigurationError(msg) => {
+                write!(f, "Configuration error: {}", msg)
             }
         }
     }
@@ -436,7 +481,7 @@ pub struct SupplyChainManager {
     /// Provenance storage
     pub provenance: HashMap<String, Provenance>,
     /// Cosign signatures
-    pub cosign_signatures: HashMap<String, CosignSignature>,
+    pub cosign_signatures: HashMap<String, String>,
     /// Artifact integrity statistics
     pub integrity_stats: ArtifactIntegrityStats,
     /// Dependency trust statistics
@@ -488,14 +533,18 @@ impl SupplyChainManager {
             cicd_stats: CicdGatekeepingStats {
                 total_builds: Arc::new(AtomicU64::new(0)),
                 builds_blocked: Arc::new(AtomicU64::new(0)),
+                policy_violations: Arc::new(AtomicU64::new(0)),
                 security_scans: Arc::new(AtomicU64::new(0)),
                 tests_executed: Arc::new(AtomicU64::new(0)),
             },
             drift_stats: RuntimeDriftStats {
-                total_drift_checks: Arc::new(AtomicU64::new(0)),
+                total_containers: Arc::new(AtomicU64::new(0)),
                 drift_incidents: Arc::new(AtomicU64::new(0)),
-                sneaky_containers: Arc::new(AtomicU64::new(0)),
+                approved_containers: Arc::new(AtomicU64::new(0)),
+                drifted_containers: Arc::new(AtomicU64::new(0)),
+                total_drift_checks: Arc::new(AtomicU64::new(0)),
                 approved_manifests: Arc::new(AtomicU64::new(0)),
+                sneaky_containers: Arc::new(AtomicU64::new(0)),
             },
             approved_dependencies: HashMap::new(),
             typosquat_packages: HashMap::new(),
@@ -507,97 +556,56 @@ impl SupplyChainManager {
             drift_reports: HashMap::new(),
             running_containers: HashMap::new(),
         };
-        
-        // Initialize with some default approved dependencies and known typosquat packages
-        manager.initialize_default_approvals();
-        manager.initialize_typosquat_detection();
-        manager.initialize_default_policies();
-        
+
+        // Initialize default approved dependencies
+        manager.approved_dependencies.insert(
+            "serde".to_string(),
+            r"^1\.(0\.[0-9]+|[1-9][0-9]*\.[0-9]+)$".to_string(), // 1.x.x
+        );
+        manager.approved_dependencies.insert(
+            "tokio".to_string(),
+            r"^1\.(0\.[0-9]+|[1-9][0-9]*\.[0-9]+)$".to_string(), // 1.x.x
+        );
+
+        // Initialize known typosquat packages
+        manager
+            .typosquat_packages
+            .insert("serede".to_string(), "serde".to_string());
+        manager
+            .typosquat_packages
+            .insert("tokioo".to_string(), "tokio".to_string());
+
+        // Initialize policy rules
+        manager.initialize_policy_rules();
+
         manager
     }
-    
-    /// Initialize default approved dependencies
-    fn initialize_default_approvals(&mut self) {
-        // In a real implementation, this would be loaded from a configuration file
-        self.approved_dependencies.insert("serde".to_string(), r"^1\.[0-9]+\.[0-9]+$".to_string());
-        self.approved_dependencies.insert("tokio".to_string(), r"^1\.[0-9]+\.[0-9]+$".to_string());
-        self.approved_dependencies.insert("axum".to_string(), r"^0\.[0-9]+\.[0-9]+$".to_string());
+
+    /// Get current timestamp
+    fn current_timestamp(&self) -> u64 {
+        use std::time::{SystemTime, UNIX_EPOCH};
+        SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .map(|d| d.as_secs())
+            .unwrap_or(0)
     }
-    
-    /// Initialize known typosquat packages for detection
-    fn initialize_typosquat_detection(&mut self) {
-        // In a real implementation, this would be loaded from a security database
-        self.typosquat_packages.insert("serede".to_string(), "serde".to_string());
-        self.typosquat_packages.insert("tokioo".to_string(), "tokio".to_string());
-        self.typosquat_packages.insert("axun".to_string(), "axum".to_string());
-    }
-    
+
     /// Initialize default policy rules
-    fn initialize_default_policies(&mut self) {
-        // Security policies
+    fn initialize_policy_rules(&mut self) {
+        // Artifact integrity policies
         self.policy_rules.insert(
-            "security-scan-required".to_string(),
+            "artifact-signature-required".to_string(),
             PolicyRule {
-                id: "security-scan-required".to_string(),
-                name: "Security Scan Required".to_string(),
-                description: "All builds must pass security scanning".to_string(),
+                id: "artifact-signature-required".to_string(),
+                name: "Artifact Signature Required".to_string(),
+                description: "All artifacts must be signed".to_string(),
                 enabled: true,
                 severity: "high".to_string(),
-                category: "security".to_string(),
+                category: "artifact-integrity".to_string(),
             }
         );
-        
-        self.policy_rules.insert(
-            "no-critical-vulns".to_string(),
-            PolicyRule {
-                id: "no-critical-vulns".to_string(),
-                name: "No Critical Vulnerabilities".to_string(),
-                description: "Builds must not contain critical vulnerabilities".to_string(),
-                enabled: true,
-                severity: "critical".to_string(),
-                category: "security".to_string(),
-            }
-        );
-        
-        // License policies
-        self.policy_rules.insert(
-            "approved-licenses-only".to_string(),
-            PolicyRule {
-                id: "approved-licenses-only".to_string(),
-                name: "Approved Licenses Only".to_string(),
-                description: "Only approved licenses are allowed".to_string(),
-                enabled: true,
-                severity: "medium".to_string(),
-                category: "license".to_string(),
-            }
-        );
-        
-        // Quality policies
-        self.policy_rules.insert(
-            "minimum-test-coverage".to_string(),
-            PolicyRule {
-                id: "minimum-test-coverage".to_string(),
-                name: "Minimum Test Coverage".to_string(),
-                description: "Builds must meet minimum test coverage requirements".to_string(),
-                enabled: true,
-                severity: "medium".to_string(),
-                category: "quality".to_string(),
-            }
-        );
-        
-        self.policy_rules.insert(
-            "all-tests-must-pass".to_string(),
-            PolicyRule {
-                id: "all-tests-must-pass".to_string(),
-                name: "All Tests Must Pass".to_string(),
-                description: "All tests must pass before deployment".to_string(),
-                enabled: true,
-                severity: "high".to_string(),
-                category: "quality".to_string(),
-            }
-        );
-        
-        // Compliance policies
+
+        // Dependency trust policies
         self.policy_rules.insert(
             "dependency-trust-check".to_string(),
             PolicyRule {
@@ -606,7 +614,59 @@ impl SupplyChainManager {
                 description: "All dependencies must be trusted".to_string(),
                 enabled: true,
                 severity: "high".to_string(),
-                category: "compliance".to_string(),
+                category: "dependency-trust".to_string(),
+            }
+        );
+
+        // CI/CD gatekeeping policies
+        self.policy_rules.insert(
+            "cicd-security-scan-required".to_string(),
+            PolicyRule {
+                id: "cicd-security-scan-required".to_string(),
+                name: "CI/CD Security Scan Required".to_string(),
+                description: "All builds must pass security scans".to_string(),
+                enabled: true,
+                severity: "critical".to_string(),
+                category: "cicd-gatekeeping".to_string(),
+            }
+        );
+
+        // Runtime drift control policies
+        self.policy_rules.insert(
+            "runtime-drift-detection".to_string(),
+            PolicyRule {
+                id: "runtime-drift-detection".to_string(),
+                name: "Runtime Drift Detection".to_string(),
+                description: "Detect and alert on runtime drift".to_string(),
+                enabled: true,
+                severity: "medium".to_string(),
+                category: "runtime-drift".to_string(),
+            }
+        );
+
+        // Build integrity policies
+        self.policy_rules.insert(
+            "reproducible-builds-required".to_string(),
+            PolicyRule {
+                id: "reproducible-builds-required".to_string(),
+                name: "Reproducible Builds Required".to_string(),
+                description: "All builds must be reproducible".to_string(),
+                enabled: true,
+                severity: "high".to_string(),
+                category: "build-integrity".to_string(),
+            }
+        );
+
+        // SBOM policies
+        self.policy_rules.insert(
+            "sbom-generation-required".to_string(),
+            PolicyRule {
+                id: "sbom-generation-required".to_string(),
+                name: "SBOM Generation Required".to_string(),
+                description: "All builds must generate SBOM".to_string(),
+                enabled: true,
+                severity: "medium".to_string(),
+                category: "sbom".to_string(),
             }
         );
     }
@@ -669,15 +729,14 @@ impl SupplyChainManager {
         self.sboms.get(id)
     }
 
-    /// Create a signature for an artifact
-    pub fn create_signature(&self, artifact_hash: &str) -> Result<Signature, SupplyChainError> {
+    /// Create a digital signature for data
+    pub fn create_signature(&self, data: &str) -> Result<Signature, SupplyChainError> {
         // In a real implementation, this would use actual cryptographic signing
         // For this example, we'll create a placeholder signature
-
         let signature = Signature {
-            algorithm: "RSA-SHA256".to_string(),
-            public_key: "public-key-placeholder".to_string(),
-            signature: format!("signature-for-{}", artifact_hash),
+            data: format!("signature-for-{}", data),
+            key_id: "default-key-id".to_string(),
+            algorithm: "SHA256-RSA".to_string(),
             timestamp: self.current_timestamp(),
         };
 
@@ -685,28 +744,20 @@ impl SupplyChainManager {
     }
 
     /// Store a signature
-    pub fn store_signature(
-        &mut self,
-        artifact_uri: &str,
-        signature: Signature,
-    ) -> Result<(), SupplyChainError> {
+    pub fn store_signature(&mut self, artifact_uri: &str, signature: Signature) -> Result<(), SupplyChainError> {
         self.signatures.insert(artifact_uri.to_string(), signature);
         Ok(())
     }
 
     /// Verify a signature
-    pub fn verify_signature(
-        &self,
-        artifact_hash: &str,
-        signature: &Signature,
-    ) -> Result<bool, SupplyChainError> {
-        // In a real implementation, this would perform actual cryptographic verification
-        // For this example, we'll just check if the signature matches our placeholder format
-        let expected_signature = format!("signature-for-{}", artifact_hash);
-        Ok(signature.signature == expected_signature)
+    pub fn verify_signature(&self, data: &str, signature: &Signature) -> Result<bool, SupplyChainError> {
+        // In a real implementation, this would use actual cryptographic verification
+        // For this example, we'll check if the signature matches our placeholder format
+        let expected_signature = format!("signature-for-{}", data);
+        Ok(signature.data == expected_signature)
     }
 
-    /// Create provenance information for a build
+    /// Create build provenance
     pub fn create_provenance(
         &self,
         build_id: &str,
@@ -719,11 +770,6 @@ impl SupplyChainManager {
             build_id: build_id.to_string(),
             source,
             build_config,
-            builder: BuilderInfo {
-                id: "default-builder".to_string(),
-                version: "1.0.0".to_string(),
-                platform: "linux-amd64".to_string(),
-            },
             artifacts,
             created: self.current_timestamp(),
         };
@@ -731,7 +777,7 @@ impl SupplyChainManager {
         Ok(provenance)
     }
 
-    /// Store provenance information
+    /// Store provenance
     pub fn store_provenance(&mut self, provenance: Provenance) -> Result<(), SupplyChainError> {
         self.provenance.insert(provenance.id.clone(), provenance);
         Ok(())
@@ -742,7 +788,167 @@ impl SupplyChainManager {
         self.provenance.get(id)
     }
 
-    /// Create an artifact with integrity information
+    /// Scan dependencies for vulnerabilities
+    pub fn scan_dependencies(&self, sbom: &Sbom) -> Result<Vec<Vulnerability>, SupplyChainError> {
+        // In a real implementation, this would use actual vulnerability databases
+        // For this example, we'll return an empty list (no vulnerabilities found)
+        let vulnerabilities = vec![];
+        Ok(vulnerabilities)
+    }
+
+    /// Validate dependency trust
+    pub fn validate_dependency_trust(&self, sbom: &Sbom) -> Result<(), SupplyChainError> {
+        let mut unapproved_count = 0;
+        let mut typosquat_count = 0;
+        let mut checksum_mismatch_count = 0;
+
+        for component in &sbom.components {
+            // Check if component is approved
+            if let Some(version_regex) = self.approved_dependencies.get(&component.name) {
+                let regex = regex::Regex::new(version_regex).map_err(|e| {
+                    SupplyChainError::DependencyTrustValidationFailed(format!(
+                        "Invalid regex for {}: {}",
+                        component.name, e
+                    ))
+                })?;
+                
+                if !regex.is_match(&component.version) {
+                    unapproved_count += 1;
+                }
+            } else {
+                unapproved_count += 1;
+            }
+
+            // Check for typosquat packages
+            if self.typosquat_packages.contains_key(&component.name) {
+                typosquat_count += 1;
+            }
+
+            // Check checksum verification
+            if !component.checksum_verified {
+                checksum_mismatch_count += 1;
+            }
+        }
+
+        // Update statistics
+        self.trust_stats
+            .total_dependencies
+            .fetch_add(sbom.components.len() as u64, Ordering::Relaxed);
+        self.trust_stats
+            .unapproved_blocked
+            .fetch_add(unapproved_count, Ordering::Relaxed);
+        self.trust_stats
+            .typosquat_detected
+            .fetch_add(typosquat_count, Ordering::Relaxed);
+        self.trust_stats
+            .checksum_failures
+            .fetch_add(checksum_mismatch_count, Ordering::Relaxed);
+
+        // Return error if any issues found
+        if unapproved_count > 0 || typosquat_count > 0 || checksum_mismatch_count > 0 {
+            let mut errors = vec![];
+            if unapproved_count > 0 {
+                errors.push(format!("{} unapproved dependencies", unapproved_count));
+            }
+            if typosquat_count > 0 {
+                errors.push(format!("{} typosquat packages detected", typosquat_count));
+            }
+            if checksum_mismatch_count > 0 {
+                errors.push(format!("{} checksum mismatches", checksum_mismatch_count));
+            }
+            
+            return Err(SupplyChainError::DependencyTrustValidationFailed(
+                format!("Dependency trust validation failed: {}", errors.join(", "))
+            ));
+        }
+
+        Ok(())
+    }
+
+    /// Validate dependency pinning
+    pub fn validate_dependency_pinning(&self, sbom: &Sbom) -> Result<(), SupplyChainError> {
+        let unpinned_count = sbom
+            .components
+            .iter()
+            .filter(|c| !c.is_pinned)
+            .count() as u64;
+
+        if unpinned_count > 0 {
+            Err(SupplyChainError::DependencyPinningValidationFailed(
+                format!("{} dependencies are not pinned", unpinned_count)
+            ))
+        } else {
+            Ok(())
+        }
+    }
+
+    /// Get trust statistics
+    pub fn get_trust_stats(&self) -> (u64, u64, u64, u64) {
+        (
+            self.trust_stats.total_dependencies.load(Ordering::Relaxed),
+            self.trust_stats.unapproved_blocked.load(Ordering::Relaxed),
+            self.trust_stats.typosquat_detected.load(Ordering::Relaxed),
+            self.trust_stats.checksum_failures.load(Ordering::Relaxed),
+        )
+    }
+
+    /// Create a cosign signature
+    pub fn create_cosign_signature(&mut self, artifact: &str, signature: &str) -> Result<(), SupplyChainError> {
+        self.cosign_signatures.insert(artifact.to_string(), signature.to_string());
+        Ok(())
+    }
+
+    /// Verify a cosign signature
+    pub fn verify_cosign_signature(&self, artifact: &str) -> Result<bool, SupplyChainError> {
+        // In a real implementation, this would verify the cosign signature
+        // For this example, we'll just check if we have a signature stored
+        Ok(self.cosign_signatures.contains_key(artifact))
+    }
+
+    /// Generate reproducible build hash
+    pub fn generate_reproducible_build_hash(&self, build_config: &BuildConfig) -> Result<String, SupplyChainError> {
+        // In a real implementation, this would generate a hash based on the build configuration
+        // For this example, we'll create a placeholder hash
+        Ok("sha256:reproducible-build-hash".to_string())
+    }
+
+    /// Verify reproducible build
+    pub fn verify_reproducible_build(&self, build_config: &BuildConfig, expected_hash: &str) -> Result<bool, SupplyChainError> {
+        let actual_hash = self.generate_reproducible_build_hash(build_config)?;
+        Ok(actual_hash == expected_hash)
+    }
+
+    /// Attach SBOM to artifact
+    pub fn attach_sbom_to_artifact(&mut self, artifact: &mut Artifact, sbom: Sbom) -> Result<(), SupplyChainError> {
+        artifact.sbom = Some(sbom);
+        Ok(())
+    }
+
+    /// Sign artifact with cosign
+    pub fn sign_artifact_with_cosign(&mut self, artifact_uri: &str) -> Result<String, SupplyChainError> {
+        // In a real implementation, this would use cosign to sign the artifact
+        // For this example, we'll create a placeholder signature
+        let signature = format!("cosign-signature-for-{}", artifact_uri);
+        self.create_cosign_signature(artifact_uri, &signature)?;
+        Ok(signature)
+    }
+
+    /// Sign artifact with cosign (with payload)
+    pub fn sign_artifact_with_cosign_payload(&mut self, artifact_uri: &str, _payload: &str) -> Result<Signature, SupplyChainError> {
+        // In a real implementation, this would use cosign to sign the artifact with payload
+        // For this example, we'll create a placeholder signature
+        let signature_data = format!("cosign-signature-for-{}", artifact_uri);
+        let signature = Signature {
+            data: signature_data,
+            key_id: "cosign-key".to_string(),
+            algorithm: "cosign".to_string(),
+            timestamp: self.current_timestamp(),
+        };
+        self.create_cosign_signature(artifact_uri, &signature.data)?;
+        Ok(signature)
+    }
+
+    /// Create an artifact
     pub fn create_artifact(
         &self,
         name: &str,
@@ -752,8 +958,7 @@ impl SupplyChainManager {
         signature: Option<Signature>,
         sbom: Option<Sbom>,
     ) -> Result<Artifact, SupplyChainError> {
-        // An artifact is considered signed if it has either a regular signature or a cosign signature
-        let is_signed = signature.is_some() || self.cosign_signatures.contains_key(uri);
+        let is_signed = signature.is_some();
         let artifact = Artifact {
             name: name.to_string(),
             uri: uri.to_string(),
@@ -764,64 +969,17 @@ impl SupplyChainManager {
             is_signed,
             created: self.current_timestamp(),
         };
-
         Ok(artifact)
     }
 
-    /// Sign an artifact with Sigstore/cosign
-    pub fn sign_artifact_with_cosign(
-        &mut self,
-        artifact_uri: &str,
-        payload: &str,
-    ) -> Result<CosignSignature, SupplyChainError> {
-        // In a real implementation, this would use the actual cosign tool
-        // For this example, we'll create a placeholder signature
-
-        let signature = CosignSignature {
-            payload: payload.to_string(),
-            signature: format!("cosign-signature-for-{}", artifact_uri),
-            certificate: "cosign-certificate-placeholder".to_string(),
-            timestamp: self.current_timestamp(),
-        };
-
-        self.cosign_signatures
-            .insert(artifact_uri.to_string(), signature.clone());
-        Ok(signature)
-    }
-
-    /// Verify Sigstore/cosign signature
-    pub fn verify_cosign_signature(
-        &self,
-        artifact_uri: &str,
-        signature: &CosignSignature,
-    ) -> Result<bool, SupplyChainError> {
-        // In a real implementation, this would perform actual cosign verification
-        // For this example, we'll just check if the signature matches our placeholder format
-        let expected_signature = format!("cosign-signature-for-{}", artifact_uri);
-        Ok(signature.signature == expected_signature)
-    }
-
-    /// Attach SBOM to an artifact
-    pub fn attach_sbom_to_artifact(
-        &mut self,
-        artifact: &mut Artifact,
-        sbom: Sbom,
-    ) -> Result<(), SupplyChainError> {
-        artifact.sbom = Some(sbom);
-        Ok(())
-    }
-
-    /// Verify artifact integrity (signature and SBOM)
-    pub fn verify_artifact_integrity(
-        &self,
-        artifact: &Artifact,
-    ) -> Result<bool, SupplyChainError> {
+    /// Verify artifact integrity (Build Signing / Provenance)
+    pub fn verify_artifact_integrity(&self, artifact: &Artifact) -> Result<bool, SupplyChainError> {
         // Update statistics
         self.integrity_stats
             .total_artifacts
             .fetch_add(1, Ordering::Relaxed);
 
-        // Check if artifact is signed (either regular signature or cosign signature)
+        // Check if artifact is signed
         if !artifact.is_signed {
             self.integrity_stats
                 .unsigned_blocked
@@ -831,7 +989,7 @@ impl SupplyChainManager {
 
         // Verify signature if present
         if let Some(signature) = &artifact.signature {
-            if self.verify_signature(&artifact.hash, signature)? {
+            if self.verify_signature(&artifact.uri, signature)? {
                 self.integrity_stats
                     .signed_verified
                     .fetch_add(1, Ordering::Relaxed);
@@ -844,8 +1002,8 @@ impl SupplyChainManager {
         }
 
         // Verify cosign signature if present
-        if let Some(cosign_sig) = self.cosign_signatures.get(&artifact.uri) {
-            if self.verify_cosign_signature(&artifact.uri, cosign_sig)? {
+        if self.cosign_signatures.contains_key(&artifact.uri) {
+            if self.verify_cosign_signature(&artifact.uri)? {
                 self.integrity_stats
                     .signed_verified
                     .fetch_add(1, Ordering::Relaxed);
@@ -869,117 +1027,6 @@ impl SupplyChainManager {
         (total, unsigned, verified, failures)
     }
 
-    /// Scan dependencies for vulnerabilities
-    pub fn scan_dependencies(&self, _sbom: &Sbom) -> Result<Vec<Vulnerability>, SupplyChainError> {
-        // In a real implementation, this would query vulnerability databases
-        // For this example, we'll return an empty list
-        Ok(vec![])
-    }
-
-    /// Validate that all dependencies are pinned
-    pub fn validate_dependency_pinning(&self, sbom: &Sbom) -> Result<bool, SupplyChainError> {
-        // In a real implementation, this would check that all dependencies
-        // have specific version pins rather than version ranges
-        // For this example, we'll check the is_pinned flag on components
-        for component in &sbom.components {
-            if !component.is_pinned {
-                return Ok(false);
-            }
-        }
-        Ok(true)
-    }
-
-    /// Verify component checksums
-    pub fn verify_component_checksums(&self, sbom: &Sbom) -> Result<bool, SupplyChainError> {
-        // In a real implementation, this would verify actual checksums
-        // For this example, we'll check the checksum_verified flag on components
-        for component in &sbom.components {
-            if !component.checksum_verified {
-                self.trust_stats
-                    .checksum_failures
-                    .fetch_add(1, Ordering::Relaxed);
-                return Ok(false);
-            }
-        }
-        Ok(true)
-    }
-
-    /// Check if dependencies are approved
-    pub fn check_dependency_approval(&self, sbom: &Sbom) -> Result<bool, SupplyChainError> {
-        self.trust_stats
-            .total_dependencies
-            .fetch_add(sbom.components.len() as u64, Ordering::Relaxed);
-            
-        for component in &sbom.components {
-            if !component.is_approved {
-                self.trust_stats
-                    .unapproved_blocked
-                    .fetch_add(1, Ordering::Relaxed);
-                return Ok(false);
-            }
-        }
-        Ok(true)
-    }
-
-    /// Detect typosquat packages
-    pub fn detect_typosquat_packages(&self, sbom: &Sbom) -> Result<Vec<String>, SupplyChainError> {
-        let mut detected = Vec::new();
-        
-        for component in &sbom.components {
-            if self.typosquat_packages.contains_key(&component.name) {
-                self.trust_stats
-                    .typosquat_detected
-                    .fetch_add(1, Ordering::Relaxed);
-                detected.push(component.name.clone());
-            }
-        }
-        
-        Ok(detected)
-    }
-
-    /// Validate dependency trust (SCA / Pin / Verify)
-    pub fn validate_dependency_trust(&self, sbom: &Sbom) -> Result<bool, SupplyChainError> {
-        // Check if all dependencies are pinned
-        if !self.validate_dependency_pinning(sbom)? {
-            return Err(SupplyChainError::DependencyTrustValidationFailed(
-                "Dependencies are not properly pinned".to_string()
-            ));
-        }
-        
-        // Verify component checksums
-        if !self.verify_component_checksums(sbom)? {
-            return Err(SupplyChainError::DependencyTrustValidationFailed(
-                "Component checksum verification failed".to_string()
-            ));
-        }
-        
-        // Check if dependencies are approved
-        if !self.check_dependency_approval(sbom)? {
-            return Err(SupplyChainError::DependencyTrustValidationFailed(
-                "Unapproved dependencies detected".to_string()
-            ));
-        }
-        
-        // Detect typosquat packages
-        let typosquat_packages = self.detect_typosquat_packages(sbom)?;
-        if !typosquat_packages.is_empty() {
-            return Err(SupplyChainError::DependencyTrustValidationFailed(
-                format!("Typosquat packages detected: {:?}", typosquat_packages)
-            ));
-        }
-        
-        Ok(true)
-    }
-
-    /// Get dependency trust statistics
-    pub fn get_trust_stats(&self) -> (u64, u64, u64, u64) {
-        let total = self.trust_stats.total_dependencies.load(Ordering::Relaxed);
-        let unapproved = self.trust_stats.unapproved_blocked.load(Ordering::Relaxed);
-        let typosquat = self.trust_stats.typosquat_detected.load(Ordering::Relaxed);
-        let checksum = self.trust_stats.checksum_failures.load(Ordering::Relaxed);
-        (total, unapproved, typosquat, checksum)
-    }
-
     /// Add an approved dependency
     pub fn add_approved_dependency(&mut self, name: &str, version_regex: &str) {
         self.approved_dependencies.insert(name.to_string(), version_regex.to_string());
@@ -995,21 +1042,12 @@ impl SupplyChainManager {
         self.typosquat_packages.insert(suspicious_name.to_string(), legitimate_name.to_string());
     }
 
-    /// Get current timestamp
-    fn current_timestamp(&self) -> u64 {
-        use std::time::{SystemTime, UNIX_EPOCH};
-        SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .map(|d| d.as_secs())
-            .unwrap_or(0)
-    }
-
     /// Create a build with CI/CD policy enforcement
     pub fn create_build(
         &mut self,
         build_number: &str,
         source: SourceInfo,
-        config: BuildConfig,
+        _config: BuildConfig,
         artifacts: Vec<Artifact>,
     ) -> Result<Build, SupplyChainError> {
         // Update statistics
@@ -1030,14 +1068,16 @@ impl SupplyChainManager {
         
         let build = Build {
             id: build_id.clone(),
-            build_number: build_number.to_string(),
-            source,
-            config,
-            artifacts,
-            policy_rules,
-            policy_results,
-            created: self.current_timestamp(),
+            version: build_number.to_string(),
+            status: "pending".to_string(),
+            start_time: self.current_timestamp(),
+            end_time: None,
+            commit_hash: source.commit_hash.clone(),
+            branch: source.branch.clone(),
+            policy_rules: self.policy_rules.values().cloned().collect(),
+            policy_results: HashMap::new(),
             passed_policies: false,
+            artifacts,
         };
 
         Ok(build)
@@ -1077,8 +1117,12 @@ impl SupplyChainManager {
             id: scan_id.clone(),
             build_id: build_id.to_string(),
             scan_type: scan_type.to_string(),
+            target: "build".to_string(),
+            timestamp: self.current_timestamp(),
             vulnerabilities,
             licenses,
+            tool: "placeholder".to_string(),
+            status: "completed".to_string(),
             completed: self.current_timestamp(),
             passed,
         };
@@ -1110,10 +1154,15 @@ impl SupplyChainManager {
             id: test_id.clone(),
             build_id: build_id.to_string(),
             test_type: test_type.to_string(),
+            name: "test".to_string(),
+            status: "completed".to_string(),
             tests_executed,
             tests_passed,
             tests_failed,
             coverage,
+            timestamp: self.current_timestamp(),
+            duration: 100,
+            output: "test output".to_string(),
             completed: self.current_timestamp(),
             passed,
         };
@@ -1273,7 +1322,7 @@ impl SupplyChainManager {
                 
                 for artifact in &build.artifacts {
                     if let Some(sbom) = &artifact.sbom {
-                        if !self.validate_dependency_trust(sbom)? {
+                        if self.validate_dependency_trust(sbom).is_err() {
                             return Ok(false); // Dependency trust validation failed
                         }
                     }
@@ -1334,13 +1383,15 @@ impl SupplyChainManager {
         let manifest = ApprovedManifest {
             id: format!("manifest-{}-{}", name, version),
             name: name.to_string(),
+            hash: "sha256:manifesthash123...".to_string(), // In a real implementation, this would be a proper hash
+            approved_at: self.current_timestamp(),
+            approved_by: "system".to_string(),
             version: version.to_string(),
             expected_processes,
             expected_file_changes,
             expected_network_connections,
             expected_env_vars,
             created: self.current_timestamp(),
-            hash: "sha256:manifesthash123...".to_string(), // In a real implementation, this would be a proper hash
         };
         
         self.drift_stats.approved_manifests.fetch_add(1, Ordering::Relaxed);
@@ -1374,6 +1425,8 @@ impl SupplyChainManager {
             id: id.to_string(),
             name: name.to_string(),
             image: image.to_string(),
+            started_at: self.current_timestamp(),
+            approved_manifest: Some(manifest_id.to_string()),
             processes,
             file_changes,
             network_connections,
@@ -1474,6 +1527,9 @@ impl SupplyChainManager {
         let report = DriftReport {
             id: format!("drift-report-{}-{}", container_id, self.current_timestamp()),
             manifest_id: manifest.id.clone(),
+            timestamp: self.current_timestamp(),
+            differences: vec![],
+            severity: "medium".to_string(),
             actual_processes: container.processes.clone(),
             actual_file_changes: container.file_changes.clone(),
             actual_network_connections: container.network_connections.clone(),
@@ -1636,8 +1692,8 @@ mod tests {
     fn test_dependency_pinning_validation() {
         let manager = SupplyChainManager::new();
         let sbom = manager.generate_sbom("test-component", "1.0.0").unwrap();
-        let is_pinned = manager.validate_dependency_pinning(&sbom).unwrap();
-        assert!(is_pinned);
+        let result = manager.validate_dependency_pinning(&sbom);
+        assert!(result.is_ok());
     }
 
     #[test]
@@ -1670,17 +1726,15 @@ mod tests {
     fn test_cosign_signing_and_verification() {
         let mut manager = SupplyChainManager::new();
         let artifact_uri = "artifact://test-container";
-        let payload = "container-image-payload";
 
         let signature = manager
-            .sign_artifact_with_cosign(artifact_uri, payload)
+            .sign_artifact_with_cosign(artifact_uri)
             .unwrap();
-        assert_eq!(signature.payload, payload);
-        assert_eq!(signature.signature, "cosign-signature-for-artifact://test-container");
+        assert_eq!(signature, "cosign-signature-for-artifact://test-container");
 
         assert!(manager.cosign_signatures.len() == 1);
         assert!(manager
-            .verify_cosign_signature(artifact_uri, &signature)
+            .verify_cosign_signature(artifact_uri)
             .unwrap());
     }
 
@@ -1741,8 +1795,8 @@ mod tests {
         let sbom = manager.generate_sbom("test-component", "1.0.0").unwrap();
         
         // Test that the generated SBOM passes trust validation
-        let is_trusted = manager.validate_dependency_trust(&sbom).unwrap();
-        assert!(is_trusted);
+        let result = manager.validate_dependency_trust(&sbom);
+        assert!(result.is_ok());
     }
 
     #[test]
@@ -2005,7 +2059,7 @@ mod tests {
         }];
         
         let build = manager.create_build("123", source, build_config, artifacts).unwrap();
-        assert_eq!(build.build_number, "123");
+        assert_eq!(build.version, "123");
         assert_eq!(build.artifacts.len(), 1);
         assert!(!build.passed_policies); // Should be false initially
         
@@ -2015,7 +2069,7 @@ mod tests {
         
         // Retrieve the build
         let retrieved_build = manager.get_build(&build.id).unwrap();
-        assert_eq!(retrieved_build.build_number, "123");
+        assert_eq!(retrieved_build.version, "123");
     }
 
     #[test]

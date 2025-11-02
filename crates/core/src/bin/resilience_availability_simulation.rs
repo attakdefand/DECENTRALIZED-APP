@@ -263,7 +263,7 @@ fn test_resilience_availability_under_stress() {
     assert_eq!(manager.get_healthy_services().len(), 20);
 
     // Test prioritization works correctly
-    let prioritized = manager.get_healthy_services();
+    let _prioritized = manager.get_healthy_services();
     // Since all have the same health status, they should be sorted by priority
 
     println!("✓ Service prioritization verified under stress");

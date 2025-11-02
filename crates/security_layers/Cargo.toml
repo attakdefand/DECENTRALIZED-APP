@@ -26,9 +26,16 @@ base64 = "0.21"
 regex = "1.0"
 lazy_static = "1.4"
 
+# Add core as a dependency
+core = { path = "../core" }
+
 [lib]
 crate-type = ["rlib"]
 
 [[bin]]
 name = "security_layers_simulation"
 path = "src/bin/security_layers_simulation.rs"
+
+[dev-dependencies]
+# For testing, we need to reference the core crate
+core = { path = "../core" }

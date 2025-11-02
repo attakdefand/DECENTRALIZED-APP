@@ -5,6 +5,8 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::time::{SystemTime, UNIX_EPOCH};
+use std::thread::sleep;
+use std::time::Duration;
 
 /// Oracle adapter trait
 pub trait OracleAdapter: Send + Sync {
@@ -20,6 +22,9 @@ pub trait OracleAdapter: Send + Sync {
 
     /// Check oracle health
     fn is_healthy(&self) -> bool;
+    
+    /// Get the adapter identifier
+    fn get_id(&self) -> String;
 }
 
 /// Price data structure
@@ -122,7 +127,108 @@ impl Default for PublisherKeyManager {
     }
 }
 
-/// Price aggregator for TWAP and median calculations
+/// Connector configuration for external oracle services
+#[derive(Debug, Clone)]
+pub struct ConnectorConfig {
+    /// Connector identifier
+    pub id: String,
+    /// Base URL for the oracle service
+    pub base_url: String,
+    /// API key for authentication
+    pub api_key: String,
+    /// Timeout in seconds
+    pub timeout: u64,
+    /// Retry configuration
+    pub retry_config: RetryConfig,
+    /// Allowlist of approved connectors
+    pub is_allowed: bool,
+}
+
+/// Retry configuration for oracle connectors
+#[derive(Debug, Clone)]
+pub struct RetryConfig {
+    /// Maximum number of retry attempts
+    pub max_attempts: u32,
+    /// Initial backoff time in milliseconds
+    pub initial_backoff_ms: u64,
+    /// Maximum backoff time in milliseconds
+    pub max_backoff_ms: u64,
+    /// Backoff multiplier
+    pub backoff_multiplier: f64,
+}
+
+/// Oracle connector with retry/backoff mechanisms
+pub struct OracleConnector {
+    /// Connector configuration
+    config: ConnectorConfig,
+    /// Failure count for backoff calculation
+    failure_count: u32,
+}
+
+impl OracleConnector {
+    /// Create a new oracle connector
+    pub fn new(config: ConnectorConfig) -> Self {
+        Self {
+            config,
+            failure_count: 0,
+        }
+    }
+    
+    /// Execute a request with retry/backoff logic
+    pub fn execute_with_retry<T, F>(&mut self, mut operation: F) -> Result<T, OracleError>
+    where
+        F: FnMut() -> Result<T, OracleError>,
+    {
+        let mut attempts = 0;
+        let mut last_error = None;
+        
+        while attempts < self.config.retry_config.max_attempts {
+            match operation() {
+                Ok(result) => {
+                    // Reset failure count on success
+                    self.failure_count = 0;
+                    return Ok(result);
+                }
+                Err(e) => {
+                    last_error = Some(e);
+                    attempts += 1;
+                    self.failure_count += 1;
+                    
+                    if attempts < self.config.retry_config.max_attempts {
+                        // Calculate backoff time
+                        let backoff_time = self.calculate_backoff();
+                        sleep(Duration::from_millis(backoff_time));
+                    }
+                }
+            }
+        }
+        
+        // If we get here, all attempts failed
+        Err(last_error.unwrap_or(OracleError::DataError("Unknown error".to_string())))
+    }
+    
+    /// Calculate backoff time based on failure count
+    fn calculate_backoff(&self) -> u64 {
+        let backoff = (self.config.retry_config.initial_backoff_ms as f64
+            * self.config.retry_config.backoff_multiplier.powi(self.failure_count as i32))
+            as u64;
+            
+        // Cap at maximum backoff
+        backoff.min(self.config.retry_config.max_backoff_ms)
+    }
+    
+    /// Check if this connector is allowed
+    pub fn is_allowed(&self) -> bool {
+        self.config.is_allowed
+    }
+    
+    /// Get connector ID
+    pub fn get_id(&self) -> &str {
+        &self.config.id
+    }
+}
+
+/// Price aggregator for TWAP and median calculations with enhanced deviation checking
 pub struct PriceAggregator {
     /// Time window for TWAP calculation (in seconds)
     pub twap_window: u64,
@@ -132,6 +238,21 @@ pub struct PriceAggregator {
     pub max_deviation: f64,
     /// Oracle adapters
     pub oracles: Vec<Box<dyn OracleAdapter>>,
+    /// Connector allowlist
+    pub connector_allowlist: Vec<String>,
+    /// Enhanced deviation checking parameters
+    pub deviation_config: DeviationConfig,
+}
+
+/// Configuration for enhanced deviation checking
+#[derive(Debug, Clone)]
+pub struct DeviationConfig {
+    /// Standard deviation multiplier for outlier detection
+    pub std_dev_multiplier: f64,
+    /// Maximum allowed percentage change between consecutive readings
+    pub max_percentage_change: f64,
+    /// Minimum number of data points required for statistical analysis
+    pub min_data_points: usize,
 }
 
 impl PriceAggregator {
@@ -141,6 +262,12 @@ impl PriceAggregator {
             min_oracles,
             max_deviation,
             oracles: Vec::new(),
+            connector_allowlist: Vec::new(),
+            deviation_config: DeviationConfig {
+                std_dev_multiplier: 2.0,
+                max_percentage_change: 5.0, // 5% maximum change
+                min_data_points: 3,
+            },
         }
     }
 
@@ -149,13 +276,30 @@ impl PriceAggregator {
         self.oracles.push(oracle);
     }
 
+    /// Add a connector to the allowlist
+    pub fn add_to_allowlist(&mut self, connector_id: String) {
+        if !self.connector_allowlist.contains(&connector_id) {
+            self.connector_allowlist.push(connector_id);
+        }
+    }
+
+    /// Check if a connector is in the allowlist
+    pub fn is_connector_allowed(&self, connector_id: &str) -> bool {
+        self.connector_allowlist.contains(&connector_id.to_string())
+    }
+
     /// Calculate TWAP for a pair
     pub fn calculate_twap(&self, pair: &str) -> Result<PriceData, OracleError> {
         let mut prices = Vec::new();
         let mut timestamps = Vec::new();
 
-        // Collect prices from all healthy oracles
+        // Collect prices from all healthy and allowed oracles
         for oracle in &self.oracles {
+            let oracle_id = oracle.get_id();
+            if !self.is_connector_allowed(&oracle_id) {
+                continue; // Skip non-allowed connectors
+            }
+            
             if oracle.is_healthy() {
                 match oracle.get_historical_prices(pair, (self.twap_window / 60) as usize) {
                     Ok(historical_prices) => {
@@ -191,8 +335,13 @@ impl PriceAggregator {
     pub fn calculate_median(&self, pair: &str) -> Result<PriceData, OracleError> {
         let mut prices = Vec::new();
 
-        // Collect latest prices from all healthy oracles
+        // Collect latest prices from all healthy and allowed oracles
         for oracle in &self.oracles {
+            let oracle_id = oracle.get_id();
+            if !self.is_connector_allowed(&oracle_id) {
+                continue; // Skip non-allowed connectors
+            }
+            
             if oracle.is_healthy() {
                 match oracle.get_price(pair) {
                     Ok(price_data) => {
@@ -209,11 +358,8 @@ impl PriceAggregator {
             ));
         }
 
-        // Calculate median
-        let median = self.calculate_median_value(&mut prices);
-
-        // Check for outliers
-        if self.detect_outliers(&prices, median) {
+        // Check for outliers using enhanced deviation checking
+        if self.detect_outliers_enhanced(&prices) {
             return Err(OracleError::ValidationError(
                 "Outliers detected".to_string(),
             ));
@@ -221,7 +367,7 @@ impl PriceAggregator {
 
         Ok(PriceData {
             pair: pair.to_string(),
-            price: median as u128,
+            price: self.calculate_median_value(&mut prices.clone()) as u128,
             timestamp: current_timestamp(),
             confidence: self.calculate_confidence(&prices),
             oracle_provider: "Median".to_string(),
@@ -262,20 +408,36 @@ impl PriceAggregator {
         }
     }
 
-    /// Detect outliers using standard deviation
-    fn detect_outliers(&self, prices: &[f64], median: f64) -> bool {
-        if prices.is_empty() {
-            return false;
+    /// Enhanced outlier detection using multiple methods
+    fn detect_outliers_enhanced(&self, prices: &[f64]) -> bool {
+        if prices.len() < self.deviation_config.min_data_points {
+            return false; // Not enough data points for statistical analysis
         }
 
+        // Method 1: Standard deviation based detection
         let mean: f64 = prices.iter().sum::<f64>() / prices.len() as f64;
         let variance: f64 =
             prices.iter().map(|x| (x - mean).powi(2)).sum::<f64>() / prices.len() as f64;
         let std_dev = variance.sqrt();
 
-        prices
+        // Check if any price is beyond std_dev_multiplier standard deviations
+        let std_dev_outlier = prices
             .iter()
-            .any(|&price| (price - median).abs() > std_dev * self.max_deviation)
+            .any(|&price| (price - mean).abs() > std_dev * self.deviation_config.std_dev_multiplier);
+
+        if std_dev_outlier {
+            return true;
+        }
+
+        // Method 2: Percentage change detection between consecutive prices
+        for i in 1..prices.len() {
+            let percentage_change = ((prices[i] - prices[i - 1]) / prices[i - 1]).abs() * 100.0;
+            if percentage_change > self.deviation_config.max_percentage_change {
+                return true;
+            }
+        }
+
+        false
     }
 
     /// Calculate confidence score
@@ -409,8 +571,12 @@ mod tests {
 
     #[test]
     fn test_price_aggregator() {
-        let _aggregator = PriceAggregator::new(3600, 3, 2.0); // 1 hour window, 3 oracles min, 2 std dev max
-                                                              // Additional tests would require mock oracle adapters
+        let mut aggregator = PriceAggregator::new(3600, 3, 2.0); // 1 hour window, 3 oracles min, 2 std dev max
+        
+        // Add a connector to allowlist
+        aggregator.add_to_allowlist("test_connector".to_string());
+        assert!(aggregator.is_connector_allowed("test_connector"));
+        assert!(!aggregator.is_connector_allowed("unknown_connector"));
     }
 
     #[test]
@@ -435,5 +601,47 @@ mod tests {
 
         // This should detect manipulation (50% change in 100 seconds)
         assert!(!tests.test_price_manipulation(&current, &previous));
+    }
+    
+    #[test]
+    fn test_connector_config() {
+        let retry_config = RetryConfig {
+            max_attempts: 3,
+            initial_backoff_ms: 100,
+            max_backoff_ms: 1000,
+            backoff_multiplier: 2.0,
+        };
+        
+        let config = ConnectorConfig {
+            id: "test_connector".to_string(),
+            base_url: "https://api.example.com".to_string(),
+            api_key: "test_key".to_string(),
+            timeout: 30,
+            retry_config,
+            is_allowed: true,
+        };
+        
+        let mut connector = OracleConnector::new(config);
+        assert_eq!(connector.get_id(), "test_connector");
+        assert!(connector.is_allowed());
+    }
+    
+    #[test]
+    fn test_enhanced_deviation_detection() {
+        let mut aggregator = PriceAggregator::new(3600, 3, 2.0);
+        // Set min_data_points to 2 for this test
+        aggregator.deviation_config.min_data_points = 2;
+        
+        // Test with normal prices
+        let normal_prices = vec![100.0, 101.0, 99.5, 100.5, 100.2];
+        assert!(!aggregator.detect_outliers_enhanced(&normal_prices));
+        
+        // Test with outlier prices
+        let outlier_prices = vec![100.0, 101.0, 99.5, 100.5, 150.0]; // 150 is an outlier
+        assert!(aggregator.detect_outliers_enhanced(&outlier_prices));
+        
+        // Test with large percentage change - this should be detected by percentage change detection
+        let large_change_prices = vec![100.0, 300.0]; // 200% change, which exceeds the 5% threshold
+        assert!(aggregator.detect_outliers_enhanced(&large_change_prices));
     }
 }

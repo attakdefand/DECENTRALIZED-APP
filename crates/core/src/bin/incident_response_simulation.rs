@@ -3,7 +3,7 @@
 //! This binary allows running the incident response simulation tests as a standalone program.
 
 use core::incident_response::{
-    Backup, BackupStatus, BackupType, CommunicationChannel, CommunicationPlan, EscalationStep,
+    Backup, BackupStatus, BackupType, CommunicationPlan,
     IncidentResponseManager, PauseKillSwitch, RestoreJob, RestoreStatus,
 };
 use std::collections::HashMap;

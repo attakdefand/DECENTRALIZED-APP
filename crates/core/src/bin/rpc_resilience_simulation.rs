@@ -184,7 +184,7 @@ fn test_rpc_resilience_under_stress() {
     assert_eq!(manager.get_healthy_providers().len(), 20);
 
     // Test prioritization works correctly
-    let prioritized = manager.get_healthy_providers();
+    let _prioritized = manager.get_healthy_providers();
     // Since all have the same health status, they should be sorted by priority
 
     println!("✓ Provider prioritization verified under stress");

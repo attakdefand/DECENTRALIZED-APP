@@ -10,6 +10,8 @@ use rand::RngCore;
 use serde::{Deserialize, Serialize};
 use sha3::{Digest, Sha3_256};
 use std::collections::HashMap;
+use base64::{Engine as _, engine::general_purpose};
+use serde_json::json;
 
 /// Authentication manager
 #[derive(Debug)]
@@ -62,6 +64,54 @@ pub struct JwtToken {
     pub header: String,
     pub payload: String,
     pub signature: String,
+}
+
+/// JWT token header
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct JwtHeader {
+    pub alg: String,
+    pub typ: String,
+}
+
+/// JWT token payload
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct JwtPayload {
+    pub sub: String,
+    pub iss: String,
+    pub aud: String,
+    pub exp: u64,
+    pub iat: u64,
+    pub scope: String,
+    pub roles: Vec<String>,
+}
+
+/// OAuth2 configuration
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct OAuth2Config {
+    pub client_id: String,
+    pub client_secret: String,
+    pub redirect_uri: String,
+    pub auth_url: String,
+    pub token_url: String,
+    pub scopes: Vec<String>,
+}
+
+/// mTLS configuration
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct MtlsConfig {
+    pub ca_cert_path: String,
+    pub client_cert_path: String,
+    pub client_key_path: String,
+    pub verify_peer: bool,
+}
+
+/// OPA policy
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct OpaPolicy {
+    pub id: String,
+    pub content: String,
+    pub version: String,
+    pub created_at: u64,
 }
 
 /// Authorization manager
@@ -280,6 +330,73 @@ impl AuthNManager {
         let mut rng = rand::thread_rng();
         format!("{:06}", rng.next_u32() % 1000000)
     }
+
+    /// Generate OAuth2 authorization URL
+    pub fn generate_oauth2_auth_url(&self, config: &OAuth2Config, state: &str) -> String {
+        format!(
+            "{}?client_id={}&redirect_uri={}&response_type=code&scope={}&state={}",
+            config.auth_url,
+            config.client_id,
+            config.redirect_uri,
+            config.scopes.join(" "),
+            state
+        )
+    }
+
+    /// Exchange OAuth2 authorization code for access token
+    pub fn exchange_oauth2_code(
+        &self,
+        config: &OAuth2Config,
+        code: &str,
+    ) -> Result<JwtToken, String> {
+        // In a real implementation, this would make an HTTP request to the token endpoint
+        // For this example, we'll create a mock JWT token
+        let header = JwtHeader {
+            alg: "RS256".to_string(),
+            typ: "JWT".to_string(),
+        };
+        
+        let now = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_secs();
+            
+        let payload = JwtPayload {
+            sub: "oauth2_user".to_string(),
+            iss: "oauth2_provider".to_string(),
+            aud: config.client_id.clone(),
+            exp: now + 3600, // 1 hour
+            iat: now,
+            scope: config.scopes.join(" "),
+            roles: vec!["oauth2_user".to_string()],
+        };
+
+        let header_json = serde_json::to_string(&header)
+            .map_err(|e| format!("Failed to serialize header: {}", e))?;
+        let payload_json = serde_json::to_string(&payload)
+            .map_err(|e| format!("Failed to serialize payload: {}", e))?;
+
+        let header_b64 = general_purpose::STANDARD.encode(header_json);
+        let payload_b64 = general_purpose::STANDARD.encode(payload_json);
+
+        // In a real implementation, we would sign the token with the provider's private key
+        let signature = format!("{}_{}_signature", header_b64, payload_b64);
+
+        let token = JwtToken {
+            header: header_b64,
+            payload: payload_b64,
+            signature,
+        };
+
+        Ok(token)
+    }
+
+    /// Validate mTLS certificate
+    pub fn validate_mtls(&self, _config: &MtlsConfig, _cert_data: &[u8]) -> Result<bool, String> {
+        // In a real implementation, this would validate the client certificate
+        // against the CA certificate and check revocation status
+        Ok(true) // Mock implementation
+    }
 }
 
 impl Default for AuthNManager {
@@ -347,6 +464,33 @@ impl AuthZManager {
         } else {
             vec![]
         }
+    }
+
+    /// Evaluate OPA policy
+    pub fn evaluate_opa_policy(&self, policy: &str, input: &str) -> Result<bool, String> {
+        // In a real implementation, this would make a request to the OPA server
+        // For this example, we'll parse the policy and input to make a decision
+        // This is a simplified mock implementation
+        
+        // Check if the policy allows the action based on the input
+        // In a real implementation, we would use the OPA library or REST API
+        Ok(policy.contains("allow") && input.contains("user"))
+    }
+
+    /// Add OPA policy
+    pub fn add_opa_policy(&mut self, policy: OpaPolicy) -> Result<(), String> {
+        // In a real implementation, this would store the policy in a policy repository
+        // For this example, we'll store it in the policies map with a special prefix
+        let policy_id = format!("opa_{}", policy.id);
+        // Convert to RbacPolicy for storage (simplified approach)
+        let rbac_policy = RbacPolicy {
+            id: policy_id,
+            name: format!("OPA Policy: {}", policy.id),
+            permissions: vec![policy.content.clone()],
+            description: format!("OPA policy version {}", policy.version),
+        };
+        self.policies.insert(rbac_policy.id.clone(), rbac_policy);
+        Ok(())
     }
 }
 
@@ -467,6 +611,42 @@ impl TokenLifecycle {
         // In a real implementation, we would validate the signature
         // For this example, we'll just check if it exists
         Ok(self.tokens.contains_key(&token.payload))
+    }
+
+    /// Generate a full JWT token with header, payload, and signature
+    pub fn generate_jwt_token(
+        &mut self,
+        header: JwtHeader,
+        payload: JwtPayload,
+        _private_key: &[u8],
+    ) -> Result<JwtToken, String> {
+        let header_json = serde_json::to_string(&header)
+            .map_err(|e| format!("Failed to serialize header: {}", e))?;
+        let payload_json = serde_json::to_string(&payload)
+            .map_err(|e| format!("Failed to serialize payload: {}", e))?;
+
+        let header_b64 = general_purpose::STANDARD.encode(header_json);
+        let payload_b64 = general_purpose::STANDARD.encode(payload_json);
+
+        // In a real implementation, we would sign the header and payload with the private key
+        // For this example, we'll use a mock signature
+        let signature = format!("{}_{}_signature", header_b64, payload_b64);
+
+        let token = JwtToken {
+            header: header_b64,
+            payload: payload_b64,
+            signature,
+        };
+
+        self.tokens.insert(payload.sub.clone(), token.clone());
+        Ok(token)
+    }
+
+    /// Validate JWT token signature
+    pub fn validate_jwt_signature(&self, token: &JwtToken, _public_key: &[u8]) -> Result<bool, String> {
+        // In a real implementation, we would verify the signature using the public key
+        // For this example, we'll just check if it's a mock signature
+        Ok(token.signature.ends_with("_signature"))
     }
 
     /// Generate refresh token
@@ -699,5 +879,94 @@ mod tests {
         
         // Test non-existent secret
         assert!(secret_mgr.retrieve_secret("nonexistent").is_err());
+    }
+
+    #[test]
+    fn test_oauth2_jwt_generation() {
+        let authn = AuthNManager::new();
+        
+        let config = OAuth2Config {
+            client_id: "test_client".to_string(),
+            client_secret: "test_secret".to_string(),
+            redirect_uri: "http://localhost:3000/callback".to_string(),
+            auth_url: "https://example.com/oauth/authorize".to_string(),
+            token_url: "https://example.com/oauth/token".to_string(),
+            scopes: vec!["read".to_string(), "write".to_string()],
+        };
+        
+        let auth_url = authn.generate_oauth2_auth_url(&config, "test_state");
+        assert!(auth_url.contains("client_id=test_client"));
+        assert!(auth_url.contains("scope=read write"));
+        assert!(auth_url.contains("state=test_state"));
+        
+        let token = authn.exchange_oauth2_code(&config, "test_code").unwrap();
+        assert!(!token.header.is_empty());
+        assert!(!token.payload.is_empty());
+        assert!(!token.signature.is_empty());
+    }
+
+    #[test]
+    fn test_jwt_token_lifecycle() {
+        let mut token_lifecycle = TokenLifecycle::new();
+        
+        let header = JwtHeader {
+            alg: "RS256".to_string(),
+            typ: "JWT".to_string(),
+        };
+        
+        let now = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_secs();
+            
+        let payload = JwtPayload {
+            sub: "test_user".to_string(),
+            iss: "test_issuer".to_string(),
+            aud: "test_audience".to_string(),
+            exp: now + 3600,
+            iat: now,
+            scope: "read write".to_string(),
+            roles: vec!["user".to_string(), "admin".to_string()],
+        };
+        
+        let private_key = [0u8; 32];
+        let token = token_lifecycle.generate_jwt_token(header, payload, &private_key).unwrap();
+        
+        let public_key = [0u8; 32];
+        assert!(token_lifecycle.validate_jwt_signature(&token, &public_key).unwrap());
+    }
+
+    #[test]
+    fn test_opa_policy_evaluation() {
+        let authz = AuthZManager::new();
+        
+        let policy = "package example
+        default allow = false
+        allow {
+            input.user == \"admin\"
+            input.action == \"read\"
+        }";
+        
+        let input = "{\"user\": \"admin\", \"action\": \"read\"}";
+        assert!(authz.evaluate_opa_policy(policy, input).unwrap());
+    }
+
+    #[test]
+    fn test_opa_policy_storage() {
+        let mut authz = AuthZManager::new();
+        
+        let policy = OpaPolicy {
+            id: "test_policy".to_string(),
+            content: "allow { true }".to_string(),
+            version: "1.0.0".to_string(),
+            created_at: std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .unwrap()
+                .as_secs(),
+        };
+        
+        assert!(authz.add_opa_policy(policy).is_ok());
+        // Check that the policy was stored (with the "opa_" prefix)
+        assert!(authz.policies.contains_key("opa_test_policy"));
     }
 }

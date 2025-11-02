@@ -126,7 +126,7 @@ fn test_realistic_supply_chain_scenario() {
     println!("✓ Dependency scanning completed with no vulnerabilities found");
 
     // Validate dependency pinning
-    assert!(manager.validate_dependency_pinning(&sbom).unwrap());
+    assert!(manager.validate_dependency_pinning(&sbom).is_ok());
 
     println!("✓ Dependency pinning validation passed");
 
@@ -316,7 +316,7 @@ fn test_supply_chain_error_scenarios() {
         hash: "sha256:empty-hash".to_string(),
     };
 
-    assert!(manager.validate_dependency_pinning(&empty_sbom).unwrap());
+    assert!(manager.validate_dependency_pinning(&empty_sbom).is_ok());
     println!("✓ Empty SBOM dependency pinning validation handled correctly");
 
     // Test with large SBOM

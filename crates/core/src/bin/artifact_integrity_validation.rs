@@ -81,11 +81,14 @@ fn main() {
     // Test 3: Test Sigstore/cosign signing
     println!("\n3. Testing Sigstore/cosign signing");
     let cosign_signature = manager
-        .sign_artifact_with_cosign("artifact://test-cosign", "test-payload")
+        .sign_artifact_with_cosign("artifact://test-cosign")
         .unwrap();
     
+    // Store the signature for verification
+    manager.create_cosign_signature("artifact://test-cosign", &cosign_signature).unwrap();
+    
     // Verify cosign signature
-    let is_valid = manager.verify_cosign_signature("artifact://test-cosign", &cosign_signature).unwrap();
+    let is_valid = manager.verify_cosign_signature("artifact://test-cosign").unwrap();
     assert!(is_valid, "Cosign signature should be valid");
     
     println!("✓ Sigstore/cosign signing and verification working correctly");
@@ -93,7 +96,7 @@ fn main() {
     // Test 4: Create artifact with cosign signature
     println!("\n4. Testing artifact with cosign signature");
     let _cosign_signature = manager
-        .sign_artifact_with_cosign("artifact://test-cosign-artifact", "test-payload")
+        .sign_artifact_with_cosign("artifact://test-cosign-artifact")
         .unwrap();
     
     let artifact_with_cosign = manager

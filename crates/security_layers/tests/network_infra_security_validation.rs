@@ -138,23 +138,18 @@ fn test_osi_hardening_config() {
     let mut manager = NetworkInfraManager::new();
     
     let config = OsiHardeningConfig {
-        allowed_ports: vec![22, 80, 443, 3000, 8080],
-        blocked_ports: vec![23, 2323], // Telnet ports
         tls_min_version: "1.3".to_string(),
         disable_legacy_ciphers: true,
-        dns_security_rules: vec![
-            "block-private-dns-resolve".to_string(),
-            "enforce-dns-over-https".to_string(),
-        ],
+        port_allowlist: vec![22, 443, 8080, 8443],
+        dns_security_rules: vec!["strict-validation".to_string(), "no-external-dns".to_string()],
     };
     
     assert!(manager.update_osi_hardening_config(config.clone()).is_ok());
     
     let updated_config = manager.get_osi_hardening_config();
-    assert_eq!(updated_config.allowed_ports, vec![22, 80, 443, 3000, 8080]);
-    assert_eq!(updated_config.blocked_ports, vec![23, 2323]);
     assert_eq!(updated_config.tls_min_version, "1.3");
     assert!(updated_config.disable_legacy_ciphers);
+    assert_eq!(updated_config.port_allowlist.len(), 4);
     assert_eq!(updated_config.dns_security_rules.len(), 2);
 }
 
@@ -163,31 +158,20 @@ fn test_osi_hardening_config() {
 fn test_osi_hardening_telemetry_logging() {
     let mut manager = NetworkInfraManager::new();
     
-    // Create open port diff data
-    let mut open_port_diff = HashMap::new();
-    open_port_diff.insert(22, true);   // SSH open
-    open_port_diff.insert(80, false);  // HTTP closed
-    open_port_diff.insert(443, true);  // HTTPS open
-    
     // Test logging telemetry data
     let telemetry = OsiHardeningTelemetry {
-        open_port_diff,
-        blocked_connection_attempts: 27,
-        dns_violations: 3,
+        open_port_diff: vec![22, 80, 443],
+        protocol_violations: 3,
+        dns_violations: 1,
     };
     
     manager.log_osi_hardening_telemetry(telemetry.clone());
     
     // Test retrieving telemetry data
     let logged_telemetry = manager.get_osi_hardening_telemetry();
-    assert_eq!(logged_telemetry.blocked_connection_attempts, 27);
-    assert_eq!(logged_telemetry.dns_violations, 3);
     assert_eq!(logged_telemetry.open_port_diff.len(), 3);
-    
-    // Check specific port states
-    assert_eq!(*logged_telemetry.open_port_diff.get(&22).unwrap(), true);
-    assert_eq!(*logged_telemetry.open_port_diff.get(&80).unwrap(), false);
-    assert_eq!(*logged_telemetry.open_port_diff.get(&443).unwrap(), true);
+    assert_eq!(logged_telemetry.protocol_violations, 3);
+    assert_eq!(logged_telemetry.dns_violations, 1);
 }
 
 /// Test Host Hardening configuration
@@ -195,14 +179,16 @@ fn test_osi_hardening_telemetry_logging() {
 fn test_host_hardening_config() {
     let mut manager = NetworkInfraManager::new();
     
+    // Create kernel hardening parameters
+    let mut kernel_hardening = HashMap::new();
+    kernel_hardening.insert("kernel.modules_disabled".to_string(), "1".to_string());
+    kernel_hardening.insert("kernel.randomize_va_space".to_string(), "2".to_string());
+    kernel_hardening.insert("net.ipv4.conf.all.rp_filter".to_string(), "1".to_string());
+    
     let config = HostHardeningConfig {
         readonly_root_fs: true,
         minimal_base_image: true,
-        kernel_hardening: HashMap::from([
-            ("kernel.modules_disabled".to_string(), "1".to_string()),
-            ("kernel.randomize_va_space".to_string(), "2".to_string()),
-            ("net.ipv4.conf.all.rp_filter".to_string(), "1".to_string()),
-        ]),
+        kernel_hardening,
         ssh_lockdown: SshLockdownConfig {
             disable_password_auth: true,
             key_based_auth_only: true,
@@ -305,6 +291,96 @@ fn test_runtime_secret_telemetry_logging() {
     assert_eq!(logged_telemetry.rotation_events, 3);
 }
 
+/// Test Service Mesh configuration
+#[test]
+fn test_service_mesh_config() {
+    let mut manager = NetworkInfraManager::new();
+    
+    // Create network policies
+    let policies = vec![
+        NetworkPolicy {
+            name: "api-to-database".to_string(),
+            sources: vec!["api-service".to_string()],
+            destinations: vec!["database-service".to_string()],
+            ports: vec![5432],
+            protocol: "TCP".to_string(),
+        },
+        NetworkPolicy {
+            name: "frontend-to-api".to_string(),
+            sources: vec!["frontend-service".to_string()],
+            destinations: vec!["api-service".to_string()],
+            ports: vec![8080, 8443],
+            protocol: "TCP".to_string(),
+        }
+    ];
+    
+    let config = ServiceMeshConfig {
+        enabled: true,
+        mtls_config: MtlsConfig {
+            enabled: true,
+            ca_cert: "test-ca-cert".to_string(),
+            cert_rotation_interval: 86400, // 24 hours
+            strict_mode: true,
+        },
+        egress_whitelist: vec![
+            "kubernetes.default.svc.cluster.local".to_string(),
+            "kube-dns.kube-system.svc.cluster.local".to_string(),
+            "external-api.example.com".to_string(),
+        ],
+        network_policies: policies,
+    };
+    
+    assert!(manager.update_service_mesh_config(config.clone()).is_ok());
+    
+    let updated_config = manager.get_service_mesh_config();
+    assert!(updated_config.enabled);
+    assert!(updated_config.mtls_config.enabled);
+    assert_eq!(updated_config.mtls_config.ca_cert, "test-ca-cert");
+    assert_eq!(updated_config.mtls_config.cert_rotation_interval, 86400);
+    assert!(updated_config.mtls_config.strict_mode);
+    assert_eq!(updated_config.egress_whitelist.len(), 3);
+    assert_eq!(updated_config.network_policies.len(), 2);
+    
+    // Check specific network policy
+    let first_policy = &updated_config.network_policies[0];
+    assert_eq!(first_policy.name, "api-to-database");
+    assert_eq!(first_policy.sources, vec!["api-service".to_string()]);
+    assert_eq!(first_policy.destinations, vec!["database-service".to_string()]);
+    assert_eq!(first_policy.ports, vec![5432]);
+    assert_eq!(first_policy.protocol, "TCP");
+    
+    // Test invalid configuration - missing CA cert
+    let mut invalid_config = config.clone();
+    invalid_config.mtls_config.ca_cert = "".to_string();
+    assert!(manager.update_service_mesh_config(invalid_config).is_err());
+    
+    // Test invalid configuration - too short rotation interval
+    let mut invalid_config2 = config.clone();
+    invalid_config2.mtls_config.cert_rotation_interval = 300; // 5 minutes
+    assert!(manager.update_service_mesh_config(invalid_config2).is_err());
+}
+
+/// Test Service Mesh telemetry logging
+#[test]
+fn test_service_mesh_telemetry_logging() {
+    let mut manager = NetworkInfraManager::new();
+    
+    // Test logging telemetry data
+    let telemetry = ServiceMeshTelemetry {
+        mtls_connections: 1250,
+        policy_violations: 3,
+        blocked_egress_attempts: 7,
+    };
+    
+    manager.log_service_mesh_telemetry(telemetry.clone());
+    
+    // Test retrieving telemetry data
+    let logged_telemetry = manager.get_service_mesh_telemetry();
+    assert_eq!(logged_telemetry.mtls_connections, 1250);
+    assert_eq!(logged_telemetry.policy_violations, 3);
+    assert_eq!(logged_telemetry.blocked_egress_attempts, 7);
+}
+
 /// Test all configurations validation
 #[test]
 fn test_all_configurations_validation() {
@@ -323,6 +399,11 @@ fn test_all_configurations_validation() {
     // Test with invalid runtime secret config
     let mut invalid_secret_config = invalid_manager.get_runtime_secret_config().clone();
     invalid_secret_config.rotation_interval = 30; // Too short
+    // Same limitation as above
+    
+    // Test with invalid service mesh config
+    let mut invalid_mesh_config = invalid_manager.get_service_mesh_config().clone();
+    invalid_mesh_config.mtls_config.cert_rotation_interval = 300; // Too short
     // Same limitation as above
 }
 
@@ -357,6 +438,14 @@ fn test_network_infra_security_layers_from_csv() {
     assert!(secret_config.tmpfs_enabled, "tmpfs should be enabled for secrets");
     assert!(secret_config.env_var_injection, "Env var injection should be enabled");
     assert!(secret_config.encryption_at_rest, "Encryption at rest should be enabled");
+    
+    // Verify service mesh configuration
+    let mesh_config = manager.get_service_mesh_config();
+    assert!(mesh_config.enabled, "Service mesh should be enabled");
+    assert!(mesh_config.mtls_config.enabled, "mTLS should be enabled");
+    assert!(mesh_config.mtls_config.strict_mode, "mTLS should be in strict mode");
+    assert!(!mesh_config.egress_whitelist.is_empty(), "Egress whitelist should be configured");
+    assert!(!mesh_config.network_policies.is_empty(), "Network policies should be configured");
     
     println!("All Network & Infrastructure Security layers validated successfully!");
 }
