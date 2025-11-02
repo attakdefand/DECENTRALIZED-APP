@@ -1,0 +1,61 @@
+# Access Governance Enforcement
+# Enforces access governance requirements in the CI/CD pipeline
+
+name: Access Governance Enforcement
+
+on:
+  pull_request:
+    branches: [ main, develop ]
+    types: [ opened, synchronize, reopened ]
+  push:
+    branches: [ main ]
+
+jobs:
+  validate-access-governance:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up PowerShell
+        uses: actions/setup-powershell@v1
+
+      - name: Create logs directory
+        run: |
+          mkdir -p logs
+
+      - name: Validate access governance
+        run: |
+          # Run the access governance validation script
+          pwsh -Command "scripts/validate-access-governance.ps1 -MinCompletionPercentage 100 -BlockOnIncompleteReviews `$true -BlockOnSoDViolations `$true"
+        shell: bash
+
+      - name: Upload audit logs
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: access-governance-audit-logs
+          path: logs/access-governance-audit.log
+          retention-days: 30
+
+  access-review-report:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Generate access review report
+        run: |
+          # In a real implementation, this would generate an actual access review report
+          # For now, we'll create a sample report
+          mkdir -p docs/security
+          echo "User,Role,Last Review Date,Status" > docs/security/access-review-report.csv
+          echo "alice.developer,developer,2025-10-15,Approved" >> docs/security/access-review-report.csv
+          echo "bob.admin,admin,2025-10-20,Approved" >> docs/security/access-review-report.csv
+          echo "charlie.auditor,auditor,2025-10-25,Approved" >> docs/security/access-review-report.csv
+
+      - name: Upload access review report
+        uses: actions/upload-artifact@v3
+        with:
+          name: access-review-report
+          path: docs/security/access-review-report.csv

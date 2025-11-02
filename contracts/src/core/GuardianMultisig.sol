@@ -20,18 +20,29 @@ contract GuardianMultisig is AccessControl, Pausable {
         bool executed;
         bytes data;
         address target;
+        uint256 createdAt;
+        address[] voters;
+    }
+    
+    struct VoteRecord {
+        address voter;
+        uint256 timestamp;
+        bytes32 proposalId;
     }
     
     mapping(bytes32 => Proposal) public proposals;
     mapping(address => bool) public isGuardian;
+    mapping(bytes32 => VoteRecord[]) public proposalVoteHistory;
     address[] public guardians;
     
     event GuardianAdded(address indexed guardian);
     event GuardianRemoved(address indexed guardian);
-    event ProposalCreated(bytes32 indexed proposalId, address target, bytes data);
-    event ProposalExecuted(bytes32 indexed proposalId);
-    event ProposalVetoed(bytes32 indexed proposalId);
+    event ProposalCreated(bytes32 indexed proposalId, address target, bytes data, uint256 timestamp);
+    event ProposalExecuted(bytes32 indexed proposalId, uint256 executionTime);
+    event ProposalVetoed(bytes32 indexed proposalId, address indexed admin);
     event RequiredSignaturesChanged(uint256 oldRequired, uint256 newRequired);
+    event VoteCast(bytes32 indexed proposalId, address indexed voter, uint256 timestamp);
+    event VoteHistoryRecorded(bytes32 indexed proposalId, address voter, uint256 timestamp);
 
     /// @notice Constructor to initialize the guardian multisig
     /// @param _guardians The initial guardian addresses
@@ -118,8 +129,9 @@ contract GuardianMultisig is AccessControl, Pausable {
         Proposal storage proposal = proposals[proposalId];
         proposal.data = data;
         proposal.target = target;
+        proposal.createdAt = block.timestamp;
         
-        emit ProposalCreated(proposalId, target, data);
+        emit ProposalCreated(proposalId, target, data, block.timestamp);
         
         return proposalId;
     }
@@ -133,6 +145,18 @@ contract GuardianMultisig is AccessControl, Pausable {
         
         proposal.hasVoted[msg.sender] = true;
         proposal.voteCount += 1;
+        proposal.voters.push(msg.sender);
+        
+        // Record vote in history
+        VoteRecord memory voteRecord = VoteRecord({
+            voter: msg.sender,
+            timestamp: block.timestamp,
+            proposalId: proposalId
+        });
+        proposalVoteHistory[proposalId].push(voteRecord);
+        
+        emit VoteCast(proposalId, msg.sender, block.timestamp);
+        emit VoteHistoryRecorded(proposalId, msg.sender, block.timestamp);
         
         // Execute if enough votes
         if (proposal.voteCount >= requiredSignatures) {
@@ -147,7 +171,7 @@ contract GuardianMultisig is AccessControl, Pausable {
         require(!proposal.executed, "Proposal already executed");
         
         proposal.executed = true;
-        emit ProposalVetoed(proposalId);
+        emit ProposalVetoed(proposalId, msg.sender);
     }
 
     /// @notice Execute a proposal
@@ -162,7 +186,7 @@ contract GuardianMultisig is AccessControl, Pausable {
         (bool success, ) = proposal.target.call(proposal.data);
         require(success, "Proposal execution failed");
         
-        emit ProposalExecuted(proposalId);
+        emit ProposalExecuted(proposalId, block.timestamp);
     }
 
     /// @notice Emergency pause function
@@ -186,6 +210,20 @@ contract GuardianMultisig is AccessControl, Pausable {
     /// @return bool Whether the address is a guardian
     function isAddressGuardian(address account) public view returns (bool) {
         return isGuardian[account];
+    }
+
+    /// @notice Get vote history for a proposal
+    /// @param proposalId The proposal ID
+    /// @return VoteRecord[] The vote history
+    function getProposalVoteHistory(bytes32 proposalId) public view returns (VoteRecord[] memory) {
+        return proposalVoteHistory[proposalId];
+    }
+
+    /// @notice Get voters for a proposal
+    /// @param proposalId The proposal ID
+    /// @return address[] The list of voters
+    function getProposalVoters(bytes32 proposalId) public view returns (address[] memory) {
+        return proposals[proposalId].voters;
     }
 
     /// @notice Version tracking

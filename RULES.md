@@ -706,9 +706,9 @@ Focused on protocol-level security mechanisms implemented directly in smart cont
 #### Layer 7: Economic Security
 - **Primary Plane**: On-chain + Off-chain simulations
 - **Owner**: Protocol/Risk
-- **Required Artifacts**: Risk params (CF, LT, LR); fee router; insurance fund policy
-- **CI Gate**: Economic simulations; liquidation scenario tests
-- **Evidence Link**: docs/protocol/RISK-PARAMS.md
+- **Required Artifacts**: Risk params (CF, LT, LR); fee router; insurance fund policy; Proof of Reserves reports
+- **CI Gate**: Economic simulations; liquidation scenario tests; Proof of Reserves validation
+- **Evidence Link**: docs/protocol/RISK-PARAMS.md; docs/security/PROOF-OF-RESERVES.md
 
 #### Layer 8: Oracle Security
 - **Primary Plane**: Hybrid (on/off)
@@ -772,23 +772,23 @@ Focused on infrastructure and application-level security controls.
 #### Layer 2: Identity and Access Management Security
 - **Primary Plane**: Infra + App code
 - **Owner**: SecOps/Platform/Backend
-- **Required Artifacts**: IdP config; RBAC map; OPA/Cedar bundles; service accounts
-- **CI Gate**: OPA/Cedar unit tests; access-review report in CI
-- **Evidence Link**: docs/security/IAM-RBAC-MAP.md
+- **Required Artifacts**: IdP config; RBAC map; OPA/Cedar bundles; service accounts; vendor access controls
+- **CI Gate**: OPA/Cedar unit tests; access-review report in CI; vendor review validation
+- **Evidence Link**: docs/security/IAM-RBAC-MAP.md; docs/security/vendor-access-controls.md
 
 #### Layer 3: Key Management Security
 - **Primary Plane**: Infra + On-chain
 - **Owner**: SecOps/Protocol
-- **Required Artifacts**: MPC/HSM policy; multisig addresses; key-rotation runbook
-- **CI Gate**: Rotation drill check; signer health probe; multisig threshold check
-- **Evidence Link**: docs/runbooks/key-rotation.md
+- **Required Artifacts**: MPC/HSM policy; multisig addresses; key-rotation runbook; vendor key management
+- **CI Gate**: Rotation drill check; signer health probe; multisig threshold check; vendor key audit
+- **Evidence Link**: docs/runbooks/key-rotation.md; docs/security/vendor-key-management.md
 
 #### Layer 4: Policy Enforcement Security
 - **Primary Plane**: App code + Infra
 - **Owner**: Backend/Sec
-- **Required Artifacts**: Policy registry; allow/deny lists; rate-classes; policy provenance
-- **CI Gate**: Policy test suite; bundle signature verify in CI
-- **Evidence Link**: infra/policies/OPA-Cedar/README.md
+- **Required Artifacts**: Policy registry; allow/deny lists; rate-classes; policy provenance; vendor policies
+- **CI Gate**: Policy test suite; bundle signature verify in CI; vendor policy validation
+- **Evidence Link**: infra/policies/OPA-Cedar/README.md; docs/security/vendor-policies.md
 
 ### Group C - Off-chain Application + Infrastructure Security (Layers 13-14)
 Focused on off-chain data protection and integrity.
@@ -908,25 +908,19 @@ The Web3 protection architecture provides a comprehensive 9-layer security model
 
 ### Layer 2: Identity & Access Control
 
-#### User/Auth Service
-- **Main Type**: AuthN (Who are you)
-- **Sub Type**: User/Auth Service
-- **Component / Mechanism**: Password hashing, MFA, OAuth2/OIDC, JWT signing/verification
-- **Goal**: Only legit users can enter
-- **Evidence / Telemetry**: Auth logs, failed login attempts, token issuance logs
-
 #### RBAC/ABAC/PBAC
 - **Main Type**: AuthZ (What can you do)
 - **Sub Type**: RBAC/ABAC/PBAC
-- **Component / Mechanism**: Role-based access control, attribute-based access control, policy-based access (OPA / Cedar)
-- **Goal**: Stop privilege abuse / lateral movement
-- **Evidence / Telemetry**: Access decision logs, denied actions
+- **Component / Mechanism**: Role-based access control, attribute-based access control, policy-based access (OPA / Cedar), vendor access management
+- **Goal**: Stop privilege abuse / lateral movement, including vendor access control
+- **Evidence / Telemetry**: Access decision logs, denied actions, vendor access logs
 
 #### Token Lifecycle
 - **Main Type**: Session & Token Hygiene
 - **Sub Type**: Token Lifecycle
 - **Component / Mechanism**: Short-lived access tokens, refresh tokens, rotation, revocation list
 - **Goal**: Reduce stolen-token blast radius
+
 - **Evidence / Telemetry**: Token expiry histogram, revoked token hits
 
 ### Layer 3: Application Security
@@ -950,10 +944,10 @@ The Web3 protection architecture provides a comprehensive 9-layer security model
 #### Rate/Velocity Rules
 - **Main Type**: Business Logic Controls
 - **Sub Type**: Rate/Velocity Rules
-- **Component / Mechanism**: OTP retry limits, withdrawal limits, anti-bruteforce counters, anti-spam throttles
-- **Goal**: Stop abuse of legit flows
-- **Evidence / Telemetry**: Per-user throttle hits, lockouts
-- **Error Handling**: Rate limit exceeded responses, velocity rule violation errors
+- **Component / Mechanism**: OTP retry limits, withdrawal limits, anti-bruteforce counters, anti-spam throttles, Proof of Reserves validation
+- **Goal**: Stop abuse of legit flows and ensure reserve adequacy
+- **Evidence / Telemetry**: Per-user throttle hits, lockouts, Proof of Reserves metrics
+- **Error Handling**: Rate limit exceeded responses, velocity rule violation errors, reserve validation failures
 
 #### SAST/SCA
 - **Main Type**: Dependency Safety
@@ -1299,8 +1293,8 @@ The extended security architecture provides a comprehensive framework organized 
 #### Layer: Compliance & Legal
 - **Purpose**: Satisfy regulatory requirements
 - **Main Types**: KYC/AML; Tax; Reporting; Audits
-- **Subtypes**: Audit trails, KYC docs, periodic compliance reports
-- **Controls / Example Artifacts**: Compliance documentation, audit reports, regulatory filings
+- **Subtypes**: Audit trails, KYC docs, periodic compliance reports, vendor compliance
+- **Controls / Example Artifacts**: Compliance documentation, audit reports, regulatory filings, vendor due diligence reports
 - **Priority**: High
 
 #### Layer: Audit, Evidence & Provenance
@@ -1329,8 +1323,8 @@ The extended security architecture provides a comprehensive framework organized 
 #### Layer: Identity & Access
 - **Purpose**: Manage who/what can act
 - **Main Types**: Auth types; Federation; RBAC; ABAC
-- **Subtypes**: OAuth2/JWT; mTLS; OPA policies; session management
-- **Controls / Example Artifacts**: Access matrices, token rotation, SSO integrations
+- **Subtypes**: OAuth2/JWT; mTLS; OPA policies; session management; vendor access
+- **Controls / Example Artifacts**: Access matrices, token rotation, SSO integrations, vendor access reviews
 - **Priority**: High
 
 #### Layer: Crypto & Key Management
@@ -1359,11 +1353,11 @@ The extended security architecture provides a comprehensive framework organized 
 
 #### Layer: Economic & Risk Controls
 - **Purpose**: Limit financial exposure and game-theory exploits
-- **Main Types**: Risk engines; limits; slippage controls
-- **Subtypes**: Per-user limits, position limits, margin checks
-- **Controls / Example Artifacts**: Risk management systems, limit enforcement, slippage controls
+- **Main Types**: Risk engines; limits; slippage controls; Proof of Reserves
+- **Subtypes**: Per-user limits, position limits, margin checks, reserve adequacy verification
+- **Controls / Example Artifacts**: Risk management systems, limit enforcement, slippage controls, Proof of Reserves reports
 - **Priority**: High
-- **Error Handling**: Risk limit violation errors, margin check failures, position limit enforcement errors
+- **Error Handling**: Risk limit violation errors, margin check failures, position limit enforcement errors, reserve validation failures
 
 #### Layer: Economic Simulations & Game Theory
 - **Purpose**: Model attacker incentives and consequences
@@ -1504,6 +1498,7 @@ The testing framework for DECENTRALIZED-APP is organized into 6 distinct testing
    - Proxy Mechanism Testing
    - Backward Compatibility
    - Migration Safety
+   - Proof of Reserves Reporting Integration
 
 3. **AMM/DEX Testing**
    - Constant Product Formula
@@ -1523,6 +1518,7 @@ The testing framework for DECENTRALIZED-APP is organized into 6 distinct testing
    - Interest Rate Models
    - Liquidation Processes
    - Risk Management
+   - Reserve Adequacy Verification
 
 6. **Oracle Testing**
    - Price Feeds
@@ -1575,16 +1571,19 @@ The testing framework for DECENTRALIZED-APP is organized into 6 distinct testing
    - Authorization controls
    - Session management
    - Token lifecycle
+   - Vendor access management
 
 2. **Key Management**
    - MPC/HSM policy validation
    - Multisig address verification
    - Key rotation procedures
+   - Vendor key management
 
 3. **Policy Enforcement**
    - Policy registry validation
    - Allow/deny list enforcement
    - Rate class controls
+   - Vendor policy enforcement
 
 **Tools & Technologies**:
 - OPA/Cedar policy engines
@@ -1892,5 +1891,9 @@ All testing groups are integrated into the CI/CD pipeline with specific gate req
 - Debugging utility effectiveness measurement
 - Test automation and CI/CD integration standards
 - Test documentation and evidence collection requirements
+- Proof of Reserves validation testing standards
+- Vendor management testing standards
+
+This comprehensive structure defines the complete ecosystem of the DECENTRALIZED-APP project, with clearly delineated components, their relationships, and their responsibilities.
 
 This comprehensive structure defines the complete ecosystem of the DECENTRALIZED-APP project, with clearly delineated components, their relationships, and their responsibilities.

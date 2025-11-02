@@ -1,0 +1,54 @@
+# Policy Governance Enforcement
+# Enforces policy governance requirements in the CI/CD pipeline
+
+name: Policy Governance Enforcement
+
+on:
+  pull_request:
+    branches: [ main, develop ]
+    types: [ opened, synchronize, reopened ]
+  push:
+    branches: [ main ]
+
+jobs:
+  validate-policy-governance:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up PowerShell
+        uses: actions/setup-powershell@v1
+
+      - name: Create logs directory
+        run: |
+          mkdir -p logs
+
+      - name: Validate policy governance
+        run: |
+          # Run the policy governance validation script
+          pwsh -Command "scripts/validate-policy-governance.ps1 -MinCoveragePercentage 95 -BlockOnLowCoverage `$true -BlockOnExpiredExceptions `$true"
+        shell: bash
+
+      - name: Upload audit logs
+        uses: actions/upload-artifact@v3
+        if: always()
+        with:
+          name: policy-governance-audit-logs
+          path: logs/policy-governance-audit.log
+          retention-days: 30
+
+  policy-lint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up PowerShell
+        uses: actions/setup-powershell@v1
+
+      - name: Run policy lint checks
+        run: |
+          # Run the policy lint script
+          pwsh -Command "scripts/policy-lint.ps1"
+        shell: bash

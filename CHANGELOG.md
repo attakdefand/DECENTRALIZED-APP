@@ -8,6 +8,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- Governance Enhancement Features:
+  - Implemented explicit blocking function for upgrade validation with guardian vote and delay requirements
+  - Enhanced vote logging and tracking mechanisms with detailed history and voter identification
+  - Created timelock configuration in JSON format with policy linting validation
+  - Developed governance dashboard for real-time tracking of governance activities and votes
+  - Added comprehensive documentation for governance feature implementations
+  - Implemented commit signing enforcement with blocking mechanism for unsigned commits
+  - Added CI/CD gatekeeping for commit signature verification
+  - Created governance documentation mapping implementations to @RULES.md sections
+  - Implemented risk governance with risk register, threat model, and exception management
+  - Added blocking mechanism for open high risks without approved exception plans
+  - Created risk governance documentation mapping implementations to @RULES.md sections
+  - Implemented policy governance with policy catalog and exception register
+  - Added blocking mechanism for policy coverage below 95% or expired exceptions
+  - Created policy governance documentation mapping implementations to @RULES.md sections
+  - Implemented access governance with RBAC/ABAC and recertification
+  - Added blocking mechanism for access review completion below 100% or SoD violations
+  - Created access governance documentation mapping implementations to @RULES.md sections
 - Automation & Continuous Defense features:
   - Implemented AutomatedRemediationManager for automated security incident response
   - Created PolicyEnforcementManager for policy-as-code enforcement pipelines
@@ -30,9 +48,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Created comprehensive test suites for all new security features
 
 ### Changed
-- Enhanced Oracle smart contract with connector allowlist functionality
-- Improved PriceAggregator with enhanced deviation checking algorithms
-- Updated security layer documentation to include new features
+- Enhanced AppTimelock.sol smart contract with explicit upgrade validation function
+- Improved GuardianMultisig.sol with detailed vote tracking and history
+- Enhanced policy linting scripts to validate timelock configuration, commit signing, and risk governance requirements
+- Updated security layer documentation to include new governance features
 - Extended testing framework to cover new security implementations
 - Updated RULES.md to reflect fully implemented automation and defense features
 
@@ -40,6 +59,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Resolved syntax errors in application_security.rs
 - Fixed duplicate Severity enum definition
 - Corrected struct field placement issues
+- Enhanced governance contract security with improved validation
 
 ## [0.1.4] - 2025-10-15
 

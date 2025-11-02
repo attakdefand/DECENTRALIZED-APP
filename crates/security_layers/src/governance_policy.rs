@@ -34,6 +34,25 @@ pub struct PolicySignature {
     pub timestamp: u64,
 }
 
+/// Commit signature verification result
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct CommitSignatureVerification {
+    pub commit_hash: String,
+    pub is_signed: bool,
+    pub signer: Option<String>,
+    pub verification_timestamp: u64,
+}
+
+/// Repository governance settings
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RepositoryGovernanceSettings {
+    pub require_signed_commits: bool,
+    pub min_signed_commits_percentage: f64,
+    pub require_ci_checks: bool,
+    pub allowed_signers: Vec<String>,
+    pub block_on_open_high_risks: bool,
+}
+
 /// Policy audit event for tracking changes
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct PolicyAuditEvent {
@@ -152,6 +171,53 @@ impl PolicyCatalog {
             policies: HashMap::new(),
             last_updated: 0,
             audit_log: Vec::new(),
+        }
+    }
+
+    /// Verify commit signatures for governance compliance
+    pub fn verify_commit_signatures(&self, commits: &[CommitSignatureVerification], settings: &RepositoryGovernanceSettings) -> Result<bool, String> {
+        if commits.is_empty() {
+            return Ok(true); // No commits to verify
+        }
+
+        let mut signed_count = 0;
+        for commit in commits {
+            if commit.is_signed {
+                // Check if signer is in allowed list (if specified)
+                if !settings.allowed_signers.is_empty() {
+                    if let Some(signer) = &commit.signer {
+                        if settings.allowed_signers.contains(signer) {
+                            signed_count += 1;
+                        }
+                    }
+                } else {
+                    // No specific allowed signers, count all signed commits
+                    signed_count += 1;
+                }
+            }
+        }
+
+        let signed_percentage = (signed_count as f64 / commits.len() as f64) * 100.0;
+        
+        // Check if signed commit percentage meets requirements
+        if settings.require_signed_commits && signed_percentage < settings.min_signed_commits_percentage {
+            return Ok(false);
+        }
+
+        Ok(true)
+    }
+
+    /// Check if merge should be blocked based on governance rules
+    pub fn should_block_merge(&self, commits: &[CommitSignatureVerification], settings: &RepositoryGovernanceSettings, ci_checks_pass: bool) -> bool {
+        // Block if CI checks are required but failing
+        if settings.require_ci_checks && !ci_checks_pass {
+            return true;
+        }
+
+        // Check commit signature requirements
+        match self.verify_commit_signatures(commits, settings) {
+            Ok(valid) => !valid,
+            Err(_) => true, // Block on verification errors
         }
     }
 
@@ -916,5 +982,61 @@ mod tests {
         assert!(tracker.close_issue("audit-003").is_ok());
         let closed = tracker.get_issue("audit-003").unwrap();
         assert_eq!(closed.status, IssueStatus::Closed);
+    }
+
+    #[test]
+    fn test_commit_signature_verification() {
+        let catalog = PolicyCatalog::new();
+        
+        let commits = vec![
+            CommitSignatureVerification {
+                commit_hash: "abc123".to_string(),
+                is_signed: true,
+                signer: Some("authorized-user".to_string()),
+                verification_timestamp: 1234567890,
+            },
+            CommitSignatureVerification {
+                commit_hash: "def456".to_string(),
+                is_signed: true,
+                signer: Some("authorized-user".to_string()),
+                verification_timestamp: 1234567891,
+            },
+            CommitSignatureVerification {
+                commit_hash: "ghi789".to_string(),
+                is_signed: false,
+                signer: None,
+                verification_timestamp: 1234567892,
+            },
+        ];
+        
+        let settings = RepositoryGovernanceSettings {
+            require_signed_commits: true,
+            min_signed_commits_percentage: 100.0,
+            require_ci_checks: true,
+            allowed_signers: vec!["authorized-user".to_string()],
+            block_on_open_high_risks: true,
+        };
+        
+        // Test that verification fails with insufficient signed commits
+        assert!(!catalog.verify_commit_signatures(&commits, &settings).unwrap());
+        
+        // Test with relaxed requirements
+        let relaxed_settings = RepositoryGovernanceSettings {
+            require_signed_commits: true,
+            min_signed_commits_percentage: 60.0,
+            require_ci_checks: true,
+            allowed_signers: vec!["authorized-user".to_string()],
+            block_on_open_high_risks: true,
+        };
+        
+        // Should pass with 66% signed commits
+        assert!(catalog.verify_commit_signatures(&commits, &relaxed_settings).unwrap());
+        
+        // Test merge blocking
+        assert!(catalog.should_block_merge(&commits, &settings, true));
+        assert!(!catalog.should_block_merge(&commits, &relaxed_settings, true));
+        
+        // Test CI check failure
+        assert!(catalog.should_block_merge(&commits, &relaxed_settings, false));
     }
 }

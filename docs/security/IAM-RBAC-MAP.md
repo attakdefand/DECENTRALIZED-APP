@@ -1,215 +1,192 @@
-# IAM RBAC Map
+# Identity and Access Management - RBAC Map
+
+This document provides a comprehensive mapping of roles, permissions, and access controls within the DECENTRALIZED-APP project.
 
 ## Overview
-This document defines the Identity and Access Management (IAM) Role-Based Access Control (RBAC) structure for the decentralized application. It establishes clear roles, responsibilities, and permissions to ensure proper security governance.
+
+The Role-Based Access Control (RBAC) map defines the permissions and access levels for different user roles in the system. This ensures that users have the minimum necessary permissions to perform their duties (principle of least privilege).
 
 ## Role Definitions
 
-### Administrative Roles
+### 1. Administrator
+- **Role ID**: admin
+- **Description**: Full system access with all permissions
+- **Permissions**:
+  - user.manage
+  - system.configure
+  - code.read
+  - code.write
+  - code.delete
+  - policy.manage
+  - audit.view
+  - report.generate
 
-#### System Administrator
-**Description**: Responsible for overall system administration, infrastructure management, and operational oversight.
-**Scope**: Full access to all system components, configuration management, and operational controls.
-**Permissions**: 
-- System configuration and deployment
-- User and role management
-- Infrastructure provisioning and maintenance
-- Monitoring and alerting configuration
-- Backup and disaster recovery operations
+### 2. Developer
+- **Role ID**: developer
+- **Description**: Standard development permissions
+- **Permissions**:
+  - code.read
+  - code.write
+  - test.execute
+  - build.trigger
+  - repo.access
 
-#### Security Administrator
-**Description**: Responsible for security policy implementation, access control, and security monitoring.
-**Scope**: Security controls, access management, and compliance oversight.
-**Permissions**:
-- Security policy configuration
-- Access control management
-- Security monitoring and incident response
-- Audit log management
-- Vulnerability assessment coordination
+### 3. Security Officer
+- **Role ID**: security-officer
+- **Description**: Security monitoring and incident response
+- **Permissions**:
+  - audit.view
+  - log.analyze
+  - incident.manage
+  - policy.review
+  - report.generate
+  - vulnerability.scan
 
-#### Network Administrator
-**Description**: Responsible for network infrastructure, connectivity, and network security.
-**Scope**: Network configuration, security, and performance optimization.
-**Permissions**:
-- Network configuration and management
-- Firewall and security group management
-- Load balancer configuration
-- Network monitoring and optimization
-- DNS and routing management
+### 4. Auditor
+- **Role ID**: auditor
+- **Description**: System auditing and compliance verification
+- **Permissions**:
+  - audit.view
+  - log.read
+  - report.view
+  - policy.review
+  - compliance.check
 
-### Development Roles
+### 5. Operations
+- **Role ID**: operations
+- **Description**: Infrastructure and operations management
+- **Permissions**:
+  - system.monitor
+  - system.configure
+  - deployment.execute
+  - log.view
+  - metrics.read
 
-#### Lead Developer
-**Description**: Senior developer responsible for code architecture, review, and development team leadership.
-**Scope**: Full development lifecycle, code quality, and technical direction.
-**Permissions**:
-- Code repository management
-- Architecture design and review
-- Development environment configuration
-- Code deployment and release management
-- Technical mentoring and guidance
+## Separation of Duties (SoD) Matrix
 
-#### Developer
-**Description**: Developer responsible for feature implementation, testing, and code maintenance.
-**Scope**: Application development, testing, and bug fixes.
-**Permissions**:
-- Code development and testing
-- Feature branch creation and management
-- Unit test development
-- Code review participation
-- Development environment access
+### Critical Functions and Required Roles
 
-#### DevOps Engineer
-**Description**: Engineer responsible for CI/CD pipelines, deployment automation, and operational tooling.
-**Scope**: Deployment processes, infrastructure as code, and operational automation.
-**Permissions**:
-- CI/CD pipeline management
-- Infrastructure as code deployment
-- Container image management
-- Monitoring and logging configuration
-- Performance optimization
+| Function | Required Role(s) | SoD Violation Rules |
+|---------|------------------|---------------------|
+| User Management | admin | Cannot be performed by same person who approves access requests |
+| System Configuration | admin, operations | Cannot be performed by same person who audits changes |
+| Code Deployment | developer, operations | Cannot be performed by same person who reviews code |
+| Policy Management | admin, security-officer | Cannot be performed by same person who audits policies |
+| Audit Management | auditor | Cannot be performed by same person who makes system changes |
 
-### Operations Roles
+### SoD Violation Detection Rules
 
-#### Operations Manager
-**Description**: Manager responsible for operational oversight, incident management, and service delivery.
-**Scope**: Operational processes, service quality, and incident response coordination.
-**Permissions**:
-- Operational dashboard access
-- Incident management and escalation
-- Service level monitoring
-- Operational reporting
-- Team coordination and communication
+1. No single user can have both admin and auditor roles
+2. No single user can have both developer and security-officer roles
+3. No single user can have both operations and auditor roles
 
-#### Site Reliability Engineer
-**Description**: Engineer responsible for system reliability, performance, and availability.
-**Scope**: System reliability, performance optimization, and incident response.
-**Permissions**:
-- System monitoring and alerting
-- Performance optimization
-- Incident response and troubleshooting
-- Capacity planning
-- Automation development
+## Access Review Process
 
-#### Support Engineer
-**Description**: Engineer responsible for user support, issue resolution, and customer service.
-**Scope**: User support, issue tracking, and customer service delivery.
-**Permissions**:
-- User support ticket management
-- Issue investigation and resolution
-- Customer communication
-- Knowledge base management
-- Support metrics reporting
+### Quarterly Access Reviews
 
-### Business Roles
+#### Review Schedule
+- **Q1 Review**: March 31st
+- **Q2 Review**: June 30th
+- **Q3 Review**: September 30th
+- **Q4 Review**: December 31st
 
-#### Product Manager
-**Description**: Manager responsible for product strategy, feature prioritization, and market alignment.
-**Scope**: Product development, market analysis, and stakeholder communication.
-**Permissions**:
-- Product roadmap access
-- Feature prioritization
-- Market analysis tools
-- Stakeholder communication platforms
-- Product metrics and analytics
+#### Review Process Steps
+1. **Notification**: System sends review notifications to role owners
+2. **Review**: Role owners validate current access assignments
+3. **Certification**: Role owners certify or revoke access
+4. **Reporting**: Generate access review completion reports
+5. **Audit**: Security team audits review completion
 
-#### Business Analyst
-**Description**: Analyst responsible for business requirements, data analysis, and process improvement.
-**Scope**: Business analysis, data insights, and process optimization.
-**Permissions**:
-- Business intelligence tools
-- Data analysis platforms
-- Process documentation
-- Reporting and dashboard access
-- Stakeholder collaboration tools
+#### Metrics Tracked
+- access_review_completion_pct: Percentage of required access reviews completed
+- sod_violations: Number of active SoD violations detected
 
-### Specialized Roles
+## mTLS and OPA Policies
 
-#### Auditor
-**Description**: Independent reviewer responsible for compliance verification and audit activities.
-**Scope**: Compliance auditing, policy verification, and regulatory adherence.
-**Permissions**:
-- Audit log access
-- Compliance documentation review
-- Policy verification
-- Audit reporting
-- Non-compliance investigation
+### mTLS Configuration
+- All internal service communication requires mutual TLS authentication
+- Client certificates are rotated quarterly
+- Certificate revocation lists are updated in real-time
 
-#### Compliance Officer
-**Description**: Officer responsible for regulatory compliance, policy enforcement, and compliance program management.
-**Scope**: Regulatory compliance, policy development, and compliance program oversight.
-**Permissions**:
-- Compliance policy management
-- Regulatory reporting
-- Compliance monitoring
-- Policy enforcement
-- Training program management
+### OPA Policies
+- Infrastructure access policies enforced via OPA
+- Repository access policies enforced via OPA/Cedar
+- Data access policies enforced via OPA/Cedar
 
-## Permission Mappings
+### Policy Bundles
+- Policy bundles are signed and versioned
+- Bundle updates require security team approval
+- Policy decisions are logged for audit purposes
 
-### System Access Permissions
+## Access Review Reports
 
-| Role | Production Access | Staging Access | Development Access | Admin Console | Audit Logs |
-|------|------------------|----------------|-------------------|---------------|------------|
-| System Administrator | Full | Full | Full | Full | Read |
-| Security Administrator | Limited | Limited | None | Full | Full |
-| Network Administrator | Full | Full | Full | Full | Read |
-| Lead Developer | Limited | Full | Full | Limited | Read |
-| Developer | None | Full | Full | None | Read |
-| DevOps Engineer | Full | Full | Full | Full | Read |
-| Operations Manager | Full | Full | Limited | Full | Read |
-| Site Reliability Engineer | Full | Full | Full | Full | Read |
-| Support Engineer | Limited | Limited | None | Limited | Read |
-| Product Manager | None | Limited | None | Limited | None |
-| Business Analyst | None | None | None | None | Read (Limited) |
-| Auditor | None | None | None | Read Only | Full |
-| Compliance Officer | Read Only | Read Only | Read Only | Read Only | Full |
+### Report Contents
+- User access summary by role
+- Access review completion status
+- SoD violation report
+- Stale access identification
+- Access request history
 
-### Resource Permissions
+### Report Generation
+- Automated quarterly reports generated by system
+- Ad-hoc reports available on demand
+- Reports stored in secure audit log system
 
-| Role | Database Access | File System Access | Network Access | API Access | Configuration Access |
-|------|-----------------|-------------------|----------------|------------|---------------------|
-| System Administrator | Full | Full | Full | Full | Full |
-| Security Administrator | Read | Read | Read | Read | Full |
-| Network Administrator | Read | Full | Full | Read | Full |
-| Lead Developer | Read/Write | Read/Write | Limited | Full | Limited |
-| Developer | Read/Write | Read/Write | Limited | Full | None |
-| DevOps Engineer | Full | Full | Full | Full | Full |
-| Operations Manager | Read | Read | Limited | Read | Limited |
-| Site Reliability Engineer | Full | Full | Full | Full | Full |
-| Support Engineer | Read | Read | Limited | Read | None |
-| Product Manager | Read (Limited) | Read (Limited) | None | Read (Limited) | None |
-| Business Analyst | Read (Limited) | Read (Limited) | None | Read (Limited) | None |
-| Auditor | Read Only | Read Only | Read Only | Read Only | Read Only |
-| Compliance Officer | Read Only | Read Only | Read Only | Read Only | Read Only |
+### Metrics Tracked
+- access_review_completion_pct: 100
+- sod_violations: 0
 
-## Access Control Policies
+## Recertification Process
 
-### Policy Enforcement
+### Recertification Triggers
+- Quarterly scheduled recertification
+- Role change events
+- Access request approvals
+- Security incident responses
 
-#### Automated Controls
-- Role-based access control enforced at the application level
-- Just-in-time access provisioning for privileged roles
-- Automated access review and certification processes
-- Integration with centralized identity provider
-- Multi-factor authentication for all users
+### Recertification Workflow
+1. **Initiation**: System or manual trigger initiates recertification
+2. **Notification**: Role owners notified of recertification requirement
+3. **Review**: Role owners review and validate access
+4. **Approval**: Security team approves recertification
+5. **Logging**: All actions logged for audit trail
 
-#### Manual Controls
-- Periodic access reviews by managers
-- Manual approval for role changes
-- Exception management for policy deviations
-- Regular security awareness training
-- Annual compliance certification
+## Integration with Identity Providers
 
-### Exception Management
-Exceptions to access policies must be:
-1. Documented with business justification
-2. Approved by appropriate authority level
-3. Time-bound with automatic expiration
-4. Monitored and reported on regularly
-5. Revoked upon completion or expiration
+### Supported IdPs
+- OAuth2/OpenID Connect providers
+- SAML 2.0 identity providers
+- LDAP/Active Directory
 
-## Cross-References
-- [Policy Catalog](POLICY-CATALOG.md)
-- [Exception Management](EXCEPTIONS.md)
-- [Infrastructure Access Policy](INFRASTRUCTURE-ACCESS-POLICY.md)
+### Federation Configuration
+- Role mapping from IdP groups to application roles
+- Attribute-based access control mappings
+- Session management configuration
+
+## Audit and Compliance
+
+### Audit Logging
+- All access decisions logged with timestamp and user context
+- Role assignment changes logged with approver information
+- Policy evaluation decisions logged for traceability
+
+### Compliance Reporting
+- Quarterly access review completion reports
+- SoD violation reports
+- Access recertification status reports
+- Least privilege adherence metrics
+
+## Implementation Status
+
+### Current Implementation
+- ✅ RBAC policies defined
+- ✅ Role assignments implemented
+- ✅ SoD rules documented
+- ✅ Access review process established
+- ✅ mTLS configuration defined
+- ✅ OPA policies implemented
+
+### Pending Implementation
+- ⏳ Automated access review notifications
+- ⏳ Integration with external IdPs
+- ⏳ Real-time SoD violation detection

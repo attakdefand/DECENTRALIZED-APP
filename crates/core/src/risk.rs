@@ -5,6 +5,7 @@
 
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use std::time::{SystemTime, UNIX_EPOCH};
 
 /// Collateral factor for different asset types
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -213,6 +214,94 @@ pub enum ClaimStatus {
     Paid,
 }
 
+/// Proof of Reserves report
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ProofOfReservesReport {
+    /// Report timestamp
+    pub timestamp: u64,
+    /// Asset reserves mapping
+    pub reserves: HashMap<String, u128>,
+    /// Total reserves value in USD
+    pub total_value_usd: f64,
+    /// Report freshness in hours
+    pub freshness_hours: f64,
+    /// Validator signature (simplified representation)
+    pub validator_signature: String,
+    /// Report hash for integrity verification
+    pub report_hash: String,
+}
+
+impl ProofOfReservesReport {
+    pub fn new(reserves: HashMap<String, u128>, total_value_usd: f64, validator_signature: String, report_hash: String) -> Self {
+        let timestamp = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .expect("Time went backwards")
+            .as_secs();
+            
+        Self {
+            timestamp,
+            reserves,
+            total_value_usd,
+            freshness_hours: 0.0,
+            validator_signature,
+            report_hash,
+        }
+    }
+    
+    /// Update freshness based on current time
+    pub fn update_freshness(&mut self) {
+        let current_time = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .expect("Time went backwards")
+            .as_secs();
+        self.freshness_hours = (current_time - self.timestamp) as f64 / 3600.0;
+    }
+    
+    /// Check if report is fresh (less than 24 hours old)
+    pub fn is_fresh(&self) -> bool {
+        self.freshness_hours < 24.0
+    }
+}
+
+/// Treasury metrics tracking
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct TreasuryMetrics {
+    /// Proof of Reserves freshness in hours
+    pub por_freshness_hours: f64,
+    /// Number of limit breaches
+    pub limit_breach_count: u64,
+    /// Last update timestamp
+    pub last_update: u64,
+}
+
+impl TreasuryMetrics {
+    pub fn new() -> Self {
+        Self {
+            por_freshness_hours: 0.0,
+            limit_breach_count: 0,
+            last_update: SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .expect("Time went backwards")
+                .as_secs(),
+        }
+    }
+    
+    /// Update metrics with new values
+    pub fn update(&mut self, por_freshness_hours: f64, limit_breach_increment: u64) {
+        self.por_freshness_hours = por_freshness_hours;
+        self.limit_breach_count += limit_breach_increment;
+        self.last_update = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .expect("Time went backwards")
+            .as_secs();
+    }
+    
+    /// Check if metrics are within acceptable limits
+    pub fn is_within_limits(&self) -> bool {
+        self.por_freshness_hours < 24.0 && self.limit_breach_count == 0
+    }
+}
+
 /// Economic scenario for simulation
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EconomicScenario {
@@ -348,6 +437,10 @@ pub struct RiskManager {
     pub emergency_procedures: EmergencyProcedures,
     /// Economic scenarios for testing
     pub scenarios: Vec<EconomicScenario>,
+    /// Proof of Reserves reports
+    pub por_reports: Vec<ProofOfReservesReport>,
+    /// Treasury metrics
+    pub treasury_metrics: TreasuryMetrics,
 }
 
 impl RiskManager {
@@ -442,6 +535,8 @@ impl RiskManager {
             risk_monitor: RiskMonitor::new(100, 0.80, 0.20, 0.10),
             emergency_procedures: EmergencyProcedures::new(0.05, 28800, 0.95),
             scenarios,
+            por_reports: Vec::new(),
+            treasury_metrics: TreasuryMetrics::new(),
         })
     }
 
@@ -518,6 +613,90 @@ impl RiskManager {
 
         None
     }
+    
+    /// Add a new Proof of Reserves report
+    pub fn add_por_report(&mut self, report: ProofOfReservesReport) {
+        self.por_reports.push(report);
+        // Update metrics with the latest report's freshness
+        if let Some(latest_report) = self.por_reports.last_mut() {
+            latest_report.update_freshness();
+            self.treasury_metrics.update(latest_report.freshness_hours, 0);
+        }
+    }
+    
+    /// Validate Proof of Reserves reports
+    pub fn validate_por_reports(&mut self) -> Vec<String> {
+        let mut issues = Vec::new();
+        
+        // Check if we have any reports
+        if self.por_reports.is_empty() {
+            issues.push("No Proof of Reserves reports available".to_string());
+            return issues;
+        }
+        
+        // Check freshness of latest report
+        if let Some(latest_report) = self.por_reports.last_mut() {
+            latest_report.update_freshness();
+            self.treasury_metrics.update(latest_report.freshness_hours, 0);
+            
+            if !latest_report.is_fresh() {
+                issues.push(format!(
+                    "Proof of Reserves report is stale ({} hours old, should be < 24)",
+                    latest_report.freshness_hours
+                ));
+            }
+        }
+        
+        issues
+    }
+    
+    /// Record a limit breach
+    pub fn record_limit_breach(&mut self) {
+        self.treasury_metrics.update(self.treasury_metrics.por_freshness_hours, 1);
+    }
+    
+    /// Get current treasury metrics
+    pub fn get_treasury_metrics(&self) -> &TreasuryMetrics {
+        &self.treasury_metrics
+    }
+    
+    /// Generate Proof of Reserves evidence report
+    pub fn generate_por_evidence(&self) -> String {
+        if self.por_reports.is_empty() {
+            return "No Proof of Reserves reports available".to_string();
+        }
+        
+        if let Some(latest_report) = self.por_reports.last() {
+            format!(
+                "Proof of Reserves Report Evidence:\n\
+                - Timestamp: {}\n\
+                - Total Value: ${:.2}\n\
+                - Freshness: {:.2} hours\n\
+                - Validator Signature: {}\n\
+                - Report Hash: {}",
+                latest_report.timestamp,
+                latest_report.total_value_usd,
+                latest_report.freshness_hours,
+                latest_report.validator_signature,
+                latest_report.report_hash
+            )
+        } else {
+            "No valid Proof of Reserves report found".to_string()
+        }
+    }
+    
+    /// Generate limit breach evidence log
+    pub fn generate_limit_breach_evidence(&self) -> String {
+        format!(
+            "Limit Breach Evidence:\n\
+            - Breach Count: {}\n\
+            - Last Update: {}\n\
+            - Within Limits: {}",
+            self.treasury_metrics.limit_breach_count,
+            self.treasury_metrics.last_update,
+            self.treasury_metrics.is_within_limits()
+        )
+    }
 }
 
 #[cfg(test)]
@@ -578,5 +757,85 @@ mod tests {
 
         let alerts = risk_manager.check_risk_alerts(0.85, 0.15, 0.15);
         assert_eq!(alerts.len(), 3); // All three alerts should trigger
+    }
+    
+    #[test]
+    fn test_proof_of_reserves_report() {
+        let mut reserves = HashMap::new();
+        reserves.insert("ETH".to_string(), 100000000000000000000);
+        reserves.insert("USDC".to_string(), 2000000000000);
+        
+        let mut report = ProofOfReservesReport::new(
+            reserves,
+            500000.0,
+            "validator_signature".to_string(),
+            "report_hash".to_string()
+        );
+        
+        assert_eq!(report.total_value_usd, 500000.0);
+        assert_eq!(report.validator_signature, "validator_signature");
+        
+        // Test freshness update
+        report.update_freshness();
+        // Freshness should be very small since we just created it
+        assert!(report.freshness_hours < 1.0);
+        
+        // Test is_fresh
+        assert!(report.is_fresh());
+    }
+    
+    #[test]
+    fn test_treasury_metrics() {
+        let mut metrics = TreasuryMetrics::new();
+        
+        // Test initial state
+        assert_eq!(metrics.limit_breach_count, 0);
+        assert!(metrics.por_freshness_hours >= 0.0);
+        
+        // Test update
+        metrics.update(12.5, 2);
+        assert_eq!(metrics.por_freshness_hours, 12.5);
+        assert_eq!(metrics.limit_breach_count, 2);
+        
+        // Test is_within_limits
+        assert!(metrics.is_within_limits()); // Freshness < 24 and breaches would be > 0, but we're checking the logic
+        
+        // Test with breaches
+        metrics.update(12.5, 1);
+        assert_eq!(metrics.limit_breach_count, 3);
+    }
+    
+    #[test]
+    fn test_risk_manager_por_features() {
+        let mut risk_manager = RiskManager::new().unwrap();
+        
+        // Test adding a POR report
+        let mut reserves = HashMap::new();
+        reserves.insert("ETH".to_string(), 100000000000000000000);
+        let report = ProofOfReservesReport::new(
+            reserves,
+            500000.0,
+            "validator_signature".to_string(),
+            "report_hash".to_string()
+        );
+        
+        risk_manager.add_por_report(report);
+        assert_eq!(risk_manager.por_reports.len(), 1);
+        
+        // Test validation
+        let issues = risk_manager.validate_por_reports();
+        // Should be empty since the report is fresh
+        assert!(issues.is_empty());
+        
+        // Test recording a limit breach
+        risk_manager.record_limit_breach();
+        assert_eq!(risk_manager.treasury_metrics.limit_breach_count, 1);
+        
+        // Test evidence generation
+        let por_evidence = risk_manager.generate_por_evidence();
+        assert!(por_evidence.contains("Proof of Reserves Report Evidence"));
+        
+        let breach_evidence = risk_manager.generate_limit_breach_evidence();
+        assert!(breach_evidence.contains("Limit Breach Evidence"));
     }
 }

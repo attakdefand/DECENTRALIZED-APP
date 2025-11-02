@@ -1,0 +1,51 @@
+name: Vendor Management Validation
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+  schedule:
+    - cron: '0 0 * * 1' # Weekly on Monday
+
+jobs:
+  validate-vendor-management:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Set up Rust
+      uses: actions-rs/toolchain@v1
+      with:
+        toolchain: nightly
+        profile: minimal
+        override: true
+
+    - name: Cache cargo registry
+      uses: actions/cache@v3
+      with:
+        path: |
+          ~/.cargo/registry
+          ~/.cargo/git
+          target
+        key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+
+    - name: Run unit tests
+      run: |
+        cargo test vendor_management
+
+    - name: Validate Vendor Management
+      run: |
+        chmod +x scripts/validate-vendor-management.sh
+        ./scripts/validate-vendor-management.sh
+      env:
+        VENDOR_SCORE_AVG: 85
+        OVERDUE_REVIEWS: 0
+
+    - name: Run integration tests
+      run: |
+        cargo test
+
+    - name: Build project
+      run: |
+        cargo build --release

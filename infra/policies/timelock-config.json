@@ -1,0 +1,36 @@
+{
+  "timelock": {
+    "minimumDelayHours": 24,
+    "maximumDelayDays": 30,
+    "defaultDelayHours": 24,
+    "proposers": [],
+    "executors": [],
+    "guardianVoteRequired": true,
+    "quorumRequirements": {
+      "minimumGuardians": 2,
+      "requiredSignaturesRatio": 0.67
+    },
+    "changeWindows": {
+      "maintenanceStartHour": 22,
+      "maintenanceEndHour": 24,
+      "noticePeriodHours": 48
+    }
+  },
+  "governance": {
+    "votingPeriodDays": 7,
+    "proposalThresholdTokens": 10000,
+    "quorumPercentage": 5,
+    "minDelayHours": 24
+  },
+  "emergency": {
+    "pauseEnabled": true,
+    "pauseDurationHours": 24,
+    "adminRoles": ["GUARDIAN_ROLE", "ADMIN_ROLE"],
+    "emergencyMultisigThreshold": 2
+  },
+  "validation": {
+    "guardianVoteRequired": true,
+    "minimumDelayHours": 24,
+    "requiredSignatures": 2
+  }
+}

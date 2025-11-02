@@ -1,0 +1,27 @@
+# Risk Governance Enforcement
+# Enforces that no open high/critical risks exist without approved exception plans
+
+name: Risk Governance Enforcement
+
+on:
+  pull_request:
+    branches: [ main, develop ]
+    types: [ opened, synchronize, reopened ]
+  push:
+    branches: [ main ]
+
+jobs:
+  validate-risk-governance:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up PowerShell
+        uses: actions/setup-powershell@v1
+
+      - name: Validate risk governance
+        run: |
+          # Run the risk governance validation script
+          pwsh -Command "scripts/validate-risk-governance.ps1 -BlockOnOpenHighRisks `$true"
+        shell: bash

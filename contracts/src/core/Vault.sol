@@ -27,13 +27,32 @@ contract Vault is ReentrancyGuard, Ownable {
         uint256 lastReset;
     }
     
+    // Treasury management structs
+    struct ProofOfReservesReport {
+        uint256 timestamp;
+        uint256 totalValueUSD;
+        bool isValidated;
+        address validator;
+    }
+    
+    struct TreasuryMetrics {
+        uint256 porFreshnessHours;
+        uint256 limitBreachCount;
+        uint256 lastUpdate;
+    }
+    
     // State variables with explicit bounds
     mapping(address => mapping(address => Deposit[])) public deposits;
     mapping(address => mapping(address => WithdrawalLimit)) public withdrawalLimits;
     mapping(address => bool) public whitelistedTokens;
+    mapping(uint256 => ProofOfReservesReport) public porReports;
+    mapping(address => uint256) public tokenReserves;
+    
     uint256 public constant MAX_DAILY_LIMIT = 1000000 * 10**18; // 1 million tokens
     uint256 public constant LIMIT_RESET_PERIOD = 1 days;
     uint256 public emergencyUnlockTime;
+    uint256 public porReportCount = 0;
+    TreasuryMetrics public treasuryMetrics;
     
     // Events for transparency
     event TokenWhitelisted(address indexed token, bool whitelisted);
@@ -42,10 +61,16 @@ contract Vault is ReentrancyGuard, Ownable {
     event WithdrawalLimitSet(address indexed token, uint256 dailyLimit);
     event EmergencyActivated(uint256 unlockTime);
     event EmergencyDeactivated();
+    event ProofOfReservesReported(uint256 indexed reportId, uint256 timestamp, uint256 totalValueUSD);
+    event LimitBreachRecorded(uint256 breachCount);
+    event TreasuryMetricsUpdated(uint256 porFreshnessHours, uint256 limitBreachCount);
     
     /// @notice Constructor to initialize the vault
     constructor() {
         emergencyUnlockTime = 0;
+        treasuryMetrics.porFreshnessHours = 0;
+        treasuryMetrics.limitBreachCount = 0;
+        treasuryMetrics.lastUpdate = block.timestamp;
     }
     
     /// @notice Whitelist a token for deposits
@@ -95,6 +120,9 @@ contract Vault is ReentrancyGuard, Ownable {
             withdrawn: false
         }));
         
+        // Update token reserves
+        tokenReserves[token] = tokenReserves[token].add(amount);
+        
         // 2. Then interact with external contracts
         IERC20(token).safeTransferFrom(msg.sender, address(this), amount);
         
@@ -119,7 +147,18 @@ contract Vault is ReentrancyGuard, Ownable {
         
         // Effects - Follow CEI pattern
         // 1. Update withdrawal limit tracking
-        updateWithdrawalLimit(token, amount);
+        bool limitExceeded = updateWithdrawalLimit(token, amount);
+        
+        // Record limit breach if exceeded
+        if (limitExceeded) {
+            treasuryMetrics.limitBreachCount = treasuryMetrics.limitBreachCount.add(1);
+            treasuryMetrics.lastUpdate = block.timestamp;
+            emit LimitBreachRecorded(treasuryMetrics.limitBreachCount);
+            emit TreasuryMetricsUpdated(treasuryMetrics.porFreshnessHours, treasuryMetrics.limitBreachCount);
+        }
+        
+        // Update token reserves
+        tokenReserves[token] = tokenReserves[token].sub(amount);
         
         // 2. Then interact with external contracts
         IERC20(token).safeTransfer(msg.sender, amount);
@@ -166,8 +205,10 @@ contract Vault is ReentrancyGuard, Ownable {
     /// @notice Update withdrawal limit tracking
     /// @param token The token address
     /// @param amount The withdrawal amount
-    function updateWithdrawalLimit(address token, uint256 amount) internal {
+    /// @return bool Whether the limit was exceeded
+    function updateWithdrawalLimit(address token, uint256 amount) internal returns (bool) {
         WithdrawalLimit storage limit = withdrawalLimits[token][msg.sender];
+        bool limitExceeded = false;
         
         // Reset daily limit if needed
         if (block.timestamp >= limit.lastReset.add(LIMIT_RESET_PERIOD)) {
@@ -175,8 +216,35 @@ contract Vault is ReentrancyGuard, Ownable {
             limit.lastReset = block.timestamp;
         }
         
+        // Check if withdrawal exceeds limits
+        if (limit.dailyUsed.add(amount) > limit.dailyLimit) {
+            limitExceeded = true;
+        }
+        
         // Update daily usage
         limit.dailyUsed = limit.dailyUsed.add(amount);
+        
+        return limitExceeded;
+    }
+    
+    /// @notice Submit a Proof of Reserves report
+    /// @param totalValueUSD The total value of reserves in USD
+    /// @param validator The address of the validator
+    function submitProofOfReserves(uint256 totalValueUSD, address validator) public onlyOwner {
+        // Create new report
+        porReportCount = porReportCount.add(1);
+        ProofOfReservesReport storage report = porReports[porReportCount];
+        report.timestamp = block.timestamp;
+        report.totalValueUSD = totalValueUSD;
+        report.isValidated = true;
+        report.validator = validator;
+        
+        // Update treasury metrics
+        treasuryMetrics.porFreshnessHours = 0; // Reset freshness as we have a new report
+        treasuryMetrics.lastUpdate = block.timestamp;
+        
+        emit ProofOfReservesReported(porReportCount, block.timestamp, totalValueUSD);
+        emit TreasuryMetricsUpdated(treasuryMetrics.porFreshnessHours, treasuryMetrics.limitBreachCount);
     }
     
     /// @notice Get total deposits for a user and token
@@ -194,6 +262,28 @@ contract Vault is ReentrancyGuard, Ownable {
         }
         
         return total;
+    }
+    
+    /// @notice Get current token reserves
+    /// @param token The token address
+    /// @return uint256 The current reserve amount
+    function getTokenReserves(address token) public view returns (uint256) {
+        return tokenReserves[token];
+    }
+    
+    /// @notice Check if Proof of Reserves report is fresh (less than 24 hours old)
+    /// @return bool Whether the report is fresh
+    function isPorReportFresh() public view returns (bool) {
+        if (porReportCount == 0) {
+            return false;
+        }
+        return (block.timestamp.sub(porReports[porReportCount].timestamp)) < 24 hours;
+    }
+    
+    /// @notice Check if treasury metrics are within acceptable limits
+    /// @return bool Whether metrics are within limits
+    function areTreasuryMetricsWithinLimits() public view returns (bool) {
+        return treasuryMetrics.porFreshnessHours < 24 && treasuryMetrics.limitBreachCount == 0;
     }
     
     /// @notice Check vault solvency invariant
