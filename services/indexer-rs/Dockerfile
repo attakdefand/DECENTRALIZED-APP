@@ -28,22 +28,14 @@ COPY services/indexer-rs/src ./services/indexer-rs/src
 RUN cargo build --release -p indexer-service
 
 # Runtime stage
-FROM gcr.io/distroless/cc-debian12
+FROM gcr.io/distroless/cc-debian12:nonroot
 
-# Create non-root user
-RUN addgroup --gid 10001 app && adduser --uid 10000 --gid 10001 app
-
-# Create app directory
 WORKDIR /app
+ENV RUST_LOG=info
 
-# Copy the binary from builder stage
-COPY --from=builder --chown=10000:10001 /app/target/release/indexer /usr/local/bin/indexer
+COPY --from=builder /app/target/release/indexer /app/bin/indexer
 
-# Switch to non-root user
-USER 10000:10001
-
-# Expose port
 EXPOSE 8080
 
-# Run the application
-ENTRYPOINT ["indexer"]
+USER nonroot
+ENTRYPOINT ["/app/bin/indexer"]

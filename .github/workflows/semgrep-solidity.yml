@@ -1,0 +1,42 @@
+name: Semgrep Solidity Scan
+
+on:
+  pull_request:
+    paths:
+      - "contracts/**/*.sol"
+      - "semgrep.yml"
+  push:
+    branches:
+      - main
+    paths:
+      - "contracts/**/*.sol"
+      - "semgrep.yml"
+  schedule:
+    - cron: "30 2 * * 1"
+  workflow_dispatch:
+
+jobs:
+  semgrep:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install Semgrep
+        run: pip install semgrep
+
+      - name: Run Semgrep (community pack + local rules)
+        run: |
+          semgrep --config p/smart-contracts --config semgrep.yml \
+            --error --metrics=off --time --include "contracts" \
+            --json > semgrep-report.json
+
+      - name: Persist Semgrep report
+        uses: actions/upload-artifact@v4
+        with:
+          name: semgrep-report
+          path: semgrep-report.json

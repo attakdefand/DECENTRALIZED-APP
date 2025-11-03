@@ -1,0 +1,25 @@
+rules:
+  - id: local-no-tx-origin-auth
+    message: "Do not use tx.origin for authorization; rely on msg.sender instead."
+    severity: ERROR
+    languages:
+      - solidity
+    patterns:
+      - pattern: require(tx.origin == $VAR, ...);
+    metadata:
+      category: security
+      technology: solidity
+
+  - id: local-no-block-timestamp-manipulation
+    message: "Avoid using block.timestamp directly for critical logic; prefer using time buffers."
+    severity: WARNING
+    languages:
+      - solidity
+    patterns:
+      - pattern: |
+          if (block.timestamp $OP $VALUE) {
+            ...
+          }
+    metadata:
+      category: security
+      technology: solidity

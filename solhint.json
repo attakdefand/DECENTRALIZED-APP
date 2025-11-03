@@ -1,0 +1,22 @@
+{
+  "extends": "solhint:recommended",
+  "plugins": [],
+  "rules": {
+    "compiler-version": [
+      "error",
+      ">=0.8.19 <0.9.0"
+    ],
+    "max-line-length": [
+      "warn",
+      140
+    ],
+    "func-visibility": [
+      "error",
+      {
+        "ignoreConstructors": true
+      }
+    ],
+    "avoid-low-level-calls": "error",
+    "no-inline-assembly": "warn"
+  }
+}

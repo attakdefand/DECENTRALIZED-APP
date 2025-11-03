@@ -299,6 +299,11 @@ impl VendorRiskManager {
             vendor_score_avg: avg_score,
         }
     }
+
+    /// Get all vendors
+    pub fn get_all_vendors(&self) -> Vec<&Vendor> {
+        self.vendors.values().collect()
+    }
 }
 
 /// Vendor risk metrics

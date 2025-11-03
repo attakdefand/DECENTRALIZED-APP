@@ -1,0 +1,87 @@
+name: Supply Chain Integrity
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  attest-and-sign:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+      actions: read
+      security-events: write
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@v1
+        with:
+          toolchain: nightly
+
+      - name: Install supply-chain tooling
+        run: |
+          cargo install cargo-audit --locked
+          cargo install cargo-deny --locked
+
+      - name: Run cargo audit
+        run: cargo audit --deny warnings
+
+      - name: Run cargo deny
+        run: cargo deny check --workspace
+
+      - name: Build release artifacts
+        env:
+          CARGO_TERM_COLOR: always
+        run: |
+          cargo build --workspace --release
+          tar -czf target/release-artifacts.tar.gz -C target release
+
+      - name: Generate SBOM
+        uses: anchore/sbom-action@v0
+        with:
+          path: .
+          output-file: sbom.spdx.json
+
+      - name: Run Trivy filesystem scan
+        uses: aquasecurity/trivy-action@0.20.0
+        with:
+          scan-type: fs
+          ignore-unfixed: true
+          format: sarif
+          output: trivy-results.sarif
+          severity: CRITICAL,HIGH
+
+      - name: Install Cosign
+        uses: sigstore/cosign-installer@v3.4.0
+
+      - name: Sign artifacts with Cosign
+        env:
+          COSIGN_EXPERIMENTAL: "1"
+        run: |
+          cosign sign-blob --yes --output-signature release.sig --output-certificate release.pem target/release-artifacts.tar.gz
+
+      - name: Verify Cosign signature
+        env:
+          COSIGN_EXPERIMENTAL: "1"
+        run: |
+          cosign verify-blob --certificate release.pem --signature release.sig target/release-artifacts.tar.gz
+
+      - name: Upload integrity artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: supply-chain-integrity
+          path: |
+            target/release-artifacts.tar.gz
+            sbom.spdx.json
+            release.sig
+            release.pem
+
+      - name: Upload Trivy SARIF
+        uses: github/codeql-action/upload-sarif@v2
+        with:
+          sarif_file: trivy-results.sarif

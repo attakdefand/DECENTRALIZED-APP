@@ -1,0 +1,15 @@
+testMode: assertion
+testLimit: 1000
+codeSize: 0
+coverage: true
+corpusDir: artifacts/security/echidna
+cryticArgs:
+  - --foundry-project
+  - contracts
+  - --compile-all
+  - --disable-color
+targets:
+  SafeTokenEchidnaHarness:
+    filepath: contracts/test/SafeTokenEchidnaHarness.sol
+    deployed: false
+    constructorArgs: []

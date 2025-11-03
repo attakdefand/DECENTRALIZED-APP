@@ -83,6 +83,11 @@ serve-docs: docs ## Serve documentation locally
 	@echo "$(GREEN)Serving documentation...$(NC)"
 	cargo doc --workspace --no-deps --open
 
+.PHONY: vendor-validate
+vendor-validate: ## Run vendor automation checks (access, keys, policy)
+	@echo "$(GREEN)Validating vendor automation baselines...$(NC)"
+	bash scripts/validate-vendor-management.sh
+
 .PHONY: install-tools
 install-tools: ## Install development tools
 	@echo "$(GREEN)Installing development tools...$(NC)"

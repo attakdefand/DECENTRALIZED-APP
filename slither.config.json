@@ -1,0 +1,13 @@
+{
+  "solc_remaps": [
+    "@openzeppelin/=contracts/lib/openzeppelin-contracts/",
+    "@openzeppelin-upgradeable/=contracts/lib/openzeppelin-contracts-upgradeable/",
+    "forge-std/=contracts/lib/forge-std/src/"
+  ],
+  "exclude_informational": true,
+  "exclude_low": false,
+  "filter_paths": "contracts/test,contracts/script,contracts/scripts,contracts/shadow-fork-simulations",
+  "detectors_to_exclude": [
+    "assembly-usage"
+  ]
+}

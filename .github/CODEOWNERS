@@ -1,0 +1,11 @@
+# Default ownership
+* @AttakDefand
+
+# Domain-specific routing
+/contracts/ @AttakDefand
+/crates/ @AttakDefand
+/services/ @AttakDefand
+/infra/ @AttakDefand
+/tests/ @AttakDefand
+/ui/ @AttakDefand
+/scripts/ @AttakDefand

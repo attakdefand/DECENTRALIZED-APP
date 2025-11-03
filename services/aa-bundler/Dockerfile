@@ -24,22 +24,14 @@ COPY services/aa-bundler/src ./services/aa-bundler/src
 RUN cargo build --release -p aa-bundler
 
 # Runtime stage
-FROM gcr.io/distroless/cc-debian12
+FROM gcr.io/distroless/cc-debian12:nonroot
 
-# Create non-root user
-RUN addgroup --gid 10001 app && adduser --uid 10000 --gid 10001 app
-
-# Create app directory
 WORKDIR /app
+ENV RUST_LOG=info
 
-# Copy the binary from builder stage
-COPY --from=builder --chown=10000:10001 /app/target/release/aa-bundler /usr/local/bin/aa-bundler
+COPY --from=builder /app/target/release/aa-bundler /app/bin/aa-bundler
 
-# Switch to non-root user
-USER 10000:10001
-
-# Expose metrics port
 EXPOSE 9095
 
-# Run the application
-ENTRYPOINT ["aa-bundler"]
+USER nonroot
+ENTRYPOINT ["/app/bin/aa-bundler"]

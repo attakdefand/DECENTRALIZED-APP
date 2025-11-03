@@ -1,0 +1,57 @@
+name: Solidity Lint & Static Analysis
+
+on:
+  pull_request:
+    paths:
+      - "contracts/**/*.sol"
+      - "solhint.json"
+      - "slither.config.json"
+  push:
+    branches:
+      - main
+    paths:
+      - "contracts/**/*.sol"
+      - "solhint.json"
+      - "slither.config.json"
+  workflow_dispatch:
+
+jobs:
+  lint-and-slither:
+    name: solhint + slither
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+
+      - name: Install Solhint
+        run: npm install -g solhint
+
+      - name: Run Solhint
+        run: solhint -c solhint.json "contracts/**/*.sol"
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install Slither toolchain
+        run: |
+          pip install --upgrade pip
+          pip install slither-analyzer
+
+      - name: Run Slither
+        run: >
+          slither . --foundry-root contracts
+          --config-file slither.config.json
+          --exclude-informational
+          --sarif slither.sarif
+          --fail-on medium
+
+      - name: Upload SARIF
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: slither.sarif

@@ -1,0 +1,46 @@
+name: Echidna Invariants
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 5 * * 1"
+
+jobs:
+  echidna:
+    runs-on: ubuntu-latest
+    env:
+      WORKSPACE: ${{ github.workspace }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: nightly
+
+      - name: Install libraries
+        working-directory: contracts
+        run: |
+          forge install --no-commit openzeppelin/openzeppelin-contracts
+          forge install --no-commit openzeppelin/openzeppelin-contracts-upgradeable
+          forge install --no-commit foundry-rs/forge-std
+
+      - name: Pull Echidna image
+        run: docker pull trailofbits/echidna:latest
+
+      - name: Run Echidna
+        run: |
+          mkdir -p artifacts/security/echidna
+          docker run --rm \
+            -v "$WORKSPACE":/workspace \
+            trailofbits/echidna:latest \
+            echidna-test /workspace/contracts/test/SafeTokenEchidnaHarness.sol \
+              --contract SafeTokenEchidnaHarness \
+              --config /workspace/echidna.yaml \
+              --format text | tee artifacts/security/echidna/output.txt
+
+      - name: Upload Echidna artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: echidna-artifacts
+          path: artifacts/security/echidna

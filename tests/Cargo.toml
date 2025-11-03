@@ -19,4 +19,4 @@ proptest = "1.0"
 cypress = "0.1"
 
 # Local dependencies
-// Removed dependencies on crates that were deleted
+# Removed dependencies on crates that were deleted

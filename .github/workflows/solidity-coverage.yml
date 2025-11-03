@@ -1,0 +1,63 @@
+name: Solidity Coverage
+
+on:
+  pull_request:
+    paths:
+      - "contracts/**"
+      - "foundry/**"
+  push:
+    branches:
+      - main
+    paths:
+      - "contracts/**"
+      - "foundry/**"
+  schedule:
+    - cron: "0 3 * * 1"
+  workflow_dispatch:
+
+jobs:
+  forge-coverage:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: contracts
+    env:
+      COVERAGE_THRESHOLD: "90"
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install system dependencies
+        run: sudo apt-get update && sudo apt-get install -y lcov
+
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: nightly
+
+      - name: Install dependencies
+        run: |
+          forge install --no-commit openzeppelin/openzeppelin-contracts
+          forge install --no-commit openzeppelin/openzeppelin-contracts-upgradeable
+          forge install --no-commit foundry-rs/forge-std
+
+      - name: Run Forge coverage
+        run: forge coverage --report lcov
+
+      - name: Summarize coverage
+        run: |
+          mkdir -p ../artifacts/security/coverage
+          lcov --summary lcov.info | tee ../artifacts/security/coverage/lcov-summary.txt
+          mv lcov.info ../artifacts/security/coverage/
+
+      - name: Enforce coverage threshold
+        run: |
+          SUMMARY="../artifacts/security/coverage/lcov-summary.txt"
+          LINE_PERCENT=$(grep -i "lines\.*:" "$SUMMARY" | awk '{print $(NF-1)}' | tr -d '%')
+          echo "Line coverage: $LINE_PERCENT%"
+          awk -v pct="$LINE_PERCENT" -v threshold="$COVERAGE_THRESHOLD" 'BEGIN { exit (pct + 0 >= threshold + 0) ? 0 : 1 }'
+
+      - name: Upload coverage artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: forge-coverage
+          path: artifacts/security/coverage

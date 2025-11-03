@@ -1,0 +1,36 @@
+name: Slither Analysis
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'contracts/**'
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'contracts/**'
+  schedule:
+    - cron: '0 4 * * 2'
+
+jobs:
+  slither:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Install Python dependencies
+        run: |
+          pip3 install --upgrade pip
+          pip3 install slither-analyzer solc-select
+          solc-select install 0.8.23
+          solc-select use 0.8.23
+
+      - name: Run Slither
+        run: |
+          cd contracts
+          slither . --fail-on high --sarif slither.sarif
+
+      - name: Upload SARIF results
+        uses: github/codeql-action/upload-sarif@v2
+        with:
+          sarif_file: contracts/slither.sarif

@@ -24,22 +24,14 @@ COPY services/mev-monitor/src ./services/mev-monitor/src
 RUN cargo build --release -p mev-monitor
 
 # Runtime stage
-FROM gcr.io/distroless/cc-debian12
+FROM gcr.io/distroless/cc-debian12:nonroot
 
-# Create non-root user
-RUN addgroup --gid 10001 app && adduser --uid 10000 --gid 10001 app
-
-# Create app directory
 WORKDIR /app
+ENV RUST_LOG=info
 
-# Copy the binary from builder stage
-COPY --from=builder --chown=10000:10001 /app/target/release/mev-monitor /usr/local/bin/mev-monitor
+COPY --from=builder /app/target/release/mev-monitor /app/bin/mev-monitor
 
-# Switch to non-root user
-USER 10000:10001
-
-# Expose metrics port
 EXPOSE 9094
 
-# Run the application
-ENTRYPOINT ["mev-monitor"]
+USER nonroot
+ENTRYPOINT ["/app/bin/mev-monitor"]
